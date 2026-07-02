@@ -1,0 +1,15 @@
+{"question": "Who created Python?", "expected_sources": ["Guido van Rossum"]}
+{"question": "What is machine learning?", "expected_sources": ["machine learning", "artificial intelligence"]}
+{"question": "When was Wikipedia founded?", "expected_sources": ["Wikipedia", "2001"]}
+{"question": "What is the speed of light?", "expected_sources": ["light", "299"]}
+{"question": "Who wrote Hamlet?", "expected_sources": ["Shakespeare", "William"]}
+{"question": "What is DNA?", "expected_sources": ["deoxyribonucleic acid", "DNA"]}
+{"question": "What country is Paris in?", "expected_sources": ["France", "Paris"]}
+{"question": "What is the capital of Japan?", "expected_sources": ["Tokyo", "Japan"]}
+{"question": "What is photosynthesis?", "expected_sources": ["photosynthesis", "plant", "chlorophyll"]}
+{"question": "Who invented the telephone?", "expected_sources": ["Alexander Graham Bell", "telephone"]}
+{"question": "What is the Pythagorean theorem?", "expected_sources": ["Pythagorean", "triangle", "hypotenuse"]}
+{"question": "What is the largest planet?", "expected_sources": ["Jupiter", "planet"]}
+{"question": "What is gravity?", "expected_sources": ["gravity", "Newton", "force"]}
+{"question": "Who painted the Mona Lisa?", "expected_sources": ["Leonardo da Vinci", "Mona Lisa"]}
+{"question": "What is the human genome?", "expected_sources": ["genome", "DNA", "genes"]}

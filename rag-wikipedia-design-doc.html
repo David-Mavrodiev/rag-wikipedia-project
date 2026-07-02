@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG System over Wikipedia — Design Doc</title>
+  <meta
+    name="description"
+    content="Design document for a Retrieval-Augmented Generation (RAG) system over a Wikipedia subset."
+  >
+  <style>
+    :root {
+      --bg-0: #0b1220;
+      --bg-1: #0f172a;
+      --bg-2: #111827;
+      --bg-3: #1e293b;
+      --ink-0: #e2e8f0;
+      --ink-1: #cbd5e1;
+      --ink-2: #94a3b8;
+      --line: rgba(148, 163, 184, 0.24);
+      --line-strong: rgba(56, 189, 248, 0.45);
+      --cyan: #22d3ee;
+      --sky: #38bdf8;
+      --indigo: #818cf8;
+      --mint: #67e8f9;
+      --green: #34d399;
+      --amber: #fbbf24;
+      --rose: #fb7185;
+      --violet: #a78bfa;
+      --shadow: 0 24px 80px rgba(2, 8, 23, 0.38);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-display: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-body: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background:
+        radial-gradient(circle at top right, rgba(56, 189, 248, 0.08), transparent 32%),
+        radial-gradient(circle at bottom left, rgba(129, 140, 248, 0.08), transparent 28%),
+        linear-gradient(180deg, #0b1220 0%, #0f172a 52%, #0c1424 100%);
+      background-attachment: fixed;
+      color: var(--ink-1);
+      font-family: var(--font-body);
+      font-size: 17px;
+      line-height: 1.65;
+      scroll-behavior: smooth;
+    }
+
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 64px 28px 120px;
+    }
+
+    h1, h2, h3, h4 {
+      color: #f8fafc;
+      font-family: var(--font-display);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      line-height: 1.1;
+    }
+
+    h1 { font-size: 2.6rem; margin: 0 0 0.5rem; }
+    h2 {
+      font-size: 1.6rem;
+      margin: 3.2rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--line);
+    }
+    h2 .num {
+      color: var(--sky);
+      font-variant-numeric: tabular-nums;
+      margin-right: 0.5rem;
+    }
+    h3 { font-size: 1.15rem; margin: 1.8rem 0 0.6rem; color: #dbeafe; }
+
+    p { margin: 0 0 1rem; }
+    strong { color: #f8fafc; font-weight: 700; }
+    em { color: #dbeafe; font-style: normal; }
+    a { color: var(--sky); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .accent { color: var(--sky); }
+    .green { color: var(--green); }
+    .amber { color: var(--amber); }
+    .rose { color: var(--rose); }
+    .violet { color: var(--violet); }
+    .mint { color: var(--mint); }
+    .subtle { color: var(--ink-2); }
+
+    code {
+      font-family: var(--font-mono);
+      font-size: 0.86em;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      color: var(--mint);
+      padding: 0.1em 0.4em;
+      border-radius: 5px;
+    }
+
+    pre {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: var(--ink-1);
+      background: rgba(2, 8, 23, 0.55);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 18px 20px;
+      overflow-x: auto;
+    }
+    pre code {
+      background: none;
+      border: none;
+      color: inherit;
+      padding: 0;
+    }
+
+    /* Header */
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      padding: 0.3rem 0.8rem;
+      border: 1px solid rgba(34, 211, 238, 0.28);
+      border-radius: 999px;
+      color: var(--mint);
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before {
+      content: "";
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--cyan);
+      box-shadow: 0 0 12px var(--cyan);
+    }
+
+    .lede {
+      font-size: 1.15rem;
+      color: var(--ink-0);
+      max-width: 70ch;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      margin: 1.5rem 0 0.5rem;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.75rem;
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 0.8rem;
+      color: var(--ink-1);
+    }
+    .pill b { color: #f8fafc; font-weight: 700; }
+    .pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+    .dot.green { background: var(--green); box-shadow: 0 0 10px var(--green); }
+    .dot.sky { background: var(--sky); box-shadow: 0 0 10px var(--sky); }
+
+    /* TOC */
+    .toc {
+      margin: 2.5rem 0 0;
+      padding: 20px 24px;
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .toc h4 {
+      margin: 0 0 0.8rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    .toc ol {
+      margin: 0; padding: 0;
+      list-style: none;
+      columns: 2;
+      column-gap: 28px;
+    }
+    .toc li {
+      counter-increment: toc;
+      margin-bottom: 0.4rem;
+      font-size: 0.92rem;
+      break-inside: avoid;
+    }
+    .toc li::before {
+      content: counter(toc, decimal-leading-zero);
+      color: var(--sky);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      margin-right: 0.6rem;
+    }
+    .toc ol { counter-reset: toc; }
+
+    /* Cards / grids */
+    .grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      margin: 1.2rem 0;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.55);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+    .card h3 { margin-top: 0; }
+    .card.accent-l { border-left: 3px solid var(--sky); }
+    .card.green-l { border-left: 3px solid var(--green); }
+    .card.amber-l { border-left: 3px solid var(--amber); }
+    .card.violet-l { border-left: 3px solid var(--violet); }
+
+    ul.clean { list-style: none; padding-left: 0; margin: 0.6rem 0; }
+    ul.clean li {
+      position: relative;
+      padding-left: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    ul.clean li::before {
+      content: "▸";
+      position: absolute;
+      left: 0;
+      color: var(--sky);
+    }
+
+    ul.check { list-style: none; padding-left: 0; }
+    ul.check li {
+      position: relative;
+      padding-left: 1.9rem;
+      margin-bottom: 0.65rem;
+    }
+    ul.check li::before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      top: -1px;
+      width: 1.25rem; height: 1.25rem;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.72rem;
+      color: var(--green);
+      border: 1px solid rgba(52, 211, 153, 0.5);
+      border-radius: 5px;
+      background: rgba(52, 211, 153, 0.08);
+    }
+
+    ul.cross li::before {
+      content: "✕";
+      color: var(--rose);
+      border-color: rgba(251, 113, 133, 0.5);
+      background: rgba(251, 113, 133, 0.08);
+    }
+
+    /* Table */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.2rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+    th {
+      color: var(--mint);
+      font-weight: 700;
+      font-size: 0.78rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--line-strong);
+    }
+    tr:hover td { background: rgba(56, 189, 248, 0.04); }
+
+    /* Architecture diagram */
+    .arch {
+      margin: 1.2rem 0;
+      padding: 26px;
+      background: rgba(2, 8, 23, 0.5);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .arch-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin: 10px 0;
+    }
+    .node {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--line-strong);
+      background: rgba(30, 41, 59, 0.7);
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #f1f5f9;
+      text-align: center;
+      min-width: 120px;
+    }
+    .node small { display: block; font-weight: 400; color: var(--ink-2); font-size: 0.72rem; }
+    .node.sky { border-color: rgba(56, 189, 248, 0.6); }
+    .node.green { border-color: rgba(52, 211, 153, 0.55); }
+    .node.violet { border-color: rgba(167, 139, 250, 0.55); }
+    .node.amber { border-color: rgba(251, 191, 36, 0.55); }
+    .arrow { color: var(--ink-2); font-size: 1.3rem; }
+    .arch-label {
+      text-align: center;
+      color: var(--ink-2);
+      font-size: 0.76rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin: 8px 0 2px;
+    }
+
+    /* Phases */
+    .phase {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 18px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+    }
+    .phase:last-child { border-bottom: none; }
+    .phase .badge {
+      width: 46px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 12px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--bg-0);
+      background: linear-gradient(135deg, var(--sky), var(--indigo));
+    }
+    .phase h3 { margin: 2px 0 0.4rem; }
+    .phase .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 0.6rem; }
+    .tag {
+      font-size: 0.72rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 6px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--mint);
+      font-family: var(--font-mono);
+    }
+    .phase .done { color: var(--green); font-size: 0.85rem; }
+
+    blockquote {
+      margin: 1.2rem 0;
+      padding: 12px 20px;
+      border-left: 3px solid var(--amber);
+      background: rgba(251, 191, 36, 0.06);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      color: var(--ink-1);
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 3rem 0;
+    }
+
+    footer {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--line);
+      color: var(--ink-2);
+      font-size: 0.85rem;
+    }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 40px 18px 80px; }
+      h1 { font-size: 2rem; }
+      .toc ol { columns: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <header>
+      <span class="eyebrow">Design Doc</span>
+      <h1>RAG System over Wikipedia</h1>
+      <p class="lede">
+        An end-to-end <strong>Retrieval-Augmented Generation</strong> system that answers
+        natural-language questions over a Wikipedia subset with grounded, <strong>cited</strong>
+        answers, served by a self-hosted open-source LLM.
+      </p>
+
+      <div class="meta">
+        <span class="pill"><span class="dot green"></span> Status: <b>Planned</b></span>
+        <span class="pill">Stack: <b>Python · FastAPI · React · Prefect · Qdrant · Ollama</b></span>
+      </div>
+
+      <nav class="toc">
+        <h4>Contents</h4>
+        <ol>
+          <li><a href="#problem">Problem &amp; context</a></li>
+          <li><a href="#goals">Goals</a></li>
+          <li><a href="#nongoals">Non-goals</a></li>
+          <li><a href="#architecture">Architecture</a></li>
+          <li><a href="#stack">Tech stack &amp; decisions</a></li>
+          <li><a href="#scenarios">Users &amp; scenarios</a></li>
+          <li><a href="#acceptance">Acceptance criteria</a></li>
+          <li><a href="#testing">Testing strategy</a></li>
+          <li><a href="#roadmap">Phased roadmap</a></li>
+          <li><a href="#risks">Risks &amp; mitigations</a></li>
+          <li><a href="#open">Open items</a></li>
+        </ol>
+      </nav>
+    </header>
+
+    <section id="problem">
+      <h2><span class="num">01</span>Problem &amp; context</h2>
+      <p>
+        Large knowledge bases like Wikipedia contain answers to a vast range of questions,
+        but finding and synthesizing them means manually searching and reading across many
+        articles. A general-purpose LLM can answer from parametric memory alone, but its
+        answers are unattributable and prone to hallucination.
+      </p>
+      <p>
+        This project builds a <strong>RAG system over a Wikipedia subset</strong>: it ingests a
+        real corpus, indexes it for semantic search, and answers natural-language questions
+        with <strong>cited</strong> sources using a self-hosted open-source LLM. Answers are
+        grounded in retrieved passages and attributable back to their source articles. The
+        system is delivered as a set of incremental, independently demoable phases, each with
+        tests.
+      </p>
+      <div class="grid">
+        <div class="card accent-l">
+          <h3 class="accent">Data pipeline</h3>
+          <p class="subtle" style="margin:0;font-size:0.9rem;">A batch ingestion pipeline
+            (download → clean → chunk → embed → load) orchestrated with Prefect, writing to a
+            dedicated vector database (Qdrant).</p>
+        </div>
+        <div class="card violet-l">
+          <h3 class="violet">Application &amp; services</h3>
+          <p class="subtle" style="margin:0;font-size:0.9rem;">A clean, testable Python service
+            (FastAPI) and a React web app, containerized with Docker Compose, with tests,
+            config, and documentation.</p>
+        </div>
+        <div class="card green-l">
+          <h3 class="green">Retrieval &amp; generation</h3>
+          <p class="subtle" style="margin:0;font-size:0.9rem;">Embeddings, vector retrieval,
+            prompt construction, a self-hosted LLM (Ollama), and a rigorous evaluation
+            harness.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="goals">
+      <h2><span class="num">02</span>Goals</h2>
+      <ul class="clean">
+        <li>Answer questions over a Wikipedia subset, returning answers <strong>with source citations</strong>.</li>
+        <li>An <strong>idempotent, re-runnable</strong> Prefect ingestion pipeline: download → clean → chunk → embed → upsert.</li>
+        <li>A <strong>dedicated vector DB (Qdrant)</strong> in Docker for retrieval.</li>
+        <li>A <strong>self-hosted open-source LLM via Ollama</strong> (<code>llama3.2:3b</code>) behind a swappable interface.</li>
+        <li>A <strong>FastAPI</strong> backend and a <strong>React</strong> web app showing answers and cited sources.</li>
+        <li>A <strong>RAG evaluation harness</strong>: golden Q&amp;A set + retrieval metrics + answer groundedness metrics.</li>
+        <li>Everything packaged with <strong>Docker Compose</strong> to run locally in a few commands.</li>
+        <li>Shipped as <strong>phased milestones</strong>, each independently demoable, with tests.</li>
+        <li>A clear <strong>README + runbook</strong> for reproducibility.</li>
+      </ul>
+    </section>
+
+    <section id="nongoals">
+      <h2><span class="num">03</span>Non-goals</h2>
+      <ul class="check cross">
+        <li>Training or fine-tuning an LLM from scratch (a possible future spin-off).</li>
+        <li>Production-grade multi-tenant auth, billing, or user accounts.</li>
+        <li>Cloud / Kubernetes deployment, autoscaling, or HA (local Docker Compose is the target).</li>
+        <li>Real-time / streaming ingestion (the pipeline is batch).</li>
+        <li>Indexing the entire Wikipedia dump — a bounded subset is used (tiny ~500 / real ~25k articles).</li>
+        <li>Hybrid search (BM25 + vector) and reranking — these are <strong>stretch goals</strong>, not v1.</li>
+        <li>GPU optimization / large-model serving performance tuning.</li>
+      </ul>
+    </section>
+
+    <section id="architecture">
+      <h2><span class="num">04</span>Architecture</h2>
+      <p>All services run under Docker Compose. The Prefect ingestion flow shares the
+        embedder and Qdrant client with the API through a common <code>core</code> package.</p>
+      <div class="arch">
+        <div class="arch-label">Request path</div>
+        <div class="arch-row">
+          <div class="node sky">Browser<small>React + Vite</small></div>
+          <span class="arrow">→</span>
+          <div class="node sky">FastAPI<small>/query · /health</small></div>
+        </div>
+        <div class="arch-row">
+          <div class="node green">Embedder<small>bge-small-en-v1.5</small></div>
+          <div class="node violet">Qdrant<small>vector DB</small></div>
+          <div class="node amber">Ollama<small>llama3.2:3b</small></div>
+        </div>
+        <div class="arch-label">Ingestion pipeline (Prefect)</div>
+        <div class="arch-row">
+          <div class="node">download</div><span class="arrow">→</span>
+          <div class="node">clean</div><span class="arrow">→</span>
+          <div class="node">chunk</div><span class="arrow">→</span>
+          <div class="node green">embed</div><span class="arrow">→</span>
+          <div class="node violet">upsert → Qdrant</div>
+        </div>
+      </div>
+
+      <h3>Source layout</h3>
+      <pre><code>projects/rag-wikipedia/
+├── docker-compose.yml
+├── Makefile                      # up · ingest · eval · test
+├── pyproject.toml / uv.lock      # uv, Python 3.12
+├── backend/
+│   ├── app/
+│   │   ├── main.py               # FastAPI app, routes, health
+│   │   ├── api/                  # routers (query, health, ingest-trigger)
+│   │   ├── core/                 # config, chunking, embeddings,
+│   │   │                         #   vectorstore, llm, retrieval, prompt
+│   │   └── models/               # pydantic request/response schemas
+│   ├── pipeline/                 # Prefect flows, tasks, sources
+│   ├── eval/                     # golden.jsonl, metrics, run_eval.py
+│   └── tests/                    # unit + integration
+├── frontend/                     # React app (QueryBox, AnswerView, CitationList)
+└── docs/runbook.md</code></pre>
+    </section>
+
+    <section id="stack">
+      <h2><span class="num">05</span>Tech stack &amp; decisions</h2>
+      <table>
+        <thead>
+          <tr><th>Topic</th><th>Decision</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Placement</td><td><code>projects/rag-wikipedia/</code></td><td>Self-contained project directory</td></tr>
+          <tr><td>Language / tooling</td><td>Python 3.12 + <code>uv</code></td><td><code>ruff</code> + <code>pytest</code></td></tr>
+          <tr><td>Corpus</td><td>HF <code>wikimedia/wikipedia</code> (EN)</td><td>tiny ~500 / real ~25k articles</td></tr>
+          <tr><td>Embeddings</td><td><code>bge-small-en-v1.5</code> (384-d)</td><td>behind an <code>Embedder</code> interface</td></tr>
+          <tr><td>LLM</td><td>Ollama <code>llama3.2:3b</code></td><td>behind an <code>LLM</code> interface (~8GB RAM)</td></tr>
+          <tr><td>Vector DB</td><td>Qdrant (Docker)</td><td>cosine distance, dim 384</td></tr>
+          <tr><td>Chunking</td><td>token-based ~512 / ~64 overlap</td><td>tune after first eval run</td></tr>
+          <tr><td>Orchestration</td><td>Prefect</td><td>ingestion flows/tasks</td></tr>
+          <tr><td>Frontend</td><td>React + Vite + TypeScript</td><td>minimal: ask / answer / sources</td></tr>
+          <tr><td>Packaging</td><td>Docker Compose</td><td>api · frontend · qdrant · ollama</td></tr>
+          <tr><td>Retrieval (v1)</td><td>vector-only top-k</td><td>hybrid + reranker = stretch</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="scenarios">
+      <h2><span class="num">06</span>Users &amp; scenarios</h2>
+      <div class="grid">
+        <div class="card accent-l">
+          <h3>Ask a question</h3>
+          <p class="subtle" style="font-size:0.9rem;margin:0;">User types a question → frontend calls
+            <code>POST /query</code> → backend embeds, searches Qdrant, assembles a grounded prompt,
+            calls the LLM → returns answer <strong>plus citations</strong>, rendered with expandable sources.</p>
+        </div>
+        <div class="card accent-l">
+          <h3>(Re)build the index</h3>
+          <p class="subtle" style="font-size:0.9rem;margin:0;">Operator triggers the Prefect flow →
+            download, clean, chunk, embed, upsert into Qdrant. <strong>Idempotent</strong> — re-running
+            does not duplicate data and can resume.</p>
+        </div>
+        <div class="card accent-l">
+          <h3>Evaluate quality</h3>
+          <p class="subtle" style="font-size:0.9rem;margin:0;">Operator runs the eval harness against the
+            golden Q&amp;A set → retrieval metrics (recall@k, MRR) + answer groundedness, as a
+            comparable report.</p>
+        </div>
+      </div>
+      <h3>Edge &amp; failure cases</h3>
+      <ul class="clean">
+        <li><strong>No relevant context found</strong> → the system says it doesn't know rather than hallucinate.</li>
+        <li><strong>Ollama / Qdrant unavailable</strong> → clear error; health check fails fast; graceful UI message.</li>
+        <li><strong>Empty / oversized / non-English query</strong> → validated and handled.</li>
+        <li><strong>Partial ingestion failure</strong> → pipeline resumes without duplicating data.</li>
+        <li><strong>Very long retrieved context</strong> → truncation / token-budget management.</li>
+      </ul>
+    </section>
+
+    <section id="acceptance">
+      <h2><span class="num">07</span>Acceptance criteria</h2>
+      <ul class="check">
+        <li><code>docker compose up</code> brings up all services healthy on a clean machine following the README.</li>
+        <li>The Prefect ingestion flow runs end-to-end and populates a Qdrant collection with vectors + source metadata.</li>
+        <li>Re-running ingestion is <strong>idempotent</strong> (no duplicate vectors; resumable after interruption).</li>
+        <li><code>POST /query</code> returns a grounded answer <strong>with citations</strong> for known-answerable questions.</li>
+        <li>When no relevant context is found, the system declines instead of fabricating an answer.</li>
+        <li>The React web app lets a user ask a question and view the answer plus expandable cited sources.</li>
+        <li>The LLM and embedding model are each swappable via configuration.</li>
+        <li>The evaluation harness outputs retrieval metrics (recall@k, MRR) and answer groundedness metrics.</li>
+        <li>Unit tests cover core logic; integration tests cover the query path; tests pass locally.</li>
+        <li>A README + runbook documents setup, ingestion, querying, and evaluation.</li>
+      </ul>
+    </section>
+
+    <section id="testing">
+      <h2><span class="num">08</span>Testing strategy</h2>
+      <div class="grid">
+        <div class="card">
+          <h3>Unit (pytest)</h3>
+          <p style="font-size:0.9rem;margin:0;" class="subtle">Cleaning/normalization, chunking, prompt assembly, citation formatting, config parsing, mocked LLM/embedding adapters.</p>
+        </div>
+        <div class="card">
+          <h3>Integration</h3>
+          <p style="font-size:0.9rem;margin:0;" class="subtle">Qdrant + mocked/small LLM exercise the ingestion → retrieval → answer path on a tiny fixture corpus.</p>
+        </div>
+        <div class="card">
+          <h3>Pipeline</h3>
+          <p style="font-size:0.9rem;margin:0;" class="subtle">Prefect flow on a fixture subset; assert idempotency (re-run = same count) and resumability.</p>
+        </div>
+        <div class="card">
+          <h3>Evaluation</h3>
+          <p style="font-size:0.9rem;margin:0;" class="subtle">Golden Q&amp;A set as a quality regression: recall@k / MRR for retrieval, groundedness for answers.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="roadmap">
+      <h2><span class="num">09</span>Phased roadmap</h2>
+      <p>Strictly sequential — each phase ships a working, demoable slice with tests.
+        The <strong>tiny dev profile</strong> is used throughout for fast iteration; the
+        <strong>real profile</strong> is a final pass.</p>
+
+      <div class="phase">
+        <div class="badge">1</div>
+        <div>
+          <h3>Scaffolding &amp; infra</h3>
+          <p style="margin:0;">Repo skeleton; Docker Compose with Qdrant + Ollama healthy; FastAPI <code>GET /health</code>; config, logging, test harness.</p>
+          <div class="tags"><span class="tag">uv init</span><span class="tag">docker-compose</span><span class="tag">/health</span></div>
+          <p class="done">Done when: <code>docker compose up</code> → /health green; <code>make test</code> passes.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="badge">2</div>
+        <div>
+          <h3>Ingestion pipeline (Prefect)</h3>
+          <p style="margin:0;">Idempotent flow: download → clean → chunk → embed → upsert. Deterministic point IDs for idempotency.</p>
+          <div class="tags"><span class="tag">sources</span><span class="tag">chunking</span><span class="tag">embeddings</span><span class="tag">vectorstore</span></div>
+          <p class="done">Done when: <code>make ingest PROFILE=tiny</code> populates Qdrant; re-run is a no-op.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="badge">3</div>
+        <div>
+          <h3>Retrieval layer</h3>
+          <p style="margin:0;">Embed query → Qdrant top-k → map to source metadata → token-budget context assembly (vector-only for v1).</p>
+          <div class="tags"><span class="tag">retrieval</span><span class="tag">top-k</span></div>
+          <p class="done">Done when: retrieval returns relevant chunks for known questions.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="badge">4</div>
+        <div>
+          <h3>Generation</h3>
+          <p style="margin:0;">Grounded prompt + citation markers; Ollama call; refusal when context is weak; citation extraction.</p>
+          <div class="tags"><span class="tag">prompt</span><span class="tag">llm</span><span class="tag">citations</span></div>
+          <p class="done">Done when: grounded, cited answer is produced; no-context yields a refusal.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="badge">5</div>
+        <div>
+          <h3>API</h3>
+          <p style="margin:0;"><code>POST /query → {answer, citations[]}</code>; pydantic models; input validation; error mapping when deps are down.</p>
+          <div class="tags"><span class="tag">/query</span><span class="tag">validation</span><span class="tag">errors</span></div>
+          <p class="done">Done when: <code>curl POST /query</code> returns grounded answer + citations.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="badge">6</div>
+        <div>
+          <h3>Web app (React)</h3>
+          <p style="margin:0;">Minimal Vite+TS app: ask a question, see the answer + expandable citations; loading/error states.</p>
+          <div class="tags"><span class="tag">QueryBox</span><span class="tag">AnswerView</span><span class="tag">CitationList</span></div>
+          <p class="done">Done when: end-to-end demo works in the browser via Compose.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="badge">7</div>
+        <div>
+          <h3>Evaluation harness</h3>
+          <p style="margin:0;">Curate <code>golden.jsonl</code>; retrieval metrics (recall@k, MRR); answer groundedness (optional LLM-as-judge); saved report.</p>
+          <div class="tags"><span class="tag">golden set</span><span class="tag">recall@k</span><span class="tag">groundedness</span></div>
+          <p class="done">Done when: <code>make eval</code> outputs a comparable metrics report.</p>
+        </div>
+      </div>
+
+      <div class="phase">
+        <div class="badge">8</div>
+        <div>
+          <h3>Packaging &amp; docs</h3>
+          <p style="margin:0;">Finalize Compose wiring + healthchecks; README quickstart; runbook; tidy Makefile targets.</p>
+          <div class="tags"><span class="tag">README</span><span class="tag">runbook</span><span class="tag">compose</span></div>
+          <p class="done">Done when: a new user goes from clone → working demo via the README.</p>
+        </div>
+      </div>
+
+      <blockquote>
+        <strong>Stretch goals</strong> (only after Phase 8): hybrid retrieval (BM25 + vector),
+        a cross-encoder reranker, answer streaming to the web app, and cloud VM deployment.
+      </blockquote>
+    </section>
+
+    <section id="risks">
+      <h2><span class="num">10</span>Risks &amp; mitigations</h2>
+      <table>
+        <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Scope is large</td><td>Strict phasing; each phase ships a demoable slice; stretch items fenced off.</td></tr>
+          <tr><td>Local compute limits</td><td>Tiny dev profile + small CPU-friendly models + batched embeddings.</td></tr>
+          <tr><td>RAG quality is hard to judge subjectively</td><td>Evaluation harness provides objective, repeatable metrics from early on.</td></tr>
+          <tr><td>Multi-service setup friction</td><td>Docker Compose + documented runbook; per-service health checks.</td></tr>
+          <tr><td>Hallucination / ungrounded answers</td><td>Enforce grounding in the prompt, return citations, implement a "don't know" path, measure groundedness.</td></tr>
+          <tr><td>Index / embedding dimension mismatch</td><td>Derive dim (384) from the model; assert against the Qdrant collection at startup.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="open">
+      <h2><span class="num">11</span>Open items</h2>
+      <p>Major decisions are locked. Remaining low-level details to finalize during implementation:</p>
+      <ul class="clean">
+        <li>Exact Wikipedia subset selection strategy (random vs category-based) for the ~500 / ~25k samples.</li>
+        <li>Final chunking parameters (token size / overlap) — tune after the first eval run.</li>
+        <li>Target delivery cadence / overall timeline for the project.</li>
+      </ul>
+    </section>
+
+    <footer>
+      <p>RAG System over Wikipedia · Design Doc · Status: <span class="green">planned</span> ·
+        Stack: Python · FastAPI · React · Prefect · Qdrant · Ollama.</p>
+    </footer>
+
+  </div>
+</body>
+</html>

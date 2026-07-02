@@ -1,0 +1,14 @@
+.app {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: system-ui, sans-serif;
+}
+
+h1 {
+  color: #333;
+}
+
+.error {
+  color: red;
+}
