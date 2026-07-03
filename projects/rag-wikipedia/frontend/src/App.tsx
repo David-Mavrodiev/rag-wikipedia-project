@@ -15,6 +15,8 @@ export interface QueryResult {
   citations: Citation[]
 }
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+
 export default function App() {
   const [result, setResult] = useState<QueryResult | null>(null)
   const [loading, setLoading] = useState(false)
@@ -25,7 +27,7 @@ export default function App() {
     setError(null)
     setResult(null)
     try {
-      const response = await fetch('/query', {
+      const response = await fetch(`${API_BASE}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question }),

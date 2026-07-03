@@ -13,3 +13,8 @@
 {"question": "What is gravity?", "expected_sources": ["gravity", "Newton", "force"]}
 {"question": "Who painted the Mona Lisa?", "expected_sources": ["Leonardo da Vinci", "Mona Lisa"]}
 {"question": "What is the human genome?", "expected_sources": ["genome", "DNA", "genes"]}
+{"question": "What did I have for breakfast this morning?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is the name of my neighbor's cat?", "expected_sources": [], "expected_refusal": true}
+{"question": "How many unread emails are in my inbox right now?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is the Wi-Fi password at my local coffee shop?", "expected_sources": [], "expected_refusal": true}
+{"question": "Where did I leave my car keys yesterday?", "expected_sources": [], "expected_refusal": true}

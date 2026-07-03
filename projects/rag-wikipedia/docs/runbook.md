@@ -40,7 +40,7 @@ EMBED_MODEL=BAAI/bge-base-en-v1.5 docker compose up api -d
 
 **`503 Vector store unavailable`** — Check Qdrant is healthy: `curl http://localhost:6333/healthz`
 
-**`503 LLM unavailable`** — Check Ollama: `curl http://localhost:11434/` and `docker compose exec ollama ollama list`
+**`503 LLM unavailable`** — Check Ollama: `curl http://localhost:11434/` and `docker compose exec ollama ollama list`. If `ollama list` shows no models, the weights were never pulled (the healthcheck only proves the server is up) — run `make pull-model`.
 
 **Slow ingestion** — Normal for real profile; use `PROFILE=tiny` for development.
 

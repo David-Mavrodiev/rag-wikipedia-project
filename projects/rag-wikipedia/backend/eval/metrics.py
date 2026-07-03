@@ -24,6 +24,13 @@ def mrr(scores: list[float]) -> float:
     return sum(scores) / len(scores)
 
 
+def refusal_accuracy(refused_flags: list[bool]) -> float:
+    """Fraction of unanswerable questions that were correctly refused."""
+    if not refused_flags:
+        return 0.0
+    return sum(refused_flags) / len(refused_flags)
+
+
 def groundedness(answer: str, context_chunks: list[str]) -> float:
     """Simple lexical groundedness: fraction of answer tokens found in context."""
     if not context_chunks or not answer.strip():
