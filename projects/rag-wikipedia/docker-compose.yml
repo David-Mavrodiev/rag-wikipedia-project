@@ -1,6 +1,8 @@
 services:
   qdrant:
-    image: qdrant/qdrant:v1.9.2
+    # v1.18.x matches qdrant-client 1.18 and provides the Query API (/points/query,
+    # added in server 1.10) that retrieval's query_points() call requires
+    image: qdrant/qdrant:v1.18.3
     ports:
       - "6333:6333"
     volumes:

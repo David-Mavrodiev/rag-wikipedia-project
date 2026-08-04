@@ -9,7 +9,7 @@ properties:
     ingress: { external: false, targetPort: 6333, transport: http }
   template:
     containers:
-      - image: qdrant/qdrant:v1.9.2
+      - image: qdrant/qdrant:v1.18.3
         name: qdrant
         resources: { cpu: 1.0, memory: 2Gi }
         volumeMounts:

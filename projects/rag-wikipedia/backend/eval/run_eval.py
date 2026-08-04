@@ -12,6 +12,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 RECALL_GATE = 0.8
 REFUSAL_GATE = 0.8
+MIN_CASES = 20
+MIN_UNANSWERABLE = 5
 
 
 def main() -> None:
@@ -24,12 +26,18 @@ def main() -> None:
     golden_path = Path(__file__).parent / "golden.jsonl"
     golden = [json.loads(line) for line in golden_path.read_text().splitlines() if line.strip()]
 
-    if not golden:
-        logger.warning("golden.jsonl is empty — nothing to evaluate.")
-        return
-
     answerable = [item for item in golden if not item.get("expected_refusal")]
     unanswerable = [item for item in golden if item.get("expected_refusal")]
+
+    # Reject an incomplete golden set up front, otherwise a missing subset would
+    # silently skip its gate and the eval would "pass" without measuring it.
+    if len(golden) < MIN_CASES or len(unanswerable) < MIN_UNANSWERABLE or not answerable:
+        raise SystemExit(
+            f"golden.jsonl must contain >= {MIN_CASES} cases, "
+            f">= {MIN_UNANSWERABLE} unanswerable, and >= 1 answerable "
+            f"(got {len(golden)} total, {len(unanswerable)} unanswerable, "
+            f"{len(answerable)} answerable)"
+        )
 
     embedder = BGEEmbedder(model_name=settings.embed_model)
     store = QdrantStore(url=settings.qdrant_url, collection=settings.collection)
@@ -74,10 +82,12 @@ def main() -> None:
     report_path.write_text(json.dumps(report, indent=2))
     logger.info("Report written to %s", report_path)
 
+    # Gates are unconditional: the golden-set validation above guarantees both
+    # subsets are non-empty, so neither metric can be skipped.
     failures = []
-    if answerable and report[f"recall@{k}"] < RECALL_GATE:
+    if report[f"recall@{k}"] < RECALL_GATE:
         failures.append(f"recall@{k}={report[f'recall@{k}']:.2f} < {RECALL_GATE}")
-    if unanswerable and report["refusal_accuracy"] < REFUSAL_GATE:
+    if report["refusal_accuracy"] < REFUSAL_GATE:
         failures.append(f"refusal_accuracy={report['refusal_accuracy']:.2f} < {REFUSAL_GATE}")
 
     if failures:

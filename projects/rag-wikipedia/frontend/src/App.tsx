@@ -15,7 +15,8 @@ export interface QueryResult {
   citations: Citation[]
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+// strip trailing slashes so a base ending in "/" doesn't produce "//query"
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
 export default function App() {
   const [result, setResult] = useState<QueryResult | null>(null)
