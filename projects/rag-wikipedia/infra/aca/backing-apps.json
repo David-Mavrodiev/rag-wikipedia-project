@@ -1,0 +1,119 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environmentId": {
+      "type": "string"
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "eastus"
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "qdrant",
+      "location": "[parameters('location')]",
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "workloadProfileName": "Consumption",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": false,
+            "targetPort": 6333,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "qdrant/qdrant:v1.9.2",
+              "name": "qdrant",
+              "resources": {
+                "cpu": 1.0,
+                "memory": "2Gi"
+              },
+              "volumeMounts": [
+                {
+                  "volumeName": "data",
+                  "mountPath": "/qdrant/storage"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "volumes": [
+            {
+              "name": "data",
+              "storageType": "AzureFile",
+              "storageName": "qdrant-data"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "ollama",
+      "location": "[parameters('location')]",
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "workloadProfileName": "ollama-d4",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": false,
+            "targetPort": 11434,
+            "transport": "http"
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "ollama/ollama:latest",
+              "name": "ollama",
+              "resources": {
+                "cpu": 3.5,
+                "memory": "8Gi"
+              },
+              "volumeMounts": [
+                {
+                  "volumeName": "models",
+                  "mountPath": "/root/.ollama"
+                }
+              ]
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          },
+          "volumes": [
+            {
+              "name": "models",
+              "storageType": "AzureFile",
+              "storageName": "ollama-models"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "outputs": {
+    "qdrantFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/containerApps', 'qdrant'), '2024-03-01').configuration.ingress.fqdn]"
+    },
+    "ollamaFqdn": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/containerApps', 'ollama'), '2024-03-01').configuration.ingress.fqdn]"
+    }
+  }
+}

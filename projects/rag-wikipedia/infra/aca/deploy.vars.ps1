@@ -1,0 +1,6 @@
+﻿$ACR = "ragwiki35081"
+$RG = "Rag-Project"
+$ENVN = "rag-env"
+$STG = "ragwikistg35081"
+$LOC = "eastus"
+$LAW = "rag-logs"

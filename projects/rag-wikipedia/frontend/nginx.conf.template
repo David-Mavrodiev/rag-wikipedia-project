@@ -8,10 +8,10 @@ server {
     }
 
     location /query {
-        proxy_pass http://api:8000/query;
+        proxy_pass ${API_UPSTREAM}/query;
     }
 
     location /health {
-        proxy_pass http://api:8000/health;
+        proxy_pass ${API_UPSTREAM}/health;
     }
 }
