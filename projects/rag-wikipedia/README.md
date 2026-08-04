@@ -18,10 +18,11 @@ End-to-end Retrieval-Augmented Generation over Wikipedia, powered by:
 docker compose up --build -d
 ```
 
-### 2. Pull the LLM (first run only)
+### 2. Pull the LLM (first run only, ~2 GB download)
 ```bash
-docker compose exec ollama ollama pull llama3.2:3b
+make pull-model
 ```
+The Ollama healthcheck only proves the server is up — generation fails with 503 until the model is pulled. Weights persist in the `ollama_data` volume, so this is a one-time step; the embedding model (~130 MB) downloads automatically on first use and is cached in the `hf_cache` volume.
 
 ### 3. Ingest Wikipedia (tiny profile ~500 articles)
 ```bash
@@ -46,6 +47,7 @@ make test
 ```bash
 make eval
 ```
+Reports recall@5 and MRR on the answerable golden questions and refusal accuracy on the unanswerable ones (`backend/eval/golden.jsonl`). Exits non-zero if recall@5 or refusal accuracy falls below the 0.8 gate.
 
 ## Profiles
 | Profile | Articles | Notes |

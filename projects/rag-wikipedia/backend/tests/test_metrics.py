@@ -1,4 +1,4 @@
-from eval.metrics import groundedness, mrr, recall_at_k, reciprocal_rank
+from eval.metrics import groundedness, mrr, recall_at_k, reciprocal_rank, refusal_accuracy
 
 
 def test_recall_at_k_full_match():
@@ -44,6 +44,18 @@ def test_mrr_calculation():
 
 def test_mrr_empty():
     assert mrr([]) == 0.0
+
+
+def test_refusal_accuracy_all_refused():
+    assert refusal_accuracy([True, True, True]) == 1.0
+
+
+def test_refusal_accuracy_partial():
+    assert refusal_accuracy([True, False, True, False]) == 0.5
+
+
+def test_refusal_accuracy_empty():
+    assert refusal_accuracy([]) == 0.0
 
 
 def test_groundedness_full():

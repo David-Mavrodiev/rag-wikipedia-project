@@ -6,6 +6,7 @@ from typing import Any
 
 from app.core.chunking import Chunk, chunk_text
 from prefect import task
+from prefect.cache_policies import NO_CACHE
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +31,14 @@ def chunk_article(article: dict) -> list[Chunk]:
     return chunk_text(article["text"], source_id=article["id"])
 
 
-@task(name="embed-chunks")
+@task(name="embed-chunks", cache_policy=NO_CACHE)
 def embed_chunks(chunks: list[Chunk], embedder: Any) -> list[tuple[Chunk, list[float]]]:
     texts = [chunk.text for chunk in chunks]
     vectors = embedder.embed_batch(texts)
     return list(zip(chunks, vectors))
 
 
-@task(name="upsert-to-qdrant")
+@task(name="upsert-to-qdrant", cache_policy=NO_CACHE)
 def upsert_to_qdrant(
     chunk_vectors: list[tuple[Chunk, list[float]]],
     vectorstore: Any,

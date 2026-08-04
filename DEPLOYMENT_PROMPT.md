@@ -201,8 +201,8 @@ az containerapp create -g $RG -n rag-api --environment $ENV `
   --user-assigned $UAMI_ID --registry-server "$ACR.azurecr.io" --registry-identity $UAMI_ID `
   --workload-profile-name Consumption --cpu 1.0 --memory 2Gi --min-replicas 1 --max-replicas 3 `
   --ingress external --target-port 8000 --transport http `
-  --env-vars QDRANT_URL="https://$QDRANT_FQDN" OLLAMA_BASE_URL="https://$OLLAMA_FQDN" `
-             EMBEDDING_MODEL="BAAI/bge-small-en-v1.5" LLM_MODEL="llama3.2:3b" ALLOWED_ORIGINS="*"
+  --env-vars QDRANT_URL="https://$QDRANT_FQDN" OLLAMA_URL="https://$OLLAMA_FQDN" `
+             EMBED_MODEL="BAAI/bge-small-en-v1.5" LLM_MODEL="llama3.2:3b" ALLOWED_ORIGINS="*"
 $API_FQDN = az containerapp show -g $RG -n rag-api --query properties.configuration.ingress.fqdn -o tsv
 
 # 7b. Build frontend with the API URL baked in, then deploy

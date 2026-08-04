@@ -13,7 +13,8 @@ EXPECTED_DIM = 384
 
 class QdrantStore:
     def __init__(self, url: str, collection: str):
-        self._client = QdrantClient(url=url)
+        # generous timeout: bulk upserts under I/O load exceed the client's 5s default
+        self._client = QdrantClient(url=url, timeout=60)
         self._collection = collection
 
     def ensure_collection(self, dim: int = EXPECTED_DIM) -> None:

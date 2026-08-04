@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     profile: str = "tiny"
     token_budget: int = 3000
     refusal_threshold: float = 0.3
+    allowed_origins: str = "*"
 
 
 settings = Settings()
