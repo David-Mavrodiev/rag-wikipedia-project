@@ -1,7 +1,7 @@
 # RAG over Wikipedia — Fully Annotated Source (every line commented)
 
 > The complete codebase needed to build this project from scratch, with a comment on essentially every line.
-> Read it top-to-bottom in this order and you have built the whole system. Comments are in English.
+> Read it top-to-bottom in this order as you have built the whole system. Comments are in English.
 >
 > **Build order:** config → interfaces (Embedder/LLM) → indexing (chunking, embeddings, vectorstore) →
 > query brain (retrieval, prompt, citations) → HTTP layer (models, api, main) → ingestion pipeline → evaluation → frontend → infra.
@@ -1120,6 +1120,25 @@ make eval
 
 # UI: http://localhost:5173  (React app)   |   tests: make test
 ```
+
+---
+
+# OPTIONAL — `backend/app/core/providers.py` (dormant LLM registry)
+
+A **dormant** (fully commented) module that makes the model a one-value config choice. It's inert until you uncomment it, so it never affects the running app — but when activated it lets the same RAG run on **Ollama, Azure OpenAI, OpenAI, or any OpenAI-compatible server** (vLLM, Mistral, Together, Groq…), swapped by a single env var. Because everything depends only on the `Embedder`/`LLM` interfaces, no other file changes.
+
+```python
+# name -> factory registry; swap = change LLM_CHOICE / EMBED_CHOICE; add a model = one line
+LLM_REGISTRY = {
+    "ollama-3b": lambda: OllamaLLM("llama3.2:3b", OLLAMA_URL),   # local, default
+    "ollama-1b": lambda: OllamaLLM("llama3.2:1b", OLLAMA_URL),   # smaller local
+    "azure":     lambda: AzureOpenAILLM(AZURE_CHAT_DEPLOYMENT, AZURE_ENDPOINT, AZURE_KEY),
+    "openai":    lambda: OpenAILLM("gpt-4o-mini", OPENAI_KEY, OPENAI_BASE_URL),  # base_url → any OpenAI-compatible API
+}
+def make_llm(): return LLM_REGISTRY[os.getenv("LLM_CHOICE", "ollama-3b")]()   # one value picks the model
+```
+
+Full commented source is in the file itself; activation steps (wiring, deps, the 384→1536 re-ingest caveat) are in **`PROJECT_BLUEPRINT.md` §17**. This is what lets you point the project at a client's LLM on day one at a new job.
 
 ---
 

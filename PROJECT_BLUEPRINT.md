@@ -1389,4 +1389,42 @@ This document is now self-contained (§0), so a total repo loss is recoverable f
 - Your working branch: `hadi-dev` (already pushed).
 - To fully rebuild: `git clone <repo>` → §7. If the repo is ever lost, this file + an AI agent reproduce it.
 
+## 17. Switching the LLM/embedder — the provider registry (dormant capability)
+
+The whole app depends only on the `Embedder`/`LLM` interfaces (§6.4, §6.9), so the model is a *configuration* choice, not a code change. `backend/app/core/providers.py` holds a **dormant** (fully commented) **one-value registry** that makes this real: the same single change swaps **Ollama-3B → 1B**, or **Ollama → Azure OpenAI / OpenAI / any OpenAI-compatible server**. It's inert until activated, so it never affects the running app.
+
+**Why this matters:** on day one at a client that uses Azure OpenAI or OpenAI (or a self-hosted vLLM/Mistral endpoint), you activate this and point the same RAG at their stack — no rewrite.
+
+**The pattern** — a name → factory registry, selected by one env var:
+
+```python
+LLM_REGISTRY = {
+    "ollama-3b": lambda: OllamaLLM("llama3.2:3b", OLLAMA_URL),
+    "ollama-1b": lambda: OllamaLLM("llama3.2:1b", OLLAMA_URL),
+    "azure":     lambda: AzureOpenAILLM(AZURE_CHAT_DEPLOYMENT, AZURE_ENDPOINT, AZURE_KEY),
+    "openai":    lambda: OpenAILLM("gpt-4o-mini", OPENAI_KEY, OPENAI_BASE_URL),  # base_url → any OpenAI-compatible server
+    # add ANY new LLM (open-source or not) as ONE line
+}
+def make_llm(): return LLM_REGISTRY[os.getenv("LLM_CHOICE", "ollama-3b")]()
+```
+(`EMBED_REGISTRY` / `make_embedder()` mirror this with `bge` | `azure` | `openai`.)
+
+**Swapping is then identical for everything:** `LLM_CHOICE=ollama-1b`, `LLM_CHOICE=azure`, `LLM_CHOICE=openai`. One value.
+
+**Activate it (e.g. to run on a client's LLM):**
+1. Uncomment `providers.py`.
+2. Add `"openai>=1.30"` to `backend/pyproject.toml`; `uv sync --all-extras`.
+3. In `app/api/query.py`, point the two factories at the registry:
+   ```python
+   from app.core.providers import make_embedder, make_llm
+   @lru_cache(maxsize=1)
+   def _embedder(): return make_embedder()
+   @lru_cache(maxsize=1)
+   def _llm():      return make_llm()
+   ```
+4. Set `LLM_CHOICE`/`EMBED_CHOICE` + the chosen provider's credentials (`OPENAI_API_KEY`, or the `AZURE_OPENAI_*` set).
+5. **Re-ingest** if you switched the *embedder*: the vector dimension changes (bge=384; OpenAI/Azure=1536) and Qdrant vectors of different dims aren't interchangeable — also make `EXPECTED_DIM` env-driven in `vectorstore.py` (`int(os.getenv("EMBED_DIM","384"))`) and set `EMBED_DIM=1536`.
+
+Switching only the **LLM** (keeping `bge` embeddings) needs no re-ingest.
+
 *Last captured from the working state on branch `fix/local-e2e-503-and-ingestion` (Qdrant 1.9.2 + client <1.10 + `.search()` + Prefect `NO_CACHE`).*
