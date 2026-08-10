@@ -6,7 +6,10 @@ dependencies = [
     "fastapi>=0.111",
     "uvicorn[standard]>=0.30",
     "pydantic-settings>=2.3",
-    "qdrant-client>=1.9",
+    # Pin to the client minor matching the pinned qdrant server (v1.9.2 in
+    # docker-compose). Client >=1.10 removes QdrantClient.search and warns on
+    # version-incompatibility with the 1.9 server.
+    "qdrant-client>=1.9,<1.10",
     "sentence-transformers>=3.0",
     "prefect>=3,<4",
     "datasets>=2.19",
