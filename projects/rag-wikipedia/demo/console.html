@@ -177,11 +177,17 @@
       const ms = Math.round(performance.now() - t0);
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const refused = !data.citations || data.citations.length === 0;
+      const nCites = (data.citations || []).length;
+      // Trust the backend's explicit refusal flag; fall back to the old
+      // citation heuristic only when talking to a pre-`refused` backend.
+      const refused = ('refused' in data) ? data.refused === true : nCites === 0;
       renderAnswer(bub, data, refused, ms);
       $('q-lat').textContent = ms + ' ms';
-      $('q-stat').innerHTML = refused ? '<span style="color:var(--warn)">Refus contrôlé</span>' : '<span style="color:var(--ok)">Ancrée</span>';
-      $('q-cite').textContent = refused ? '0' : data.citations.length;
+      $('q-stat').innerHTML = refused
+        ? '<span style="color:var(--warn)">Refus contrôlé</span>'
+        : (nCites > 0 ? '<span style="color:var(--ok)">Ancrée</span>'
+                      : '<span style="color:var(--muted)">Répondu</span>');
+      $('q-cite').textContent = nCites;
       bub.parentElement.className = 'row assistant' + (refused?' refused':'');
     }catch(err){
       bub.innerHTML = '<b style="color:var(--warn)">Erreur :</b> ' + esc(err.message) +
@@ -192,13 +198,19 @@
   }
 
   function renderAnswer(bub, data, refused, ms){
+    const nCites = (data.citations || []).length;
     let html = '<div>' + esc(data.answer) + '</div>';
     html += '<div class="badges">';
-    html += refused
-      ? '<span class="badge r">◇ refus contrôlé</span>'
-      : '<span class="badge g">✓ ancrée · '+data.citations.length+' source(s)</span>';
+    if(refused){
+      html += '<span class="badge r">◇ refus contrôlé</span>';
+    } else if(nCites > 0){
+      html += '<span class="badge g">✓ ancrée · '+nCites+' source(s)</span>';
+    } else {
+      // Grounded answer the model left uncited — NOT a refusal.
+      html += '<span class="badge n">• répondu · sans citation</span>';
+    }
     html += '<span class="badge n">'+ms+' ms</span></div>';
-    if(!refused){
+    if(!refused && nCites > 0){
       html += '<div class="cites">';
       for(const c of data.citations){
         html += '<details class="cite"><summary><span class="idx">['+c.index+']</span> '+esc(c.title)+'</summary>'+
