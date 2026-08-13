@@ -213,7 +213,7 @@
     if(!refused && nCites > 0){
       html += '<div class="cites">';
       for(const c of data.citations){
-        html += '<details class="cite"><summary><span class="idx">['+c.index+']</span> '+esc(c.title)+'</summary>'+
+        html += '<details class="cite"><summary><span class="idx">['+esc(c.index)+']</span> '+esc(c.title)+'</summary>'+
                 '<p class="ex">'+esc(c.excerpt||'')+'</p></details>';
       }
       html += '</div>';

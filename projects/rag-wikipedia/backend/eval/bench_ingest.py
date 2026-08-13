@@ -7,8 +7,11 @@ extrapolates to the full `real` profile (25k articles).
 Usage:
     uv run python backend/eval/bench_ingest.py [N]     # default N=2000
 
-Writes to a throwaway collection (BENCH_COLLECTION, default "bench_ingest") and
-deletes it at the end, so the primary `wikipedia` collection is untouched.
+Safety: this benchmark DROPS its collection when it finishes, so it must never
+point at real data. By default it generates a unique throwaway name per run. If
+BENCH_COLLECTION is set explicitly, the run is refused when that name is the
+primary collection or when the collection already exists — the benchmark only
+ever deletes a collection it created itself.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from __future__ import annotations
 import os
 import sys
 import time
+import uuid
 from pathlib import Path
 
 # make `app` and `pipeline` importable (this file lives in backend/eval)
@@ -29,27 +33,28 @@ from pipeline.sources import iter_articles  # noqa: E402
 from pipeline.tasks import clean_text  # noqa: E402
 
 REAL_TARGET = 25_000  # articles in the `real` profile
+DEFAULT_BENCH_PREFIX = "bench_ingest"
 
 
-def main() -> None:
-    n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
-    collection = os.environ.get("BENCH_COLLECTION", "bench_ingest")
-    qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
+def resolve_collection() -> str:
+    """Return a benchmark collection name that cannot clobber real data.
 
-    print(f"[bench] N={n} collection={collection} qdrant={qdrant_url}", flush=True)
+    Unset  -> unique name per run (nothing pre-existing can be destroyed).
+    Set    -> honoured, but never the primary collection.
+    """
+    configured = os.environ.get("BENCH_COLLECTION")
+    if configured is None:
+        return f"{DEFAULT_BENCH_PREFIX}_{uuid.uuid4().hex[:8]}"
+    if configured == settings.collection:
+        raise SystemExit(
+            f"Refusing to run: BENCH_COLLECTION={configured!r} is the primary "
+            f"collection. This benchmark drops its collection when it finishes, "
+            f"which would destroy the indexed corpus."
+        )
+    return configured
 
-    t = time.perf_counter()
-    embedder = BGEEmbedder(model_name=settings.embed_model)
-    model_load_s = time.perf_counter() - t
-    print(f"[bench] model loaded in {model_load_s:.1f}s", flush=True)
 
-    store = QdrantStore(url=qdrant_url, collection=collection)
-    try:
-        store._client.delete_collection(collection)
-    except Exception:
-        pass
-    store.ensure_collection(dim=384)
-
+def _run(store: QdrantStore, embedder: BGEEmbedder, n: int, model_load_s: float) -> None:
     t_fetch = t_clean = t_chunk = t_embed = t_upsert = 0.0
     n_articles = n_skipped = n_chunks = 0
 
@@ -115,6 +120,9 @@ def main() -> None:
     def pct(x: float) -> str:
         return f"{100 * x / wall:5.1f}%" if wall else "  n/a"
 
+    def per_s(x: float) -> str:
+        return f"{x / wall:.1f}" if wall else "n/a"
+
     print("\n=========== INGESTION BENCHMARK ===========", flush=True)
     print(f"articles streamed : {seen}  (embedded {n_articles}, skipped {n_skipped})")
     print(f"chunks upserted   : {n_chunks}  ({n_chunks / max(n_articles,1):.1f} chunks/article)")
@@ -127,8 +135,8 @@ def main() -> None:
     print(f"embed (BGE/CPU)   : {t_embed:6.1f}s  {pct(t_embed)}")
     print(f"upsert (qdrant)   : {t_upsert:6.1f}s  {pct(t_upsert)}")
     print("--- throughput ---")
-    print(f"{seen / wall:.1f} articles/s | {n_chunks / wall:.0f} chunks/s")
-    if seen:
+    print(f"{per_s(seen)} articles/s | {per_s(n_chunks)} chunks/s")
+    if seen and wall:
         est = model_load_s + wall / seen * REAL_TARGET
         print(
             f"--- extrapolation to real ({REAL_TARGET} articles) ---\n"
@@ -136,8 +144,44 @@ def main() -> None:
             f"{model_load_s:.0f}s model load), ~{n_chunks / seen * REAL_TARGET:,.0f} chunks"
         )
 
-    store._client.delete_collection(collection)
-    print(f"[bench] dropped throwaway collection '{collection}'", flush=True)
+
+def main() -> None:
+    try:
+        n = int(sys.argv[1]) if len(sys.argv) > 1 else 2000
+    except ValueError:
+        raise SystemExit(f"N must be an integer, got {sys.argv[1]!r}") from None
+    if n <= 0:
+        raise SystemExit(f"N must be a positive integer, got {n}")
+
+    collection = resolve_collection()
+    qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
+
+    print(f"[bench] N={n} collection={collection} qdrant={qdrant_url}", flush=True)
+
+    t = time.perf_counter()
+    embedder = BGEEmbedder(model_name=settings.embed_model)
+    model_load_s = time.perf_counter() - t
+    print(f"[bench] model loaded in {model_load_s:.1f}s", flush=True)
+
+    store = QdrantStore(url=qdrant_url, collection=collection)
+
+    # Only ever drop a collection this run created: refuse a pre-existing one
+    # instead of deleting it (the old code deleted it up front, unconditionally).
+    existing = [c.name for c in store._client.get_collections().collections]
+    if collection in existing:
+        raise SystemExit(
+            f"Refusing to run: collection {collection!r} already exists. This "
+            f"benchmark drops its collection when it finishes. Drop it manually "
+            f"or unset BENCH_COLLECTION to get a unique throwaway name."
+        )
+
+    store.ensure_collection(dim=384)
+    try:
+        _run(store, embedder, n, model_load_s)
+    finally:
+        # Cleanup runs even if the benchmark raises or is interrupted.
+        store._client.delete_collection(collection)
+        print(f"[bench] dropped throwaway collection '{collection}'", flush=True)
 
 
 if __name__ == "__main__":

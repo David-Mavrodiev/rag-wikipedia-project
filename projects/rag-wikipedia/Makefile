@@ -9,6 +9,10 @@ pull-model:
 down:
 	docker compose down
 
+# These run `uv run` from here on purpose: pyproject.toml in this directory
+# declares a uv workspace with `backend` as a member, so uv resolves the shared
+# workspace environment (.venv here) from either location. Verified: running
+# from here and from backend/ both resolve the same interpreter.
 ingest:
 	PROFILE=$(PROFILE) uv run python backend/pipeline/flow.py
 

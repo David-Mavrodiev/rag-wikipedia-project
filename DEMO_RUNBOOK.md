@@ -148,6 +148,24 @@ Every row below is an error actually hit on this machine.
 
 ---
 
+## ⚠️ Deploying to Azure Container Apps
+
+`infra/aca/backing-apps.json` pins `qdrant/qdrant:v1.18.3` against a persistent
+`qdrant-data` volume. **The same version-skip rule applies as locally, but the
+consequences are worse:** if that volume already holds data written by v1.9.2,
+the container starts on incompatible storage, and Qdrant's storage migration is
+**not reversible**.
+
+Before deploying over an existing volume, do one of:
+
+- **Reindex into a new volume** (recommended) — provision a fresh `qdrant-data`,
+  deploy v1.18.3, re-run ingestion, then switch traffic; or
+- **Staged upgrade** — snapshot, then move through each intermediate minor
+  version (latest patch of each), verifying health at every step.
+
+The warning lives here rather than in the JSON because ARM templates are parsed
+by tooling that does not reliably accept comments.
+
 ## Ports & health
 
 | Service | Port | Health check |

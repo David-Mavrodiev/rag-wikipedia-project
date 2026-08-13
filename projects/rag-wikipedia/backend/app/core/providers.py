@@ -30,10 +30,16 @@
 #          LLM_CHOICE   = ollama-3b | ollama-1b | azure | openai   (default: ollama-3b)
 #          EMBED_CHOICE = bge | azure | openai                     (default: bge)
 #      ...plus the credentials for whichever preset you chose (see ENV VARS).
-#   5) If you change the EMBEDDER (not just the LLM), RE-INGEST: the vector
-#      dimension changes (bge=384; OpenAI/Azure=1536) and Qdrant vectors of
-#      different dimensions are not interchangeable. Also make the dim
-#      configurable in vectorstore.py (see the note at the bottom of this file).
+#   5) If you change the EMBEDDER (not just the LLM), set EMBED_DIM and
+#      RE-INGEST into a NEW collection. Do NOT assume 1536: bge-small is 384,
+#      text-embedding-3-small is 1536, text-embedding-3-large is 3072, an Azure
+#      deployment can serve any model, and some APIs accept a requested output
+#      dimension. Vectors of different dimensions are not interchangeable, so a
+#      wrong value builds a collection that rejects the vectors you produce.
+#      Verify against a REAL embedding before creating the collection:
+#          probe = embedder.embed("dimension probe")
+#          assert len(probe) == int(os.environ["EMBED_DIM"]), len(probe)
+#      (see the vectorstore note at the bottom of this file)
 #
 # -----------------------------------------------------------------------------
 # ENV VARS
@@ -84,7 +90,30 @@
 #         )
 #         return r.choices[0].message.content or ""
 #
-# class AzureOpenAIEmbedder(Embedder):                      # embeddings via Azure OpenAI (e.g. 1536-d)
+# def _ordered_embeddings(response, texts: list[str]) -> list[list[float]]:
+#     """Return the batch's embeddings in INPUT order, mapping by item.index.
+#
+#     NEVER trust response order. A provider may return batch items out of
+#     order; zipping by position would then attach a vector to the WRONG chunk
+#     text. That corruption is silent — ingestion succeeds, retrieval returns
+#     confident nonsense, and nothing surfaces the mismatch. Both Azure and
+#     OpenAI document `index` as the item's position in the input list.
+#     Missing, duplicate and out-of-range indices are rejected loudly.
+#     """
+#     out: list[list[float] | None] = [None] * len(texts)
+#     for item in response.data:
+#         if not 0 <= item.index < len(texts):
+#             raise ValueError(f"embedding index {item.index} out of range for {len(texts)} inputs")
+#         if out[item.index] is not None:
+#             raise ValueError(f"duplicate embedding index {item.index}")
+#         out[item.index] = item.embedding
+#     missing = [i for i, vector in enumerate(out) if vector is None]
+#     if missing:
+#         raise ValueError(f"provider returned no embedding for inputs {missing}")
+#     return out  # type: ignore[return-value]
+#
+#
+# class AzureOpenAIEmbedder(Embedder):                      # embeddings via Azure OpenAI (dimension varies!)
 #     def __init__(self, deployment: str, endpoint: str, api_key: str, api_version: str = "2024-06-01"):
 #         from openai import AzureOpenAI
 #         self._deployment = deployment
@@ -93,7 +122,7 @@
 #         return self._client.embeddings.create(model=self._deployment, input=text).data[0].embedding
 #     def embed_batch(self, texts: list[str]) -> list[list[float]]:   # many strings -> many vectors, one call
 #         r = self._client.embeddings.create(model=self._deployment, input=texts)
-#         return [d.embedding for d in r.data]              # order matches the input order
+#         return _ordered_embeddings(r, texts)              # map by index, not by arrival order
 #
 # class OpenAIEmbedder(Embedder):                           # embeddings via OpenAI OR an OpenAI-compatible server
 #     def __init__(self, model: str, api_key: str, base_url: str | None = None):
@@ -104,7 +133,7 @@
 #         return self._client.embeddings.create(model=self._model, input=text).data[0].embedding
 #     def embed_batch(self, texts: list[str]) -> list[list[float]]:
 #         r = self._client.embeddings.create(model=self._model, input=texts)
-#         return [d.embedding for d in r.data]
+#         return _ordered_embeddings(r, texts)              # map by index, not by arrival order
 #
 #
 # # ---------------------------------------------------------------------------
@@ -132,11 +161,15 @@
 #     "azure":  lambda: AzureOpenAIEmbedder(os.environ["AZURE_EMBED_DEPLOYMENT"],
 #                                           os.environ["AZURE_OPENAI_ENDPOINT"],
 #                                           os.environ["AZURE_OPENAI_API_KEY"],
-#                                           os.getenv("AZURE_OPENAI_API_VERSION", "2024-06-01")),   # 1536-d -> re-ingest
+#                                           os.getenv("AZURE_OPENAI_API_VERSION", "2024-06-01")),
 #     "openai": lambda: OpenAIEmbedder(os.getenv("OPENAI_EMBED_MODEL", "text-embedding-3-small"),
 #                                      os.environ["OPENAI_API_KEY"],
-#                                      os.getenv("OPENAI_BASE_URL") or None),                        # 1536-d -> re-ingest
+#                                      os.getenv("OPENAI_BASE_URL") or None),
 # }
+# # DIMENSIONS ARE NOT UNIFORM. bge-small=384, text-embedding-3-small=1536,
+# # text-embedding-3-large=3072, and an Azure deployment serves whatever model
+# # it was created with. For any non-"bge" choice: probe the real dimension
+# # (step 5), set EMBED_DIM to it, and re-ingest into a NEW collection.
 #
 #
 # def make_llm() -> LLM:                                    # build the LLM named by LLM_CHOICE (default: ollama-3b)
@@ -156,7 +189,10 @@
 # # ---------------------------------------------------------------------------
 # # vectorstore.py note (only relevant if you switch the EMBEDDER's dimension):
 # # ensure_collection() hardcodes EXPECTED_DIM = 384 and raises if it differs.
-# # To use a 1536-d embedder (Azure/OpenAI), make the dimension configurable:
+# # To use a hosted embedder, make the dimension configurable:
 # #     EXPECTED_DIM = int(os.getenv("EMBED_DIM", "384"))
-# # then set EMBED_DIM=1536 and re-ingest into a fresh collection.
+# # then set EMBED_DIM to the dimension you PROBED (step 5) — not an assumed
+# # 1536 — and re-ingest into a fresh collection. Keeping the assert in
+# # ensure_collection() is what turns a wrong EMBED_DIM into a loud failure at
+# # startup instead of a confusing rejection mid-ingest.
 # # =============================================================================

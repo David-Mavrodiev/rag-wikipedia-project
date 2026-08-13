@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 from app.core.refusal import REFUSAL_MESSAGE, is_refusal
 
-
 # --- pure classifier -------------------------------------------------------
 
 def test_exact_refusal_is_refusal():
@@ -39,6 +38,16 @@ def test_refusal_tolerates_whitespace_quotes_and_case():
 
 def test_refusal_tolerates_curly_apostrophe():
     assert is_refusal("I don’t know based on the provided context.") is True
+
+
+def test_refusal_tolerates_curly_double_quotes():
+    # Regression: curly wrapping quotes used to defeat strip('"'), so a refusal
+    # was reported as a grounded answer.
+    assert is_refusal("“I don't know based on the provided context.”") is True
+
+
+def test_refusal_tolerates_curly_quotes_and_apostrophe_together():
+    assert is_refusal("“I don’t know based on the provided context.”") is True
 
 
 def test_empty_answer_is_not_refusal():

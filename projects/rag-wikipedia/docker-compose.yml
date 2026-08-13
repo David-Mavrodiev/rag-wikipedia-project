@@ -1,7 +1,19 @@
 services:
   qdrant:
-    # v1.18.x matches qdrant-client 1.18 and provides the Query API (/points/query,
-    # added in server 1.10) that retrieval's query_points() call requires
+    # v1.18.x provides the Query API (/points/query, added in server 1.10) that
+    # retrieval's query_points() call requires. Client floor is set in
+    # backend/pyproject.toml (query_points exists from client 1.10).
+    #
+    # UPGRADING OVER AN EXISTING VOLUME: Qdrant does not support skipping minor
+    # versions on a single node. Starting v1.18.3 on storage written by v1.9.2
+    # panics at boot and the container exits 101:
+    #   "Failed to deserialize .../segment.json: unknown variant `on_disk`"
+    # There is no in-place fix — use a FRESH volume and re-ingest:
+    #   docker compose down
+    #   docker volume rm rag-wikipedia_qdrant_data
+    #   docker compose up -d qdrant && make ingest
+    # (The supported alternative is a staged upgrade through every intermediate
+    # minor with snapshots at each step; overkill for this demo corpus.)
     image: qdrant/qdrant:v1.18.3
     ports:
       - "6333:6333"
