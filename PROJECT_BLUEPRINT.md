@@ -48,8 +48,8 @@ Ingestion (Prefect, offline):
 | Language | Python **3.12** | typed backend |
 | Pkg manager | **uv** | fast, lockfile-driven |
 | API | **FastAPI** + uvicorn | async, typed, trivial to containerize |
-| Vector DB | **Qdrant `v1.9.2`** (Docker) | cosine, 384-d |
-| Qdrant client | **`qdrant-client>=1.9,<1.10`** | **MUST match the server minor.** Client ≥1.10 removed `QdrantClient.search()` and calls the Query API (`/points/query`) that only exists in server ≥1.10 → `503`s. See §12.1. |
+| Vector DB | **Qdrant `v1.18.3`** (Docker) | cosine, 384-d. Exposes the Query API (`/points/query`, server ≥1.10). |
+| Qdrant client | **`qdrant-client>=1.12,<2`** | Uses `query_points()` (present from client 1.10; the legacy `search()` was removed in 1.16). Client and server must both be on the Query API — see §12.1. |
 | Embeddings | **`BAAI/bge-small-en-v1.5`** (384-d), via `sentence-transformers` | small, good, CPU-runnable |
 | LLM | **Ollama `llama3.2:3b`** | self-hosted, open-source → cost/latency control, no per-token bill. Swappable via config. |
 | Orchestration | **Prefect `>=3,<4`** | 2.x and 3.x APIs differ — pin the major |
@@ -113,10 +113,11 @@ dependencies = [
     "fastapi>=0.111",
     "uvicorn[standard]>=0.30",
     "pydantic-settings>=2.3",
-    # Pin to the client minor matching the pinned qdrant server (v1.9.2 in
-    # docker-compose). Client >=1.10 removes QdrantClient.search and warns on
-    # version-incompatibility with the 1.9 server.
-    "qdrant-client>=1.9,<1.10",
+    # Must provide the Query API (query_points), which vectorstore.py calls and
+    # the pinned Qdrant server (v1.18.3 in docker-compose) exposes.
+    # query_points is present from client 1.10 (absent in 1.9.x); the legacy
+    # search() was removed in 1.16. >=1.12 is a conservative, tested floor.
+    "qdrant-client>=1.12,<2",
     "sentence-transformers>=3.0",
     "prefect>=3,<4",
     "datasets>=2.19",
@@ -283,9 +284,10 @@ class QdrantStore:
         self._client.upsert(collection_name=self._collection, points=structs)
 
     def search(self, vector: list[float], top_k: int = 5) -> list[dict[str, Any]]:
-        results = self._client.search(
-            collection_name=self._collection, query_vector=vector, limit=top_k, with_payload=True
-        )
+        # query_points is the Query API; it replaced the client's removed search()
+        results = self._client.query_points(
+            collection_name=self._collection, query=vector, limit=top_k, with_payload=True
+        ).points
         return [
             {"score": r.score, "text": r.payload.get("text", ""), "title": r.payload.get("title", ""),
              "source_id": r.payload.get("source_id", "")}
@@ -296,7 +298,10 @@ class QdrantStore:
         return self._client.count(collection_name=self._collection).count
 ```
 
-> **`.search()` is correct ONLY with `qdrant-client<1.10` + server 1.9.x.** If you instead run a modern client/server (≥1.10), replace with `query_points(...).points`. See §12.1 — do not mix.
+> The public method is still called `search()` — that is **our** interface, and retrieval
+> calls it. What changed underneath is the *client* call: `self._client.query_points(...)`
+> instead of the removed `self._client.search(...)`. Client and server must both be on
+> the Query API (client ≥1.10, server ≥1.10). See §12.1.
 
 ### 6.6 `backend/app/core/retrieval.py`
 
@@ -457,7 +462,42 @@ class Citation(BaseModel):
 class QueryResponse(BaseModel):
     answer: str
     citations: list[Citation]
+    # Explicit refusal signal so clients never infer it from citation count
+    # (a grounded answer can legitimately have zero citations).
+    refused: bool = False
 ```
+
+### 6.10b `backend/app/core/refusal.py`  *(the refusal contract)*
+
+```python
+from __future__ import annotations
+
+# Single source of truth shared by the API (returns it verbatim on empty/low-score
+# retrieval), the prompt (instructs the model to emit it) and any client that must
+# tell a refusal from a real answer.
+REFUSAL_MESSAGE = "I don't know based on the provided context."
+
+# Smart quotes -> ASCII: model output is not byte-stable, and handling only the
+# ASCII forms is how a refusal silently gets reported as a grounded answer.
+_SMART_QUOTES = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'"})
+
+
+def is_refusal(answer: str) -> bool:
+    """True when *answer* is a refusal, decided by the TEXT only.
+
+    Deliberately does NOT look at citations. A grounded answer that omits [n]
+    markers (small local models do this intermittently) is a real answer, not a
+    refusal — conflating "no citations" with "refused" is the bug this prevents.
+    """
+    normalized = answer.strip().translate(_SMART_QUOTES).strip('"').strip().lower()
+    return normalized.startswith(REFUSAL_MESSAGE.lower())
+```
+
+> **Why this exists.** Refusal is a *product feature* here, so it must be an explicit
+> part of the API contract, not something a UI guesses. Two refusal kinds are covered:
+> a **hard refusal** (retrieval empty or below `refusal_threshold`, API returns
+> `REFUSAL_MESSAGE`) and a **soft refusal** (the model itself declines despite having
+> context). Both set `refused: true`.
 
 ### 6.11 `backend/app/api/health.py`
 
@@ -489,13 +529,13 @@ from app.core.config import settings
 from app.core.embeddings import BGEEmbedder
 from app.core.llm import OllamaLLM
 from app.core.prompt import build_prompt
+from app.core.refusal import REFUSAL_MESSAGE, is_refusal
 from app.core.retrieval import retrieve
 from app.core.vectorstore import QdrantStore
 from app.models.query import Citation, QueryRequest, QueryResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-REFUSAL = "I don't know based on the provided context."
 
 
 @lru_cache(maxsize=1)
@@ -515,7 +555,8 @@ async def query(request: QueryRequest) -> QueryResponse:
         raise HTTPException(status_code=503, detail="Vector store unavailable") from exc
 
     if is_empty:
-        return QueryResponse(answer=REFUSAL, citations=[])
+        # Hard refusal: retrieval was empty or below the score threshold.
+        return QueryResponse(answer=REFUSAL_MESSAGE, citations=[], refused=True)
 
     prompt = build_prompt(request.question, chunks)
     try:
@@ -524,9 +565,16 @@ async def query(request: QueryRequest) -> QueryResponse:
         logger.error("LLM error: %s", exc)
         raise HTTPException(status_code=503, detail="LLM unavailable") from exc
 
+    # Soft refusal: the model declined despite having context. Decide by the
+    # answer TEXT, never by citation count.
+    if is_refusal(answer):
+        return QueryResponse(answer=answer, citations=[], refused=True)
+
     cited = extract_citation_indices(answer)
     citations = build_citations(chunks, cited)
-    return QueryResponse(answer=answer, citations=[Citation(**c) for c in citations])
+    return QueryResponse(
+        answer=answer, citations=[Citation(**c) for c in citations], refused=False
+    )
 ```
 
 ### 6.13 `backend/app/main.py`
@@ -848,7 +896,10 @@ if __name__ == "__main__":
 ```yaml
 services:
   qdrant:
-    image: qdrant/qdrant:v1.9.2
+    # Query API (/points/query) requires server >=1.10. Upgrading over storage
+    # written by 1.9.2 panics at boot ("unknown variant `on_disk`", exit 101):
+    # use a FRESH volume and re-ingest. See §12.1.
+    image: qdrant/qdrant:v1.18.3
     ports: ["6333:6333"]
     volumes: [qdrant_data:/qdrant/storage]
     healthcheck:
@@ -1107,11 +1158,18 @@ A **no-build** ChatGPT-style page: a chat pane (question → grounded answer wit
       const ms = Math.round(performance.now() - t0);
       if(!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const refused = !data.citations || data.citations.length === 0;
+      const nCites = (data.citations || []).length;
+      // Trust the backend's explicit refusal flag. NEVER infer refusal from
+      // citation count: the model sometimes returns a correct grounded answer
+      // with no [n] markers, and calling that a refusal destroys user trust.
+      const refused = ('refused' in data) ? data.refused === true : nCites === 0;
       renderAnswer(bub, data, refused, ms);
       $('q-lat').textContent = ms + ' ms';
-      $('q-stat').innerHTML = refused ? '<span style="color:var(--warn)">Refus contrôlé</span>' : '<span style="color:var(--ok)">Ancrée</span>';
-      $('q-cite').textContent = refused ? '0' : data.citations.length;
+      $('q-stat').innerHTML = refused
+        ? '<span style="color:var(--warn)">Refus contrôlé</span>'
+        : (nCites > 0 ? '<span style="color:var(--ok)">Ancrée</span>'
+                      : '<span style="color:var(--muted)">Répondu</span>');
+      $('q-cite').textContent = nCites;
       bub.parentElement.className = 'row assistant' + (refused?' refused':'');
     }catch(err){
       bub.innerHTML = '<b style="color:var(--warn)">Erreur :</b> ' + esc(err.message) +
@@ -1122,16 +1180,22 @@ A **no-build** ChatGPT-style page: a chat pane (question → grounded answer wit
   }
 
   function renderAnswer(bub, data, refused, ms){
+    const nCites = (data.citations || []).length;
     let html = '<div>' + esc(data.answer) + '</div>';
     html += '<div class="badges">';
-    html += refused
-      ? '<span class="badge r">◇ refus contrôlé</span>'
-      : '<span class="badge g">✓ ancrée · '+data.citations.length+' source(s)</span>';
+    if(refused){
+      html += '<span class="badge r">◇ refus contrôlé</span>';
+    } else if(nCites > 0){
+      html += '<span class="badge g">✓ ancrée · '+nCites+' source(s)</span>';
+    } else {
+      // Grounded answer the model left uncited — NOT a refusal.
+      html += '<span class="badge n">• répondu · sans citation</span>';
+    }
     html += '<span class="badge n">'+ms+' ms</span></div>';
-    if(!refused){
+    if(!refused && nCites > 0){
       html += '<div class="cites">';
       for(const c of data.citations){
-        html += '<details class="cite"><summary><span class="idx">['+c.index+']</span> '+esc(c.title)+'</summary>'+
+        html += '<details class="cite"><summary><span class="idx">['+esc(c.index)+']</span> '+esc(c.title)+'</summary>'+
                 '<p class="ex">'+esc(c.excerpt||'')+'</p></details>';
       }
       html += '</div>';
@@ -1247,7 +1311,7 @@ Deploy all 4 services to **Azure Container Apps**. Condensed happy path (full ma
 
 ### 11.1 `infra/aca/backing-apps.json` — ARM template for qdrant + ollama (step 6)
 
-Deploy with `az deployment group create -g <RG> -n backing-apps -f infra/aca/backing-apps.json -p environmentId="<ENV_ID>"`. Fully parameterized (no hardcoded subscription). Qdrant image is `v1.9.2` to match the client pin (§12.1); bump it to `v1.18.3` **only if** you also adopt the modern-client (`query_points`) approach.
+Deploy with `az deployment group create -g <RG> -n backing-apps -f infra/aca/backing-apps.json -p environmentId="<ENV_ID>"`. Fully parameterized (no hardcoded subscription). Qdrant image is `v1.18.3`, matching the client pin and the `query_points` code path (§12.1). **Never deploy it over a volume written by v1.9.2** — Qdrant does not support skipping minor versions and the storage migration is irreversible; reindex into a fresh volume, or upgrade in stages with snapshots.
 
 ```json
 {
@@ -1273,7 +1337,7 @@ Deploy with `az deployment group create -g <RG> -n backing-apps -f infra/aca/bac
         "template": {
           "containers": [
             {
-              "image": "qdrant/qdrant:v1.9.2",
+              "image": "qdrant/qdrant:v1.18.3",
               "name": "qdrant",
               "resources": { "cpu": 1.0, "memory": "2Gi" },
               "volumeMounts": [ { "volumeName": "data", "mountPath": "/qdrant/storage" } ]
@@ -1325,7 +1389,13 @@ The `rag-api` and `rag-frontend` apps are created with `az containerapp create` 
 ## 12. Hard-won lessons (read this first when something breaks)
 
 **12.1 — `/query` returns 503 `'QdrantClient' object has no attribute 'search'`.**
-`qdrant-client>=1.9` with no upper bound resolves to **1.18**, which **removed `.search()`** and uses the Query API (`/points/query`, server ≥1.10). The Compose server is **1.9.2**. Two valid fixes — **pick one, never mix:** (a) **pin `qdrant-client>=1.9,<1.10`** and keep `.search()` + server 1.9.2 *(this repo's choice — smallest change)*; or (b) bump the server to `qdrant/qdrant:v1.18.3` **and** switch code to `query_points(...).points`. In-memory tests pass either way, so add a **Compose-backed or contract test** to catch the real mismatch.
+An unbounded `qdrant-client>=1.9` resolves to a modern client that **removed `.search()`** (gone in 1.16) and uses the Query API (`/points/query`, server ≥1.10). Paired with a 1.9.2 server that produces `503 Vector store unavailable` and `'QdrantClient' object has no attribute 'query_points'`. Two valid fixes existed — **pick one, never mix:** (a) pin `qdrant-client<1.10` and keep `.search()` + server 1.9.2; or (b) run server `v1.18.3` **and** call `query_points(...).points`.
+
+**This repo chose (b).** Current state: server `v1.18.3`, client `>=1.12,<2`, `vectorstore.py` calls `query_points`. In-memory tests pass under either option, which is exactly why `tests/test_vectorstore.py` exists — it exercises the real client method so a client-API regression fails before release.
+
+**Two traps this cost us in practice:**
+1. **A merge silently reverted the pin.** Merging a branch that carried option (a)'s `<1.10` pin on top of option (b)'s code reintroduced the 503. The lesson: the pin and the call site are *one decision* — review them together.
+2. **The volume is not portable across the jump.** Starting v1.18.3 on storage written by v1.9.2 panics at boot with ``Failed to deserialize .../segment.json: unknown variant `on_disk` `` and the container exits **101**. There is no in-place fix: drop the volume and re-ingest, or stage the upgrade through every intermediate minor with snapshots.
 
 **12.2 — Ingestion dies `HashError: cannot pickle '_thread.RLock'`.**
 Prefect hashes task inputs for its result cache; `embed_chunks`/`upsert_to_qdrant` receive an embedder/`QdrantStore` holding unpicklable locks. Fix: `@task(cache_policy=NO_CACHE)` on those two side-effecting tasks (caching was meaningless for them anyway).
@@ -1350,9 +1420,9 @@ Usually correct: with the `tiny` profile (first 500 articles) that topic isn't i
 ## 13. Acceptance checklist
 
 - [ ] `docker compose up` → all 4 services healthy on a clean machine.
-- [ ] `make pull-model` then `make ingest PROFILE=tiny` → Qdrant populated (~6.3k vectors); re-run is a no-op (idempotent).
+- [ ] `make pull-model` then `make ingest PROFILE=tiny` → Qdrant populated (~6.3k vectors); a re-run adds **no duplicate points** (deterministic IDs overwrite in place). Note this is *idempotent, not cheap*: every article is still streamed, cleaned, chunked and re-embedded, so a re-run costs the same as the first on the `real` profile. An article-level checkpoint would be needed to make it actually skip work.
 - [ ] `POST /query` → grounded answer **with citations**; declines when no relevant context.
-- [ ] LLM and embedder swappable via config (env vars).
+- [ ] LLM/embedder **model** swappable via config within the local providers (`LLM_MODEL=llama3.2:1b`, `EMBED_MODEL=...`). *Cross-provider* swapping (Azure/OpenAI via `LLM_CHOICE`) is **future work** — the registry is dormant (§17).
 - [ ] `make eval` → recall@k, MRR, refusal accuracy; gate ≥ 0.8 on tiny.
 - [ ] `pytest` → all green (incl. Qdrant contract tests).
 - [ ] Demo console answers a grounded question and a refusal, shows latency + metrics.
@@ -1361,7 +1431,7 @@ Usually correct: with the `tiny` profile (first 500 articles) that topic isn't i
 
 ## 14. Positioning (for clients / interviews)
 
-This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — LLM/embedder swappable to Azure OpenAI), a measured **performance analysis** (embedding ≈ 97% of ingestion; 25k articles ≈ 15 h / ~404k vectors on CPU → GPU/ONNX/batching plan), and honest **"operational vs in-progress"** framing. Next levers: hybrid search (BM25 + dense), cross-encoder reranking, LLM-judge groundedness, CI.
+This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — and the `Embedder`/`LLM` interfaces make an Azure OpenAI adapter a drop-in, with the registry written and ready to activate, §17), a measured **performance analysis** (embedding ≈ 97% of ingestion; 25k articles ≈ 15 h / ~404k vectors on CPU → GPU/ONNX/batching plan), and honest **"operational vs in-progress"** framing. Next levers: hybrid search (BM25 + dense), cross-encoder reranking, LLM-judge groundedness, CI.
 
 ---
 
@@ -1391,9 +1461,16 @@ This document is now self-contained (§0), so a total repo loss is recoverable f
 
 ## 17. Switching the LLM/embedder — the provider registry (dormant capability)
 
-The whole app depends only on the `Embedder`/`LLM` interfaces (§6.4, §6.9), so the model is a *configuration* choice, not a code change. `backend/app/core/providers.py` holds a **dormant** (fully commented) **one-value registry** that makes this real: the same single change swaps **Ollama-3B → 1B**, or **Ollama → Azure OpenAI / OpenAI / any OpenAI-compatible server**. It's inert until activated, so it never affects the running app.
+> ⚠️ **Status: NOT ACTIVE — this is future work, not shipped behavior.**
+> `backend/app/core/providers.py` is **100% commented out** (0 non-comment lines; it
+> imports to an empty module), and `app/api/query.py` still constructs `BGEEmbedder`
+> and `OllamaLLM` directly. **`LLM_CHOICE` / `EMBED_CHOICE` do nothing today.** The
+> registry becomes real only after the activation steps below are done *and tested*.
+> Do not describe provider swapping as a working feature until then.
 
-**Why this matters:** on day one at a client that uses Azure OpenAI or OpenAI (or a self-hosted vLLM/Mistral endpoint), you activate this and point the same RAG at their stack — no rewrite.
+The whole app depends only on the `Embedder`/`LLM` interfaces (§6.4, §6.9), so the model is a *configuration* choice rather than a code change. `providers.py` holds a **dormant** (fully commented) **one-value registry** that is designed to make this real: once activated, the same single change swaps **Ollama-3B → 1B**, or **Ollama → Azure OpenAI / OpenAI / any OpenAI-compatible server**. Kept dormant so it cannot affect the running app.
+
+**Why it's written now:** on day one at a client that uses Azure OpenAI or OpenAI (or a self-hosted vLLM/Mistral endpoint), the design work is already done — activate it and point the same RAG at their stack instead of rewriting.
 
 **The pattern** — a name → factory registry, selected by one env var:
 
@@ -1427,4 +1504,4 @@ def make_llm(): return LLM_REGISTRY[os.getenv("LLM_CHOICE", "ollama-3b")]()
 
 Switching only the **LLM** (keeping `bge` embeddings) needs no re-ingest.
 
-*Last captured from the working state on branch `fix/local-e2e-503-and-ingestion` (Qdrant 1.9.2 + client <1.10 + `.search()` + Prefect `NO_CACHE`).*
+*Last captured from the working state on branch `hadi-dev`: Qdrant server **v1.18.3** + `qdrant-client>=1.12,<2` + `query_points()`, the explicit **`refused`** API contract (`app/core/refusal.py`), and Prefect `NO_CACHE`. Verified end-to-end locally: grounded answers with citations, and a controlled refusal.*

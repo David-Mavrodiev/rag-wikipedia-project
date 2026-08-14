@@ -203,9 +203,10 @@ class QdrantStore:                            # thin wrapper; the ONLY place in 
         self._client.upsert(collection_name=self._collection, points=structs)
 
     def search(self, vector: list[float], top_k: int = 5) -> list[dict[str, Any]]:
-        results = self._client.search(        # nearest-neighbour search by cosine similarity
-            collection_name=self._collection, query_vector=vector, limit=top_k, with_payload=True,
-        )
+        # query_points = Qdrant's Query API; it replaced the client's removed search()
+        results = self._client.query_points(  # nearest-neighbour search by cosine similarity
+            collection_name=self._collection, query=vector, limit=top_k, with_payload=True,
+        ).points                              # .points unwraps the QueryResponse envelope
         return [                              # normalise Qdrant's results into simple dicts
             {
                 "score": result.score,                          # similarity score (higher = closer)
@@ -220,7 +221,14 @@ class QdrantStore:                            # thin wrapper; the ONLY place in 
         return self._client.count(collection_name=self._collection).count  # number of points stored
 ```
 
-> **Note on versions:** `.search()` matches `qdrant-client >= 1.9, < 1.10` with a Qdrant **server 1.9.x**. If you run a modern client/server (>= 1.10), swap `.search(...)` for `.query_points(...).points`. Never mix (client >= 1.10 against server 1.9.2 raises the `'QdrantClient' object has no attribute 'search'` 503).
+> **Note on versions.** The public method is still named `search()` — that is *our*
+> interface and `retrieval.py` calls it. What changed is the client call underneath:
+> `query_points()` (Query API, client ≥1.10) instead of the removed `search()` (gone
+> in client 1.16). **Client and server must agree:** this repo runs client
+> `>=1.12,<2` against server `v1.18.3`. A modern client against a 1.9.2 server gives
+> `'QdrantClient' object has no attribute 'query_points'` → `503 Vector store
+> unavailable`. `tests/test_vectorstore.py` exercises the real client method so this
+> mismatch fails a test rather than a demo.
 
 ## `backend/app/core/retrieval.py` — search, refuse, fit the token budget
 
@@ -365,7 +373,38 @@ class Citation(BaseModel):                   # shape of one citation in the resp
 class QueryResponse(BaseModel):              # shape of the outgoing response
     answer: str                              # the generated (or refusal) text
     citations: list[Citation]                # zero or more citations
+    refused: bool = False                    # EXPLICIT refusal state — see refusal.py
 ```
+
+## `backend/app/core/refusal.py` — the refusal contract
+
+```python
+from __future__ import annotations
+
+# Single source of truth for what "refused" means. Shared by the API (returns it
+# verbatim when retrieval is empty/low-score), the prompt (tells the model to emit
+# it) and any client that must tell a refusal from a real answer. One definition
+# here stops those three from drifting apart.
+REFUSAL_MESSAGE = "I don't know based on the provided context."
+
+# Smart (curly) quotes -> ASCII. Model output is not byte-stable: the same refusal
+# can come back curly-quoted, and handling only the ASCII forms is exactly how a
+# refusal silently gets reported as a grounded answer.
+_SMART_QUOTES = str.maketrans({"“": '"', "”": '"', "‘": "'", "’": "'"})
+
+
+def is_refusal(answer: str) -> bool:         # decided by the TEXT only
+    # Deliberately does NOT look at citations. A grounded answer that omits [n]
+    # markers (small local models do this intermittently) is a real answer, not a
+    # refusal — conflating "no citations" with "refused" is the bug this prevents.
+    normalized = answer.strip().translate(_SMART_QUOTES).strip('"').strip().lower()
+    return normalized.startswith(REFUSAL_MESSAGE.lower())
+```
+
+Two refusal kinds share this contract: a **hard refusal** (retrieval empty or below
+`refusal_threshold` — the API returns `REFUSAL_MESSAGE` and never calls the LLM) and
+a **soft refusal** (the model itself declines despite having context). Both set
+`refused: true`, so a client never has to guess.
 
 ## `backend/app/api/health.py` — liveness probe
 
@@ -391,13 +430,15 @@ from app.core.config import settings
 from app.core.embeddings import BGEEmbedder
 from app.core.llm import OllamaLLM
 from app.core.prompt import build_prompt
+from app.core.refusal import REFUSAL_MESSAGE, is_refusal
 from app.core.retrieval import retrieve
 from app.core.vectorstore import QdrantStore
 from app.models.query import Citation, QueryRequest, QueryResponse
 
 logger = logging.getLogger(__name__)
 router = APIRouter()                          # groups this file's routes; included by main.py
-REFUSAL = "I don't know based on the provided context."  # the exact refusal string returned to the client
+# REFUSAL_MESSAGE / is_refusal are imported from app.core.refusal (see above) —
+# the refusal string is defined once, never re-declared here.
 
 
 @lru_cache(maxsize=1)                         # build once, reuse forever (a lazy singleton)
@@ -423,8 +464,8 @@ async def query(request: QueryRequest) -> QueryResponse:   # request is already 
         logger.error("Retrieval error: %s", exc)
         raise HTTPException(status_code=503, detail="Vector store unavailable") from exc
 
-    if is_empty:                              # refusal path: return the fixed string and skip the (expensive) LLM
-        return QueryResponse(answer=REFUSAL, citations=[])
+    if is_empty:                              # HARD refusal: skip the (expensive) LLM entirely
+        return QueryResponse(answer=REFUSAL_MESSAGE, citations=[], refused=True)
 
     prompt = build_prompt(request.question, chunks)  # assemble the grounded prompt with [n] markers
 
@@ -434,12 +475,18 @@ async def query(request: QueryRequest) -> QueryResponse:   # request is already 
         logger.error("LLM error: %s", exc)
         raise HTTPException(status_code=503, detail="LLM unavailable") from exc
 
+    # SOFT refusal: the model declined even though context was available. Decided
+    # by the answer TEXT, never by citation count — a grounded answer may have 0.
+    if is_refusal(answer):
+        return QueryResponse(answer=answer, citations=[], refused=True)
+
     cited_indices = extract_citation_indices(answer)   # which [n] did the model actually use?
     citations = build_citations(chunks, cited_indices) # map those numbers to real sources + excerpts
 
     return QueryResponse(                     # the validated response object
         answer=answer,
         citations=[Citation(**citation) for citation in citations],  # dicts → Citation models
+        refused=False,                        # answered (possibly with zero citations)
     )
 ```
 
@@ -981,7 +1028,7 @@ dependencies = [
     "fastapi>=0.111",                          # the web framework
     "uvicorn[standard]>=0.30",                 # the ASGI server that runs FastAPI
     "pydantic-settings>=2.3",                  # env-driven Settings
-    "qdrant-client>=1.9,<1.10",                # PINNED to match the Qdrant 1.9.2 server (keeps .search() working)
+    "qdrant-client>=1.12,<2",                  # needs query_points (Query API); matches the v1.18.3 server
     "sentence-transformers>=3.0",              # the embedding model runtime
     "prefect>=3,<4",                           # ingestion orchestration (pin the major: 2.x vs 3.x differ)
     "datasets>=2.19",                          # HuggingFace datasets (the Wikipedia corpus)
@@ -1013,7 +1060,9 @@ testpaths = ["tests"]
 ```yaml
 services:
   qdrant:
-    image: qdrant/qdrant:v1.9.2                 # the vector DB (pinned; matches qdrant-client <1.10)
+    image: qdrant/qdrant:v1.18.3                # vector DB; Query API needs server >=1.10. Do NOT start
+                                                # this over a v1.9.2 volume — it panics (exit 101). Fresh
+                                                # volume + re-ingest.
     ports: ["6333:6333"]                        # expose the REST/gRPC port to the host
     volumes: [qdrant_data:/qdrant/storage]      # persist vectors across restarts
     healthcheck:
@@ -1100,7 +1149,10 @@ lint:                                             # run the linter
 
 ```bash
 # 0) prerequisites: Docker Desktop, Python 3.12 + uv, Node 20 (frontend only)
-uv sync --all-extras --python 3.12          # create .venv and install everything from pyproject.toml
+# Run from projects/rag-wikipedia (its pyproject.toml declares a uv WORKSPACE whose
+# only member is backend/, so the shared .venv is created here and covers the backend).
+cd projects/rag-wikipedia
+uv sync --all-extras --python 3.12          # create .venv and install everything from backend/pyproject.toml
 
 # 1) start the four services
 make up

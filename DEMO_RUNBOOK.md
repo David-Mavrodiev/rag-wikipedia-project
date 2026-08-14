@@ -13,7 +13,9 @@ cosmetic — without them the model fails to load on a 16 GB machine (see
 
 ```powershell
 # 1) Vector DB  (run from projects\rag-wikipedia)
-docker compose start qdrant
+#    `up -d` creates the container if it does not exist yet AND starts it, so
+#    this works on a fresh checkout. (`start` only resumes an existing one.)
+docker compose up -d qdrant
 
 # 2) LLM — CPU-only + bounded context (see WHY below)
 $env:OLLAMA_NUM_GPU=0; $env:OLLAMA_CONTEXT_LENGTH=8192; ollama serve
@@ -58,14 +60,25 @@ Get-Process -Name "ollama*" -ErrorAction SilentlyContinue | Stop-Process -Force
 
 ## Warm up before any live demo
 
-Cold start is ~13 s; once the model is resident, queries drop to **2–5 s**. Never let a
-panel watch the first cold query. Fire one throwaway request:
+**The first query after a fresh `ollama serve` is slow — measured between ~13 s and
+~69 s on this machine** (the 3B model is read from disk into RAM, and the API loads
+the embedder on its first call). Once the model is resident, queries drop to
+**2–5 s**. Never let a panel watch that first cold query. Fire one throwaway request
+and wait for it to return before you present:
 
 ```powershell
-curl.exe -s -m 300 -X POST http://127.0.0.1:8000/query `
-  -H "Content-Type: application/json" `
-  -d '{\"question\":\"Who was Abraham Lincoln?\"}'
+Invoke-RestMethod -Uri http://127.0.0.1:8000/query -Method Post `
+  -ContentType 'application/json' `
+  -Body '{"question":"Who was Abraham Lincoln?"}'
 ```
+
+> **Use `Invoke-RestMethod`, not `curl.exe`, for POSTs here.** Windows PowerShell
+> mangles quotes when passing arguments to native executables — verified on this
+> machine, `-d '{\"question\":\"Who was Abraham Lincoln?\"}'` arrives truncated at
+> the first space, and the unescaped variant arrives with its quotes stripped.
+> Either way the API gets invalid JSON, the request 422s, and the model stays
+> cold. `Invoke-RestMethod` is native PowerShell, so it never crosses that
+> boundary. If you must use curl, put the body in a file and pass `-d "@body.json"`.
 
 Keep the browser tab open — after a long idle the model unloads and the next query is
 slow again.

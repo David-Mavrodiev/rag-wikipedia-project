@@ -76,10 +76,10 @@ Participant machine:
 - OpenAI API key, if running the OpenAI provider path
 - Codex CLI installed and authenticated, if running the Codex section live
 
-Repository path used in this lab:
+All paths in this lab are relative to the project directory. From your clone:
 
 ```powershell
-cd C:\Users\HADI\Downloads\RAG-WIKIPEDIA-PROJECT\rag-wikipedia-project\projects\rag-wikipedia
+cd <repo-root>/projects/rag-wikipedia
 ```
 
 ## Source Files To Know
@@ -123,10 +123,11 @@ User question
 
 ## Part 2: Start The Local Lab
 
-Run Qdrant:
+Run Qdrant (`up -d` creates the container on a first run; `start` only resumes an
+existing one, so it fails for a participant who has never run Compose here):
 
 ```powershell
-docker compose start qdrant
+docker compose up -d qdrant
 ```
 
 Start Ollama in CPU mode for this machine:
@@ -205,16 +206,25 @@ Teaching points:
 
 ## Part 5: Show A Controlled Refusal
 
-Ask:
+Ask one of the questions the evaluation set already marks
+`"expected_refusal": true` in `backend/eval/golden.jsonl`:
 
 ```text
-Who won the 2022 FIFA World Cup?
+What did I have for breakfast this morning?
 ```
+
+Use a golden unanswerable case rather than an ad-hoc question (an earlier draft
+used "Who won the 2022 FIFA World Cup?"): a question about the world can become
+*answerable* the moment the indexed corpus changes, which makes a live demo
+nondeterministic. A question about the participant's private life can never be
+in the corpus, so the refusal is deterministic — and it ties the demo directly
+to the `refusal_accuracy` metric the eval gate measures.
 
 Expected behavior:
 
-- The system refuses if the indexed corpus does not contain the answer.
-- The answer should be close to:
+- Retrieval finds nothing above the score threshold, so the API returns a hard
+  refusal with `"refused": true` and an empty `citations` list.
+- The answer is exactly:
 
 ```text
 I don't know based on the provided context.

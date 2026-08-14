@@ -16,7 +16,7 @@ index.html            ← the single HTML page the browser loads
 
 - **Dev:** `vite` serves the app with hot reload; a proxy forwards `/query` and `/health` to the API.
 - **Build:** `tsc` type-checks, then `vite build` bundles everything into `dist/`.
-- **Prod:** an `nginx` container serves `dist/` and proxies `/query` and `/health` to the `api` service.
+- **Prod:** an `nginx` container serves `dist/` and proxies `/query` and `/health` to `${API_UPSTREAM}` (substituted at container startup; defaults to the Compose `api` service).
 - **Tests:** `vitest` runs component tests in a fake DOM (`jsdom`).
 
 ---
@@ -127,9 +127,12 @@ export default defineConfig({
     setupFiles: './src/test-setup.ts',              // run this file once before the test suite
   },
   server: {                                         // dev-server-only settings
+    // `npm run dev` runs Vite on the HOST, where the Compose service name `api`
+    // does NOT resolve — so the dev proxy targets localhost. `api:8000` belongs
+    // only to nginx.conf.template, which runs inside the Compose network.
     proxy: {                                        // forward API calls to the backend during `npm run dev`
-      '/query': 'http://api:8000',                  // POST /query → the api container
-      '/health': 'http://api:8000',                 // GET /health → the api container
+      '/query': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
+      '/health': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
     },
   },
 })
@@ -183,7 +186,13 @@ export default defineConfig({
 
 # SERVING & CONTAINER
 
-## `frontend/nginx.conf` — how the production container serves the app
+## `frontend/nginx.conf.template` — how the production container serves the app
+
+It is a **template**, not a finished config: `${API_UPSTREAM}` is substituted **at
+container startup**, not at build time. The `nginx:alpine` image automatically runs
+`envsubst` over everything in `/etc/nginx/templates/` and writes the result into
+`/etc/nginx/conf.d/`. That is what lets the same image point at the Compose `api`
+service locally and at a different upstream in the cloud — **no rebuild required**.
 
 ```nginx
 server {
@@ -196,14 +205,19 @@ server {
     }
 
     location /query {                       # API calls to /query…
-        proxy_pass http://api:8000/query;   # …are forwarded to the backend `api` service
+        proxy_pass ${API_UPSTREAM}/query;   # …forwarded to the upstream resolved at STARTUP
     }
 
     location /health {                      # and /health…
-        proxy_pass http://api:8000/health;  # …forwarded to the backend too
+        proxy_pass ${API_UPSTREAM}/health;  # …forwarded to the backend too
     }
 }
 ```
+
+> **Two different upstreams, do not confuse them.** `api:8000` is a *Compose network*
+> name and only resolves **inside** the container — it is the default baked in as
+> `ENV API_UPSTREAM`. The Vite dev server runs on your **host**, where `api` does not
+> resolve, so `vite.config.ts` proxies to `http://localhost:8000` instead.
 
 ## `frontend/Dockerfile` — two-stage build (Node builds, nginx serves)
 
@@ -220,7 +234,9 @@ RUN npm run build                           # type-check + bundle into /app/dist
 
 FROM nginx:alpine                           # stage 2: a tiny nginx image to serve the built files
 COPY --from=builder /app/dist /usr/share/nginx/html  # copy the built assets from stage 1
-COPY nginx.conf /etc/nginx/conf.d/default.conf       # install our server config (SPA + API proxy)
+# install the TEMPLATE: nginx runs envsubst over /etc/nginx/templates/ at startup
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
+ENV API_UPSTREAM=http://api:8000            # default upstream = the Compose `api` service; override per environment
 EXPOSE 80                                   # document that the container serves on port 80
 ```
 
@@ -320,6 +336,6 @@ npm run test         # run the Vitest component tests
 ## What to say about the frontend in an interview
 
 - **"It's a deliberately thin UI"** — the intelligence is in the backend; the frontend just calls `POST /query` and renders the `{answer, citations[]}` shape.
-- **"The API base URL is build-configurable"** — empty in local dev (nginx proxies same-origin), and the real URL is baked in at build time via `VITE_API_BASE_URL` for cloud deployment.
+- **"The API base URL is configurable at two layers"** — in the **bundle** at build time via `VITE_API_BASE_URL` (empty by default, so the app calls same-origin paths and any trailing slash is stripped before `/query` is appended), and at the **proxy** at container start via `${API_UPSTREAM}` in `nginx.conf.template`. Locally, `npm run dev` uses **Vite's own proxy** — nginx is only in the production container.
 - **"Two-stage Docker build"** — Node builds the static bundle, then a tiny nginx image serves it and proxies API calls, so the runtime image ships no Node.
-- **"Components are tested in a fake DOM"** — Vitest + jsdom + Testing Library verify rendering, the trimmed-submit behaviour, the loading/disabled state, and the citation expand/collapse.
+- **"Components are tested in a fake DOM"** — Vitest + jsdom + Testing Library verify rendering, the trimmed-submit behaviour, the loading/disabled state, and that a citation **expands** on click. (Collapse is not asserted — the tests click once and check the excerpt appears.)

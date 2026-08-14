@@ -407,6 +407,8 @@ def test_health_returns_200(client):             # `client` fixture comes from c
 ```python
 from unittest.mock import patch                   # patch() temporarily replaces an object during a `with` block
 
+from app.core.refusal import REFUSAL_MESSAGE      # the single-source refusal string (see refusal.py)
+
 
 def test_health(client):                          # /health returns 200 (smoke test of the app + client)
     response = client.get("/health")
@@ -423,6 +425,12 @@ def test_query_too_long(client):                  # a >500-char question is reje
     assert response.status_code == 422            # 422 = validation error (max_length=500)
 
 
+# NOTE: this assertion used to be `"don't know" in answer OR citations == []`.
+# The OR made it pass for ANY answer with no citations — including a perfectly
+# good grounded answer the model forgot to cite. That is exactly the bug the
+# `refused` flag exists to prevent, so the test asserts the explicit state.
+# tests/test_refusal.py covers the full matrix (hard refusal, soft refusal,
+# grounded-with-citations, grounded-without-citations).
 def test_query_returns_refusal_when_no_context(client):  # empty retrieval → refusal, LLM not needed
     with (                                        # replace the three lru_cache singletons with mocks for this test
         patch("app.api.query._embedder") as mock_embedder,
@@ -435,7 +443,9 @@ def test_query_returns_refusal_when_no_context(client):  # empty retrieval → r
 
     assert response.status_code == 200            # refusal is a normal 200 response, not an error
     data = response.json()
-    assert "don't know" in data["answer"].lower() or data["citations"] == []  # refusal text and/or no citations
+    assert data["refused"] is True                # EXPLICIT state, not inferred
+    assert data["answer"] == REFUSAL_MESSAGE      # the exact contract string
+    assert data["citations"] == []                # a refusal never cites
 
 
 def test_query_returns_answer_with_citations(client):  # a good retrieval → grounded answer + citations
