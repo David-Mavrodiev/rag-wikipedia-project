@@ -31,6 +31,7 @@ from app.core.embeddings import BGEEmbedder  # noqa: E402
 from app.core.vectorstore import QdrantStore  # noqa: E402
 from pipeline.sources import iter_articles  # noqa: E402
 from pipeline.tasks import clean_text  # noqa: E402
+from qdrant_client.models import Distance, VectorParams  # noqa: E402
 
 REAL_TARGET = 25_000  # articles in the `real` profile
 DEFAULT_BENCH_PREFIX = "bench_ingest"
@@ -52,6 +53,34 @@ def resolve_collection() -> str:
             f"which would destroy the indexed corpus."
         )
     return configured
+
+
+def claim_collection(store: QdrantStore, collection: str, dim: int = 384) -> None:
+    """Create *collection*, establishing that THIS run owns it.
+
+    Ownership is established by CREATING the collection, never by checking first.
+    A check-then-create pair is a race: another process can create the name in
+    between, and this benchmark drops its collection when it finishes - so a lost
+    race would destroy data it does not own. `create_collection()` fails when the
+    name is taken, which makes a successful create the proof of ownership.
+
+    Raises SystemExit if the name is already taken; re-raises anything else.
+    """
+    try:
+        store._client.create_collection(
+            collection_name=collection,
+            vectors_config=VectorParams(size=dim, distance=Distance.COSINE),
+        )
+    except Exception as exc:
+        # Distinguish "someone else owns this name" from a genuine failure
+        # (server down, bad config) instead of swallowing both.
+        if store._client.collection_exists(collection):
+            raise SystemExit(
+                f"Refusing to run: collection {collection!r} already exists. This "
+                f"benchmark drops its collection when it finishes. Drop it manually "
+                f"or unset BENCH_COLLECTION to get a unique throwaway name."
+            ) from exc
+        raise
 
 
 def _run(store: QdrantStore, embedder: BGEEmbedder, n: int, model_load_s: float) -> None:
@@ -165,17 +194,10 @@ def main() -> None:
 
     store = QdrantStore(url=qdrant_url, collection=collection)
 
-    # Only ever drop a collection this run created: refuse a pre-existing one
-    # instead of deleting it (the old code deleted it up front, unconditionally).
-    existing = [c.name for c in store._client.get_collections().collections]
-    if collection in existing:
-        raise SystemExit(
-            f"Refusing to run: collection {collection!r} already exists. This "
-            f"benchmark drops its collection when it finishes. Drop it manually "
-            f"or unset BENCH_COLLECTION to get a unique throwaway name."
-        )
+    claim_collection(store, collection)
 
-    store.ensure_collection(dim=384)
+    # claim_collection() returning proves this run created the collection, so the
+    # cleanup in `finally` can only ever delete what this run made.
     try:
         _run(store, embedder, n, model_load_s)
     finally:
