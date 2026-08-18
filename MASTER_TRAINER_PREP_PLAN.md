@@ -33,48 +33,77 @@ David's six criteria, and where your evidence already lives:
 David: *"Ask it to inspect the repository first, produce a plan, implement a scoped
 change, and run the relevant checks."*
 
-### Pick this feature: **add `groundedness` to the evaluation report**
+### Already done — the groundedness exercise (use this as your case study)
 
-`backend/eval/metrics.py` already defines `groundedness()` — and `run_eval.py`
-**never calls it**. So the function is dead code, and the docs promise a metric the
-report does not contain. That makes it an ideal exercise:
+This exercise has been **run and shipped**, so treat it as finished material rather
+than something to demo live. What happened, end to end:
 
-- **Real** — a genuine gap a reviewer found, not a toy task.
-- **Scoped** — one metric, one report field, one test.
-- **Verifiable** — `pytest` must stay green, and `report.json` gains a field.
-- **Great teaching content** — "how do you know your RAG is any good?" is the
-  question every enterprise asks. Evals are the most business-relevant topic you own.
+| Step | What happened |
+|---|---|
+| **Inspect / plan** | Codex read the eval harness and found `groundedness()` in `metrics.py` was never called by `run_eval.py` — defined but dead. |
+| **Implement** | It split `main()` into `validate_golden_set` / `evaluate_golden` / `gate_failures` (making the harness unit-testable for the first time), added groundedness to `report.json`, and correctly kept it **out** of the pass/fail gate. → commit `8b595e5` |
+| **Review — the part that matters** | Accepted, but with a real cost identified: measuring groundedness needs **one LLM call per answerable case**, which turned a seconds-long retrieval-only eval into a minutes-long run *and* added a hard dependency on the LLM being reachable. `make eval` is a documented command, so that is a genuine regression in operability. |
+| **Fix** | Scoped the cost behind `--with-groundedness`. Default stays fast and LLM-free; `make eval-groundedness` opts in. When not measured the key is **omitted** from the report rather than reported as `0.0` — "not measured" must not read as "badly grounded". → commit `a9aac36` |
 
-**Backup features** (if you want a second run, or Codex finishes fast):
-- Make `EXPECTED_DIM` env-configurable in `vectorstore.py` (currently hardcoded 384).
-- Change `query()` from `async def` to `def` so blocking inference stops holding the
-  event loop (see §4, drill 6 — one word, deep reasoning).
+**Why this is your strongest answer to David's criterion 3.** You did not simply
+accept the agent's work, and you did not reject it either — you *kept the feature and
+scoped its cost*. That is a harder, more senior move than a thumbs up or down.
+
+> The line: *"It worked and the tests were good. What I flagged in review was that it
+> turned a retrieval-only harness into one that needs the LLM — eval went from seconds
+> to minutes and would fail if Ollama was down. So I kept the metric and put it behind
+> a flag."*
+
+### For the live demo — make `EXPECTED_DIM` configurable
+
+Pick an **unimplemented** feature so the demo is real. This one is ideal:
+
+`backend/app/core/vectorstore.py` hardcodes `EXPECTED_DIM = 384` and raises if a
+different dimension is passed. That blocks any embedder swap, and it is the exact
+failure David told you to rehearse — **embedding-dimension mismatch**.
+
+- **Real** — an open CodeRabbit finding, not a toy task.
+- **Scoped** — one constant, one validation, one test.
+- **Verifiable** — `pytest` stays green; the default (384) must not change.
+- **Great teaching content** — bge-small is 384-d, `text-embedding-3-small` is 1536,
+  `text-embedding-3-large` is 3072. Vectors of different dimensions are **not**
+  interchangeable, so switching embedder forces a **re-ingest into a new collection**.
+  That single fact explains why RAG migrations are not free.
 
 ### The prompt sequence (do not skip step A)
 
 ```text
 A. INSPECT — no edits yet
-   "Read this repository and explain how the evaluation harness works: what
-    backend/eval/run_eval.py measures, what backend/eval/metrics.py provides, and
-    what ends up in report.json. Tell me what is defined but unused."
+   "Read this repository and explain how the vector store decides the embedding
+    dimension: what backend/app/core/vectorstore.py enforces, where the value comes
+    from, and what happens today if the embedder produced a different size."
 
 B. PLAN — still no edits
-   "groundedness() exists in metrics.py but run_eval.py never calls it. Propose a
-    plan to include it in the report for answerable cases. List every file you
-    would touch, the tests you would add, and what could break. Do not write code yet."
+   "EXPECTED_DIM is hardcoded to 384, which blocks swapping to a 1536-d or 3072-d
+    embedder. Propose a plan to make it configurable via an EMBED_DIM environment
+    variable, defaulting to 384, and to validate it against a real embedding before
+    the collection is created. List every file you would touch, the tests you would
+    add, and what could break. Do not write code yet."
 
 C. IMPLEMENT — scoped
-   "Implement that plan. Keep the change minimal. Do not modify the existing
-    recall@k, MRR or refusal_accuracy logic, and do not add it to the pass/fail
-    gate — report it only."
+   "Implement that plan. Keep the change minimal and keep 384 as the default so
+    existing behaviour is unchanged. Do not touch retrieval, chunking, or the API."
 
 D. VERIFY
    "Run the backend test suite and ruff. Show me the results."
 ```
 
-**Why step A matters in the room:** it demonstrates you drive the agent through
-*inspect → plan → implement → verify* instead of prompting "add groundedness" and
-hoping. That sequence *is* the teachable method.
+**Why step A matters in the room:** it shows you drive the agent through
+*inspect → plan → implement → verify* rather than prompting "make it configurable"
+and hoping. That sequence *is* the teachable method.
+
+**Backup features** (if Codex finishes fast, or you want a second run):
+- Strict golden-set validation in `run_eval.py` — `expected_refusal` is currently
+  classified by truthiness, so the string `"false"` is silently treated as
+  *unanswerable*.
+- Change `query()` from `async def` to `def` so blocking inference stops holding the
+  event loop (see §4, drill 6). One keyword, deep reasoning — better *explained* than
+  demoed.
 
 ### Record as you go (you will need this for §2)
 - The plan Codex produced — did it find every file?
@@ -224,12 +253,12 @@ Assessment**. Order:
 ### Updated seven-step "what to do next" plan
 
 This is the current plan for the recorded video and follow-up roadmap. It supersedes
-the older "OpenAI port second" framing above: the video feature is groundedness, and
-the rest is enterprise hardening.
+the older "OpenAI port second" framing above: the rest is enterprise hardening.
 
-1. **Add groundedness to the eval report** - the live Codex/video feature. It turns
-   a real unused metric into an enterprise-relevant quality signal, without changing
-   the existing recall/refusal gates.
+1. ~~Add groundedness to the eval report~~ - **DONE** (commits `8b595e5`,
+   `a9aac36`). Shipped, then scoped behind `--with-groundedness` after review.
+   Use it as the case study in section 1; the **live** Codex/video feature is now
+   making `EXPECTED_DIM` configurable, which is still open.
 2. **Add GitHub Actions CI** - backend tests, frontend tests, lint, build, and RAG
    eval on every push or pull request.
 3. **Add deployment smoke tests and rollback automation** - deploy a new Azure

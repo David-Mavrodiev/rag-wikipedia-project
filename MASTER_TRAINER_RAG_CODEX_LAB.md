@@ -59,7 +59,7 @@ Total: 90 minutes
 | Context and architecture | 10 min | Explain the business problem and system shape |
 | Local run and first query | 15 min | Show a grounded answer with citations |
 | Refusal path | 10 min | Show why controlled refusal matters |
-| Codex CLI task | 20 min | Add groundedness to the eval report |
+| Codex CLI task | 20 min | Make the embedding dimension configurable |
 | OpenAI provider discussion | 15 min | Explain provider swap and embedding dimensions |
 | Troubleshooting drill | 15 min | Diagnose staged failures |
 | Recap and business translation | 5 min | Convert engineering details into enterprise value |
@@ -245,17 +245,25 @@ Business translation:
 
 Goal:
 
-Use Codex CLI to add a report-only groundedness metric to the RAG evaluation report.
-This is a real repo gap: `groundedness()` exists in `backend/eval/metrics.py`, but
-the evaluation runner did not report it.
+Use Codex CLI to make the vector store's embedding dimension configurable.
+This is a real, still-open repo gap: `backend/app/core/vectorstore.py` hardcodes
+`EXPECTED_DIM = 384`, which blocks swapping to any other embedder.
+
+> **Baseline note.** An earlier version of this lab used "add groundedness to the
+> eval report". That has since been implemented and refined (commits `8b595e5`,
+> `a9aac36`), so it is no longer an open gap — it now serves as the *review* case
+> study (what the agent produced, what it cost, and the flag it was scoped behind).
+> Demo an unimplemented feature so the exercise is real.
 
 Suggested prompt to Codex CLI:
 
 ```text
-Inspect this FastAPI RAG project without editing first. Explain how backend/eval/run_eval.py
-uses backend/eval/metrics.py and what ends up in report.json. Then implement a minimal
-change that reports groundedness for answerable eval cases. Reuse the existing groundedness()
-metric, add focused tests, and do not change the existing recall@k or refusal_accuracy gates.
+Inspect this FastAPI RAG project without editing first. Explain how
+backend/app/core/vectorstore.py decides the embedding dimension, where the value comes
+from, and what happens today if the embedder produced a different size. Then implement a
+minimal change making it configurable via an EMBED_DIM environment variable, defaulting
+to 384 so current behaviour is unchanged, validated against a real embedding before the
+collection is created. Add focused tests. Do not touch retrieval, chunking, or the API.
 ```
 
 Trainer commentary while Codex works:
