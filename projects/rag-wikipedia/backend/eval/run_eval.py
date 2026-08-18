@@ -16,16 +16,7 @@ MIN_CASES = 20
 MIN_UNANSWERABLE = 5
 
 
-def main() -> None:
-    from app.core.config import settings
-    from app.core.embeddings import BGEEmbedder
-    from app.core.retrieval import retrieve
-    from app.core.vectorstore import QdrantStore
-    from eval.metrics import mrr, recall_at_k, reciprocal_rank, refusal_accuracy
-
-    golden_path = Path(__file__).parent / "golden.jsonl"
-    golden = [json.loads(line) for line in golden_path.read_text().splitlines() if line.strip()]
-
+def validate_golden_set(golden: list[dict]) -> tuple[list[dict], list[dict]]:
     answerable = [item for item in golden if not item.get("expected_refusal")]
     unanswerable = [item for item in golden if item.get("expected_refusal")]
 
@@ -39,12 +30,19 @@ def main() -> None:
             f"{len(answerable)} answerable)"
         )
 
-    embedder = BGEEmbedder(model_name=settings.embed_model)
-    store = QdrantStore(url=settings.qdrant_url, collection=settings.collection)
+    return answerable, unanswerable
 
-    k = settings.top_k
+
+def evaluate_golden(golden: list[dict], embedder, store, llm, k: int) -> dict:
+    from app.core.prompt import build_prompt
+    from app.core.retrieval import retrieve
+    from eval.metrics import groundedness, mrr, recall_at_k, reciprocal_rank, refusal_accuracy
+
+    answerable, unanswerable = validate_golden_set(golden)
+
     recall_scores: list[float] = []
     reciprocal_rank_scores: list[float] = []
+    groundedness_scores: list[float] = []
 
     for item in answerable:
         question = item["question"]
@@ -54,10 +52,21 @@ def main() -> None:
 
         recall_score = recall_at_k(texts, expected, k=k)
         rr_score = reciprocal_rank(texts, expected)
+        answer = llm.generate(build_prompt(question, chunks)) if chunks else ""
+        groundedness_score = groundedness(answer, texts)
+
         recall_scores.append(recall_score)
         reciprocal_rank_scores.append(rr_score)
+        groundedness_scores.append(groundedness_score)
 
-        logger.info("Q: %r | recall@%s=%.2f | RR=%.2f", question[:50], k, recall_score, rr_score)
+        logger.info(
+            "Q: %r | recall@%s=%.2f | RR=%.2f | groundedness=%.2f",
+            question[:50],
+            k,
+            recall_score,
+            rr_score,
+            groundedness_score,
+        )
 
     refused_flags: list[bool] = []
     for item in unanswerable:
@@ -66,13 +75,40 @@ def main() -> None:
         refused_flags.append(refused)
         logger.info("Q: %r | refused=%s", question[:50], refused)
 
-    report = {
+    return {
         f"recall@{k}": sum(recall_scores) / len(answerable) if answerable else 0.0,
         "mrr": mrr(reciprocal_rank_scores),
+        "groundedness": sum(groundedness_scores) / len(answerable) if answerable else 0.0,
         "refusal_accuracy": refusal_accuracy(refused_flags),
         "n_answerable": len(answerable),
         "n_unanswerable": len(unanswerable),
     }
+
+
+def gate_failures(report: dict, k: int) -> list[str]:
+    failures = []
+    if report[f"recall@{k}"] < RECALL_GATE:
+        failures.append(f"recall@{k}={report[f'recall@{k}']:.2f} < {RECALL_GATE}")
+    if report["refusal_accuracy"] < REFUSAL_GATE:
+        failures.append(f"refusal_accuracy={report['refusal_accuracy']:.2f} < {REFUSAL_GATE}")
+    return failures
+
+
+def main() -> None:
+    from app.core.config import settings
+    from app.core.embeddings import BGEEmbedder
+    from app.core.llm import OllamaLLM
+    from app.core.vectorstore import QdrantStore
+
+    golden_path = Path(__file__).parent / "golden.jsonl"
+    golden = [json.loads(line) for line in golden_path.read_text().splitlines() if line.strip()]
+
+    embedder = BGEEmbedder(model_name=settings.embed_model)
+    store = QdrantStore(url=settings.qdrant_url, collection=settings.collection)
+    llm = OllamaLLM(model=settings.llm_model, base_url=settings.ollama_url)
+
+    k = settings.top_k
+    report = evaluate_golden(golden, embedder, store, llm, k)
 
     print("\n=== Evaluation Report ===")
     for key, value in report.items():
@@ -84,11 +120,7 @@ def main() -> None:
 
     # Gates are unconditional: the golden-set validation above guarantees both
     # subsets are non-empty, so neither metric can be skipped.
-    failures = []
-    if report[f"recall@{k}"] < RECALL_GATE:
-        failures.append(f"recall@{k}={report[f'recall@{k}']:.2f} < {RECALL_GATE}")
-    if report["refusal_accuracy"] < REFUSAL_GATE:
-        failures.append(f"refusal_accuracy={report['refusal_accuracy']:.2f} < {REFUSAL_GATE}")
+    failures = gate_failures(report, k)
 
     if failures:
         print(f"\nGATE FAILED: {'; '.join(failures)}")
