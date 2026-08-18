@@ -36,6 +36,15 @@ layer**, and it was enumerating **248 tools on every startup**:
 | `codex_apps__google_calendar` | 15 |
 | others (safety, plugin mgmt, doc control, hotline) | 13 |
 
+Measured with (Docker/Codex idle, nothing else running):
+
+```powershell
+# tool count and namespace breakdown
+python -c "import json,glob; d=json.load(open(glob.glob('$env:USERPROFILE/.codex/cache/codex_apps_tools/*.json')[0],encoding='utf-8')); print(len(d['tools']))"
+# cached payload sizes
+du -sh ~/.codex/cache/codex_apps_tools ~/.codex/cache/codex_app_directory ~/.codex/cache/remote_plugin_catalog
+```
+
 Plus cached payloads under `~/.codex/cache/`:
 
 ```text
@@ -63,9 +72,12 @@ Writes to `~/.codex/config.toml`:
 
 ```toml
 [features]
-js_repl = false
-apps = false          # codex_apps is never spawned -> nothing left to fail
+js_repl = false       # was ALREADY false - not changed by this fix
+apps = false          # <- the only flag this fix sets
 ```
+
+Only `apps` was changed. `js_repl` was already disabled before any of this work
+began (which is what made the stale `node_repl` server in §5 pure dead weight).
 
 Stale caches were also cleared (they rebuild on demand):
 
@@ -86,8 +98,13 @@ Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\cache\codex_apps_tools",
 ### What this costs
 ChatGPT Apps inside Codex — Sites, and the Gmail / Slack / Drive / Calendar / GitHub
 **connectors**. Codex's core (reading the repo, planning, editing files, running
-commands) is untouched. For a coding assessment this is a net win: 248 fewer tools in
-the model's context.
+commands) is untouched. For a coding assessment this is a net win: those 248 tool
+definitions are no longer loaded at startup.
+
+> Whether every one of them would have entered the model's context on each turn was
+> **not measured** — tool exposure can be filtered per request. The verified claims
+> are the startup cost (43 s → 6 s) and the removal of the warning; treat any
+> context-window saving as plausible but unquantified.
 
 ## 4. Turning apps back on
 
@@ -142,7 +159,18 @@ That alone cut startup 43 s → 10 s and eliminated two errors:
 Optional cleanup: `npm uninstall -g @openai/codex`.
 
 `codex update` reports *"Could not detect the Codex installation method"* — this build
-is desktop-app managed. That is expected; you are already on the latest.
+is desktop-app managed, so the CLI cannot update itself in place. That is expected.
+
+**That failure says nothing about versions.** To check whether you are current,
+compare the two sources of truth directly:
+
+```powershell
+codex --version                                   # installed: 0.147.0
+Get-Content "$env:USERPROFILE\.codex\version.json"  # latest_version: 0.147.0
+```
+
+At the time of writing those matched, so no update was needed — but re-check rather
+than inferring it from the update command failing.
 
 > The old binary's version comparison reported itself as "not older" than 0.147.0, so
 > it never self-updated. Version skew here is silent — check `codex --version` against
@@ -156,7 +184,7 @@ is desktop-app managed. That is expected; you are already on the latest.
 | `unknown variant 'max', expected none/minimal/low/medium/high/xhigh` | Stale client (0.137) vs current server schema | Use the 0.147.0 binary on PATH; remove stale MCP entries pointing at old installs |
 | `timeout waiting for child process to exit` | MCP server binary from an obsolete install | `codex mcp remove <name>` |
 | Plugin/marketplace doubts | — | `codex plugin list`, `codex mcp list`, `codex doctor` |
-| `search command could not be verified` (doctor warn) | ripgrep not installed | Cosmetic; install ripgrep for faster in-Codex search |
+| `search command could not be verified` (doctor warn) | ripgrep genuinely absent (`rg` is not on PATH on this machine) | Install ripgrep. **Codex's fallback behaviour was not verified here**, so do not assume the warning is harmless — it may mean slower or less complete in-repo search |
 
 **First move for any Codex issue:** `codex doctor` — it checks install, config, auth,
 sandbox, connectivity, and MCP in one pass.
@@ -171,7 +199,19 @@ config.toml.bak-plugins-*         before disabling the 3 connector plugins
 config.toml.bak-apps-*            before disabling the apps feature
 ```
 
-Restore with `Copy-Item <backup> $env:USERPROFILE\.codex\config.toml`.
+Restore one of them — **preserving the current file first**, so a bad restore is
+itself reversible:
+
+```powershell
+$codex = "$env:USERPROFILE\.codex"
+Get-ChildItem "$codex\config.toml.bak-*" | Sort-Object LastWriteTime   # list backups
+
+# back up what is there NOW, then restore the chosen snapshot
+Copy-Item "$codex\config.toml" "$codex\config.toml.bak-before-restore-$(Get-Date -f yyyyMMdd-HHmmss)"
+Copy-Item "$codex\config.toml.bak-20260818-121941" "$codex\config.toml" -Force
+
+codex doctor          # confirm the restored config still parses
+```
 
 ---
 
@@ -191,4 +231,9 @@ shows **method**:
 6. **Made it reversible** and wrote it down (this file).
 
 > The line: *"I stopped guessing and measured what it was actually loading. 248 tools
-> at every startup — that was the answer, and the fix was one flag."*
+> at every startup — that was the answer."*
+
+Be precise if asked what the fix was: **two** changes landed, not one. Removing the
+stale `node_repl` server (§5) cut startup 43 s → 10 s and cleared two errors;
+disabling `apps` removed the warning itself and took startup to 6 s. The one-flag
+line is the headline, not the whole story.
