@@ -59,7 +59,7 @@ Total: 90 minutes
 | Context and architecture | 10 min | Explain the business problem and system shape |
 | Local run and first query | 15 min | Show a grounded answer with citations |
 | Refusal path | 10 min | Show why controlled refusal matters |
-| Codex CLI task | 20 min | Add or inspect a diagnostic endpoint |
+| Codex CLI task | 20 min | Add groundedness to the eval report |
 | OpenAI provider discussion | 15 min | Explain provider swap and embedding dimensions |
 | Troubleshooting drill | 15 min | Diagnose staged failures |
 | Recap and business translation | 5 min | Convert engineering details into enterprise value |
@@ -245,23 +245,28 @@ Business translation:
 
 Goal:
 
-Use Codex CLI to add or inspect a diagnostic endpoint that helps trainers troubleshoot the lab live.
+Use Codex CLI to add a report-only groundedness metric to the RAG evaluation report.
+This is a real repo gap: `groundedness()` exists in `backend/eval/metrics.py`, but
+the evaluation runner did not report it.
 
 Suggested prompt to Codex CLI:
 
 ```text
-Inspect this FastAPI RAG project. Add a GET /stats endpoint that returns collection name, vector count, top_k, refusal_threshold, LLM provider choice, embedding provider choice, and embedding dimension. Keep the change small, follow existing patterns, and add focused tests.
+Inspect this FastAPI RAG project without editing first. Explain how backend/eval/run_eval.py
+uses backend/eval/metrics.py and what ends up in report.json. Then implement a minimal
+change that reports groundedness for answerable eval cases. Reuse the existing groundedness()
+metric, add focused tests, and do not change the existing recall@k or refusal_accuracy gates.
 ```
 
 Trainer commentary while Codex works:
 
-> Notice the workflow. I am not asking Codex to redesign the system. I am giving it a narrow, testable change. I still review the diff and run the tests. This is the right mental model for coding agents in professional delivery: acceleration with human ownership.
+> Notice the workflow. I am not asking Codex to redesign the system. I am giving it a narrow, testable eval change. I still review the diff and run the tests. This is the right mental model for coding agents in professional delivery: acceleration with human ownership.
 
 Expected Codex workflow:
 
 1. Inspect `app/main.py`, router files, config, and vectorstore.
-2. Propose a small route or router addition.
-3. Add test coverage.
+2. Propose a minimal eval runner change.
+3. Add test coverage for the new report field and unchanged gate behavior.
 4. Run the backend test suite.
 5. Present a diff for review.
 
@@ -270,7 +275,7 @@ Useful trainer questions:
 - What context did Codex need before editing?
 - What should require approval?
 - Which files did it touch?
-- Did it preserve existing API behavior?
+- Did it preserve existing eval gates?
 - What tests prove the change?
 - What would you reject in the generated diff?
 
@@ -685,4 +690,3 @@ Use this with Matze:
 - OpenAI model documentation: https://developers.openai.com/api/docs/models
 - OpenAI files and vector store API reference: https://platform.openai.com/docs/api-reference/files
 - OpenAI vector store files API reference: https://platform.openai.com/docs/api-reference/vector-stores-files
-

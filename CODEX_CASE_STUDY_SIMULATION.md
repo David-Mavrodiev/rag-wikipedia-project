@@ -1,5 +1,9 @@
 # Codex Case Study Simulation: Trainer-Led RAG Repository Lab
 
+> Current recording choice: use **add `groundedness` to the evaluation report** as
+> the primary Codex feature, following `MASTER_TRAINER_PREP_PLAN.md`. The `/stats`
+> endpoint described below remains a backup lab exercise for live diagnostics.
+
 ## Purpose
 
 This document simulates a practical, role-relevant case study for a technical trainer interview. It uses this repository as the live training asset and assumes the interviewer asks you to teach a group of developers how to use Codex responsibly on an existing codebase.
