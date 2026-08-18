@@ -40,10 +40,14 @@ Backend tests are under `projects/rag-wikipedia/backend/tests/` and cover:
 
 - API behavior: `test_api.py`, `test_health.py`.
 - Retrieval and vector store behavior: `test_retrieval.py`, `test_vectorstore.py`.
-- Prompt-generation support behavior: `test_generation.py`, `test_refusal.py`, `test_citations.py` if present in future.
+- Prompt construction and citation extraction: `test_generation.py`.
+- Refusal contract (hard, soft, and grounded-without-citations): `test_refusal.py`.
 - Pipeline and chunking behavior: `test_pipeline.py`, `test_chunking.py`.
 - Configuration and metrics: `test_config.py`, `test_metrics.py`.
-- Ingestion benchmark behavior: `test_bench_ingest.py`.
+- Evaluation harness and its gates: `test_run_eval.py`.
+- Ingestion benchmark safety and collection ownership: `test_bench_ingest.py`.
+
+The suite is **69 tests** as of this writing (`cd projects/rag-wikipedia/backend && uv run pytest -q`).
 
 Frontend component tests are under `projects/rag-wikipedia/frontend/src/components/`
 and use Vitest plus React Testing Library:
@@ -333,8 +337,20 @@ automatically after each push.
 
 ### Recommended post-push pipeline
 
-Every push to GitHub should run the following workflow before production traffic is
-changed:
+**Not every push should reach production.** Split the pipeline by trigger, so that
+unreviewed branch commits can never change production traffic:
+
+| Trigger | Runs | Deploys? |
+|---|---|---|
+| Push to any branch, and every pull request | tests, lint, build, RAG eval gate | **No** |
+| Merge to `main` (i.e. after review) | the same checks, then build and push images | **Staging only** |
+| Manual approval on a protected `production` environment, or a version tag | promote the already-tested image | **Yes** |
+
+Gate the production job behind a GitHub Environment with required reviewers, and give
+it the only credentials that can touch production. A workflow triggered by `push` to
+any branch with production secrets in scope is a supply-chain risk, not a convenience.
+
+With that separation in place, the pipeline stages are:
 
 1. Checkout source.
 2. Install Python and Node dependencies from lockfiles.
