@@ -1,7 +1,11 @@
-# RAG over Wikipedia — Fully Annotated Tests (every line commented)
+# RAG over Wikipedia — Annotated Test Inventory
 
-> The complete `backend/tests/` suite — **44 tests** — with a comment on essentially every line. Comments in English.
-> Companion to `ANNOTATED_CODE.md` (the source). Run them with `make test` (`cd backend && uv run pytest tests/ -v`).
+> Current snapshot: **69 backend pytest tests** across 13 files, plus **7 frontend
+> Vitest component tests** across 3 files. The original backend annotations below are
+> kept as teaching notes; the current audit sections call out tests added since this
+> file was first written.
+> Companion to `ANNOTATED_CODE.md` (the source). Run backend tests with `make test`
+> from `projects/rag-wikipedia`.
 
 ## Testing philosophy (what a reviewer looks for)
 
@@ -9,11 +13,13 @@ The suite mixes three kinds of test on purpose:
 
 | Kind | What it does | Files |
 |---|---|---|
-| **Unit** (pure functions, no I/O) | Test logic in isolation — instant, deterministic | `test_chunking`, `test_config`, `test_generation`, `test_metrics` |
-| **Unit with mocks** (fake the slow deps) | Test the wiring by faking Qdrant/Ollama with `MagicMock`/`patch` — no network, no models | `test_retrieval`, `test_api`, `test_pipeline` |
-| **Contract** (real dependency, in-memory) | Run against a **real in-memory Qdrant** to catch a client/DB API mismatch that a mock would hide | `test_vectorstore` |
+| **Pure unit** | Tests deterministic logic without network, models, or stores | `test_chunking`, `test_config`, `test_generation`, `test_metrics`, refusal parsing in `test_refusal` |
+| **Mocked wiring** | Tests API/retrieval/pipeline/eval flow by faking slow dependencies | `test_retrieval`, `test_api`, `test_pipeline`, `test_run_eval`, API cases in `test_refusal` |
+| **Contract / integration-lite** | Uses real in-process components where mocks previously hid risk | `test_vectorstore` with in-memory Qdrant, FastAPI `TestClient` route tests |
+| **Eval coverage** | Protects RAG quality gates and groundedness opt-in behavior | `test_run_eval`, `test_metrics` |
+| **Frontend component** | Verifies presentational/query components with Vitest and React Testing Library | `AnswerView.test.tsx`, `CitationList.test.tsx`, `QueryBox.test.tsx` |
 
-The credibility-critical paths get the most coverage: **refusal logic, citation extraction, chunking determinism, the query path, and the Qdrant contract.** The contract tests exist because mocking the vector store is *exactly* what let a real client API break (`.search()` removed) reach production once — so those tests now run against the real thing.
+The credibility-critical paths get the most coverage: **refusal logic, citation extraction, chunking determinism, the query path, eval gates, and the Qdrant contract.** The contract tests exist because mocking the vector store is *exactly* what let a real client API break (`.search()` removed) reach production once — so those tests now run against the real thing.
 
 ---
 
@@ -481,16 +487,89 @@ def test_query_qdrant_down(client):               # a retrieval exception → 50
 
 ---
 
+## Current coverage audit
+
+Backend pytest currently collects **69 tests**:
+
+```text
+test_api.py             6
+test_bench_ingest.py    6
+test_chunking.py        5
+test_config.py          2
+test_generation.py      6
+test_health.py          1
+test_metrics.py         15
+test_pipeline.py        1
+test_refusal.py         13
+test_retrieval.py       3
+test_run_eval.py        6
+test_vectorstore.py     5
+```
+
+Frontend Vitest currently has **7 component tests**:
+
+```text
+AnswerView.test.tsx     1
+CitationList.test.tsx   3
+QueryBox.test.tsx       3
+```
+
+This project does **not** currently configure numeric line or branch coverage. Treat
+the counts above as test inventory and behavioral coverage, not as a percentage claim.
+
+---
+
+## Tests added after the original annotation
+
+`backend/tests/test_bench_ingest.py` protects the ingestion benchmark from writing
+into the primary collection by accident. It verifies throwaway collection naming,
+explicit collection overrides, successful collection claiming, duplicate-name refusal,
+and reraising genuine Qdrant failures.
+
+`backend/tests/test_refusal.py` is the refusal-contract regression suite. It proves
+that exact and soft refusals are marked as refused, grounded answers remain accepted
+even without `[n]` markers, curly quotes/apostrophes are normalized, and the API
+separates hard retrieval refusals from soft LLM refusals.
+
+`backend/tests/test_run_eval.py` covers the eval harness behavior added after the
+original 44-test snapshot. It verifies that groundedness is reported only when an LLM
+is supplied, the fast path never calls the LLM, the CLI flag defaults off, and
+groundedness remains report-only rather than part of the pass/fail gate.
+
+Frontend component tests cover the visible query flow at component level:
+`AnswerView` renders answer text, `CitationList` renders nothing for empty citations
+and expands citation detail on click, and `QueryBox` handles input submission plus
+loading-disabled state.
+
+---
+
+## Known gaps
+
+- No numeric pytest/Vitest coverage report is configured.
+- No live service integration test starts FastAPI, Qdrant, Ollama, and the frontend
+  proxy together.
+- No deployment smoke test verifies a deployed revision's health, query, refusal, and
+  frontend behavior.
+- Frontend reproducibility is incomplete until a package lockfile is committed and
+  tests can run from `npm ci` in CI.
+
+---
+
 ## How to run
 
 ```bash
-cd backend && uv run pytest tests/ -v       # run all 44 tests, verbose
-# or from the repo:  make test
+cd projects/rag-wikipedia
+make test                                   # backend pytest, verbose
+make lint                                   # backend ruff
+
+cd frontend
+npm test                                    # frontend Vitest, if deps are installed
 ```
 
 ## What to say about your tests in an interview
 
-- **"I test the credibility-critical paths hardest"** — refusal logic, citation extraction, chunking determinism, the query path, and the Qdrant contract.
+- **"I test the credibility-critical paths hardest"** — refusal logic, citation extraction, chunking determinism, the query path, eval gates, and the Qdrant contract.
 - **"I mock the slow dependencies for unit tests, but I keep one real contract test against an in-memory Qdrant"** — because mocking the store is exactly what let a client API break slip into production once; now it fails in CI instead.
 - **"Idempotency is a property test"** — I ingest the same articles twice and assert the vector count doesn't change, which proves the deterministic-ID design.
 - **"Validation and failure mapping are tested"** — empty/oversized input → 422; a dead dependency → 503; a refusal is a normal 200.
+- **"I do not overclaim coverage"** — the suite has strong behavioral coverage, but numeric line/branch coverage is not configured yet.

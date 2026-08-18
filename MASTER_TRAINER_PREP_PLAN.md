@@ -5,7 +5,7 @@ Turns David Mavrodiev's mentoring feedback into an executable plan, mapped onto 
 Assessment* with Matze; Stage 3: *Final Interview + Live Delivery*).
 
 **The core insight:** you do not need to invent material. This repository already
-contains real, unfixed findings, a real AI-review-rejection story, and six real
+contains one real open finding, a real AI-review-rejection story, and six real
 failures with real error messages. Use them.
 
 ---
@@ -65,6 +65,9 @@ failure David told you to rehearse — **embedding-dimension mismatch**.
 - **Real** — an open CodeRabbit finding, not a toy task.
 - **Scoped** — one constant, one validation, one test.
 - **Verifiable** — `pytest` stays green; the default (384) must not change.
+- **Accepted only when proven** — the implementation must show where `EMBED_DIM` is
+  read, keep the default collection shape unchanged, and reject a real embedding whose
+  length does not match the configured dimension.
 - **Great teaching content** — bge-small is 384-d, `text-embedding-3-small` is 1536,
   `text-embedding-3-large` is 3072. Vectors of different dimensions are **not**
   interchangeable, so switching embedder forces a **re-ingest into a new collection**.
@@ -158,10 +161,10 @@ step, and a conclusion."* This is also what you will deliver to him in the simul
 
 | Time | Segment | Content |
 |---|---|---|
-| 0:00–1:00 | **Objective** | "By the end you'll know how to drive a coding agent through inspect → plan → implement → verify, and how to check its work. We'll add a quality metric to a real RAG evaluation." |
-| 1:00–3:00 | **Explanation** | What the system does: retrieve → ground → cite → refuse. Why evals exist: an LLM answer is not automatically right, so you measure. Name the four metrics. |
+| 0:00–1:00 | **Objective** | "By the end you'll know how to drive a coding agent through inspect → plan → implement → verify, and how to check its work. We'll make the vector-store embedding dimension configurable without changing the default behavior." |
+| 1:00–3:00 | **Explanation** | What the system does: retrieve → ground → cite → refuse. Explain why vector dimensions are a storage contract: a 384-d collection cannot safely accept 1536-d or 3072-d embeddings. |
 | 3:00–6:30 | **Live demo** | Run the Codex sequence from §1. Narrate *why* you ask it to inspect and plan first. |
-| 6:30–8:30 | **Validation** | Read the diff aloud. Run `pytest`. Run `make eval`. Show the new field in `report.json`. State what you'd reject. |
+| 6:30–8:30 | **Validation** | Read the diff aloud. Run `pytest` and ruff. Show that 384 remains the default and that a mismatched embedding dimension fails before collection creation. State what you'd reject. |
 | 8:30–10:00 | **Conclusion** | The agent accelerates; it doesn't absolve. Recap: scope it, plan first, verify with tests, own the diff. |
 
 **Rules for delivery**
@@ -259,8 +262,8 @@ the older "OpenAI port second" framing above: the rest is enterprise hardening.
    `a9aac36`). Shipped, then scoped behind `--with-groundedness` after review.
    Use it as the case study in section 1; the **live** Codex/video feature is now
    making `EXPECTED_DIM` configurable, which is still open.
-2. **Add GitHub Actions CI** - backend tests, frontend tests, lint, build, and RAG
-   eval on every push or pull request.
+2. **Extend GitHub Actions CI** - backend lint/tests now run on push and pull
+   request; add frontend tests/build and the RAG eval gate next.
 3. **Add deployment smoke tests and rollback automation** - deploy a new Azure
    Container Apps revision, verify health/query/refusal/frontend, then shift traffic
    or roll back.
@@ -276,9 +279,10 @@ the older "OpenAI port second" framing above: the rest is enterprise hardening.
 
 Video conclusion line:
 
-> "Today we implemented step 1: a real RAG evaluation improvement. The remaining
-> six steps are how I would harden this from a strong portfolio project into
-> something closer to enterprise deployment quality."
+> "Today we implemented the next live Codex exercise: making the embedding-dimension
+> contract configurable while preserving the 384-d default. The groundedness metric
+> is the review case study; the remaining roadmap is how I would harden this from a
+> strong portfolio project into something closer to enterprise deployment quality."
 
 ## 7. For the simulation with David
 
