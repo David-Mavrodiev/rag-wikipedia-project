@@ -144,6 +144,31 @@ curl.exe -s http://localhost:6333/collections/wikipedia
 
 ---
 
+## Reset the Qdrant volume (destructive)
+
+Needed when the stored data was written by an **incompatible Qdrant version** —
+the container then panics at boot with ``unknown variant `on_disk` `` and exits
+**101**. There is no in-place migration; the volume has to go.
+
+```powershell
+# from projects\rag-wikipedia
+docker compose stop qdrant
+docker compose rm -f qdrant     # REQUIRED: Docker refuses to remove a volume
+                                # that any container still references, even a
+                                # stopped one ("volume is in use")
+docker volume rm rag-wikipedia_qdrant_data
+docker compose up -d qdrant
+```
+
+Then **re-ingest** (previous section) — the new volume is empty.
+
+> **Never use `docker compose down -v` for this.** The `-v` flag removes *every*
+> volume in the project, including `ollama_data` (your ~2 GB `llama3.2:3b`
+> model) and `hf_cache` (the embedding model). You would be re-downloading
+> gigabytes to fix a Qdrant problem. Remove the one named volume instead.
+
+---
+
 ## Troubleshooting
 
 Every row below is an error actually hit on this machine.
@@ -151,7 +176,7 @@ Every row below is an error actually hit on this machine.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `open //./pipe/dockerDesktopLinuxEngine` | Docker Desktop not running | Launch it, wait ~30 s |
-| Qdrant container exits **101**, log says `unknown variant 'on_disk'` | Volume was written by Qdrant **1.9.2**; server is now **1.18.3** — incompatible segment format | `docker volume rm rag-wikipedia_qdrant_data`, `docker compose up -d qdrant`, then **re-ingest** |
+| Qdrant container exits **101**, log says `unknown variant 'on_disk'` | Volume was written by Qdrant **1.9.2**; server is now **1.18.3** — incompatible segment format | See [Reset the Qdrant volume](#reset-the-qdrant-volume-destructive) — the container must be removed **before** the volume |
 | `/query` → **503 Vector store unavailable**, log: `'QdrantClient' object has no attribute 'query_points'` | `qdrant-client` pinned too old (`<1.10`); `vectorstore.py` uses the Query API | `pyproject.toml` must pin `qdrant-client>=1.12,<2` (fixed in commit `170e800`), then `uv sync` |
 | `/query` → **503 LLM unavailable**, log: `cudaMalloc failed` | Ollama running in GPU mode, GPU full | Kill Ollama, restart with `OLLAMA_NUM_GPU=0` |
 | `/query` → **503 LLM unavailable**, log: `failed to allocate CPU buffer of size 12884901888` | 128k-context KV cache | Restart with `OLLAMA_CONTEXT_LENGTH=8192` |
