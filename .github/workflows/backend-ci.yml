@@ -1,0 +1,52 @@
+name: Backend CI
+
+# Tests and lint only. Deliberately NO deployment, NO secrets, and NO production
+# credentials - this workflow cannot change anything outside the runner.
+on:
+  push:
+  pull_request:
+
+# Read-only token: the job never needs to write to the repository.
+permissions:
+  contents: read
+
+# A newer push to the same ref cancels the older run instead of queueing both.
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: lint + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      # sentence-transformers pulls torch; without this the runner downloads the
+      # ~2 GB CUDA build for no reason. The tests run on CPU.
+      UV_TORCH_BACKEND: cpu
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Installed via Astral's official script rather than a third-party action,
+      # so there is no action version to keep chasing.
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # pyproject.toml here declares the uv workspace whose member is backend/,
+      # so the shared environment is resolved from this directory.
+      - name: Install dependencies
+        working-directory: projects/rag-wikipedia
+        run: uv sync --all-extras --python 3.12
+
+      - name: Lint
+        working-directory: projects/rag-wikipedia/backend
+        run: uv run ruff check app/ pipeline/ eval/ tests/
+
+      # No Qdrant or Ollama service is needed: the suite uses an in-memory Qdrant
+      # for the contract tests and mocks the embedder and LLM everywhere else.
+      - name: Tests
+        working-directory: projects/rag-wikipedia/backend
+        run: uv run pytest -q
