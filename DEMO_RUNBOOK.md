@@ -192,6 +192,7 @@ by tooling that does not reliably accept comments.
 
 ## Related docs
 
+- [CODEX_RUNBOOK.md](CODEX_RUNBOOK.md) — Codex CLI environment + the `codex_apps` startup fix
 - [PROJECT_BLUEPRINT.md](PROJECT_BLUEPRINT.md) — rebuild from scratch; **§17** = swapping the LLM/embedder provider
 - [ANNOTATED_CODE.md](ANNOTATED_CODE.md) — every backend/frontend file, line-commented
 - [TESTS_ANNOTATED.md](TESTS_ANNOTATED.md) — the test suite explained
