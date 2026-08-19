@@ -301,6 +301,7 @@ into a real dry run.
 ---
 
 ## Related docs
+- [MASTER_TRAINER_LESSON_SCRIPT.md](MASTER_TRAINER_LESSON_SCRIPT.md) - beat-by-beat rehearsal script for the 10-minute lesson (section 3)
 - [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md) — start/stop, warm-up, troubleshooting
 - [CODEX_RUNBOOK.md](CODEX_RUNBOOK.md) — Codex CLI environment, the `codex_apps` startup fix, troubleshooting
 - [MASTER_TRAINER_RAG_CODEX_LAB.md](MASTER_TRAINER_RAG_CODEX_LAB.md) — the lab itself
