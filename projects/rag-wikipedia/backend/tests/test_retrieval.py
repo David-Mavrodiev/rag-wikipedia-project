@@ -44,3 +44,61 @@ def test_refusal_on_low_score():
 
     _, empty = retrieve("test query", embedder, store)
     assert empty is True
+
+
+def test_refusal_on_high_score_without_evidence_overlap(monkeypatch):
+    from app.core.config import settings
+    from app.core.retrieval import retrieve
+
+    monkeypatch.setattr(settings, "refusal_high_confidence_score", 0.95)
+
+    embedder = MagicMock()
+    embedder.embed.return_value = [0.1] * 384
+    store = MagicMock()
+    store.search.return_value = [
+        {
+            "score": 0.9,
+            "text": "France is a country in Europe.",
+            "title": "France",
+            "source_id": "1",
+        },
+        {"score": 0.88, "text": "Paris is a city.", "title": "Paris", "source_id": "2"},
+    ]
+
+    _, empty = retrieve("Where did I leave my keys yesterday?", embedder, store)
+
+    assert empty is True
+
+
+def test_allows_high_score_with_evidence_overlap():
+    from app.core.retrieval import retrieve
+
+    embedder = MagicMock()
+    embedder.embed.return_value = [0.1] * 384
+    store = MagicMock()
+    store.search.return_value = [
+        {
+            "score": 0.9,
+            "text": "Python was created by Guido van Rossum.",
+            "title": "Python",
+            "source_id": "1",
+        }
+    ]
+
+    _, empty = retrieve("Who created Python?", embedder, store)
+
+    assert empty is False
+
+
+def test_private_question_refuses_before_embedding():
+    from app.core.retrieval import retrieve
+
+    embedder = MagicMock()
+    store = MagicMock()
+
+    chunks, empty = retrieve("What is my current bank balance?", embedder, store)
+
+    assert chunks == []
+    assert empty is True
+    embedder.embed.assert_not_called()
+    store.search.assert_not_called()

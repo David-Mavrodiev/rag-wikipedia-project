@@ -1,4 +1,14 @@
 services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   qdrant:
     # v1.18.x provides the Query API (/points/query, added in server 1.10) that
     # retrieval's query_points() call requires. Client floor is set in
@@ -48,10 +58,13 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
+      - RATE_LIMIT_REDIS_URL=redis://redis:6379/0
       - PROFILE=${PROFILE:-tiny}
     volumes:
       - hf_cache:/root/.cache/huggingface
     depends_on:
+      redis:
+        condition: service_healthy
       qdrant:
         condition: service_healthy
       ollama:

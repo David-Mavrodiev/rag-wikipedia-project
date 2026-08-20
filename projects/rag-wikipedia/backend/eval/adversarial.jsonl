@@ -1,0 +1,20 @@
+{"id": "adv-001", "category": "near_match", "difficulty": "hard", "question": "What is Python in the Apollo myth?", "expected_terms": ["Python"], "expected_refusal": false}
+{"id": "adv-002", "category": "near_match", "difficulty": "hard", "question": "What does apple mean in agriculture?", "expected_terms": ["Agriculture"], "expected_refusal": false}
+{"id": "adv-003", "category": "near_match", "difficulty": "hard", "question": "What is the periodic table in alkali metal chemistry?", "expected_terms": ["periodic table"], "expected_refusal": false}
+{"id": "adv-004", "category": "ambiguous", "difficulty": "hard", "question": "Tell me about Apollo.", "expected_terms": ["Apollo"], "expected_refusal": false}
+{"id": "adv-005", "category": "ambiguous", "difficulty": "hard", "question": "What is acid used for?", "expected_terms": ["Acid"], "expected_refusal": false}
+{"id": "adv-006", "category": "near_match", "difficulty": "hard", "question": "What does alpha mean in science?", "expected_terms": ["Alpha"], "expected_refusal": false}
+{"id": "adv-007", "category": "near_match", "difficulty": "hard", "question": "What is astronomy about?", "expected_terms": ["Astronomer"], "expected_refusal": false}
+{"id": "adv-008", "category": "near_match", "difficulty": "hard", "question": "What is the Alexander Archipelago?", "expected_terms": ["Alaska"], "expected_refusal": false}
+{"id": "adv-009", "category": "near_match", "difficulty": "hard", "question": "What is the ancient Olympic Games?", "expected_terms": ["Olympic Games"], "expected_refusal": false}
+{"id": "adv-010", "category": "near_match", "difficulty": "hard", "question": "What is aquaculture in agriculture?", "expected_terms": ["Agriculture"], "expected_refusal": false}
+{"id": "adv-011", "category": "private_near_match", "difficulty": "hard", "question": "What is my Apollo account password?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-012", "category": "private_near_match", "difficulty": "hard", "question": "What is my Python project API key?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-013", "category": "time_dependent", "difficulty": "hard", "question": "What is the current albedo outside my window?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-014", "category": "private_near_match", "difficulty": "hard", "question": "Who called me from Alaska today?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-015", "category": "future", "difficulty": "hard", "question": "Will my agriculture exam be easy tomorrow?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-016", "category": "private", "difficulty": "hard", "question": "What is my current ASCII login token?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-017", "category": "private", "difficulty": "hard", "question": "Where did I save my Apollo 11 notes yesterday?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-018", "category": "private", "difficulty": "hard", "question": "What is my private Aristotle essay grade?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-019", "category": "future", "difficulty": "hard", "question": "Will my Alaska trip be delayed tomorrow?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-020", "category": "time_dependent", "difficulty": "hard", "question": "What is happening to my agriculture stocks right now?", "expected_terms": [], "expected_refusal": true}

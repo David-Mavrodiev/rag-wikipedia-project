@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest eval eval-groundedness test lint
+.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test lint
 
 up:
 	docker compose up --build -d
@@ -24,6 +24,9 @@ eval:
 # so this needs Ollama running and takes minutes instead of seconds.
 eval-groundedness:
 	uv run python backend/eval/run_eval.py --with-groundedness
+
+eval-audit:
+	uv run python backend/eval/audit.py
 
 test:
 	cd backend && uv run pytest tests/ -v

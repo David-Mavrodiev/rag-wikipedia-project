@@ -13,7 +13,17 @@ class Settings(BaseSettings):
     profile: str = "tiny"
     token_budget: int = 3000
     refusal_threshold: float = 0.3
+    refusal_min_score: float = 0.45
+    refusal_high_confidence_score: float = 0.78
+    refusal_min_margin: float = 0.02
+    refusal_min_overlap_terms: int = 1
+    retrieval_candidate_k: int = 20
     allowed_origins: str = "*"
+    rate_limit_enabled: bool = True
+    rate_limit_redis_url: str = "redis://localhost:6379/0"
+    rate_limit_query_per_minute: int = 10
+    rate_limit_query_burst: int = 20
+    rate_limit_client_header: str = ""
 
 
 settings = Settings()
