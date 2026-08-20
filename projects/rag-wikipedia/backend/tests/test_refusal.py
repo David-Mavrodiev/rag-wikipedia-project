@@ -7,7 +7,13 @@ citation count. If this behavior regresses, these tests fail immediately.
 
 from unittest.mock import patch
 
-from app.core.refusal import REFUSAL_MESSAGE, is_refusal
+import pytest
+from app.core.refusal import (
+    REFUSAL_MESSAGE,
+    evidence_overlap,
+    is_private_or_time_dependent,
+    is_refusal,
+)
 
 # --- pure classifier -------------------------------------------------------
 
@@ -106,3 +112,103 @@ def test_api_empty_retrieval_is_hard_refusal(client):
     assert data["refused"] is True
     assert data["answer"] == REFUSAL_MESSAGE
     assert data["citations"] == []
+
+
+# --- intent classifier: answerable questions must NOT be short-circuited ------
+#
+# `is_private_or_time_dependent` refuses BEFORE embedding, so a false positive
+# here is a hard refusal of a question the corpus can answer — invisible to the
+# eval suites, because every unanswerable case in them contains "my".
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Who won World War I?",          # Roman numeral, not the pronoun "I"
+        "What is World War I about?",
+        "What is alternating current?",  # physics noun, not "current <thing>"
+        "What is an ocean current?",
+        "What is the current of a circuit?",
+        "What is ME/CFS?",               # abbreviation, not the pronoun "me"
+        "Who was Aristotle?",
+        "What is the largest planet?",
+    ],
+)
+def test_answerable_questions_are_not_classified_private(question):
+    assert is_private_or_time_dependent(question) is False
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "What did I have for breakfast this morning?",
+        "Who called me from Alaska today?",
+        "What is my current bank balance?",
+        "Who is the current president?",
+        "Where is my passport currently located?",
+        "What is the security code for my apartment building?",
+        "Which restaurant will I visit tomorrow?",
+        "What is happening right now?",
+    ],
+)
+def test_private_or_time_dependent_questions_are_classified(question):
+    assert is_private_or_time_dependent(question) is True
+
+
+# --- evidence overlap: whole tokens, never substrings ------------------------
+
+def test_overlap_ignores_substring_matches():
+    # "art" inside "particles"/"part" is not evidence about art. Counting it
+    # inflated the overlap and turned a refusal into a false accept.
+    assert evidence_overlap("What is art?", [{"text": "Particles are part of nature."}]) == []
+
+
+def test_overlap_ignores_concatenated_substrings():
+    chunks = [{"text": "A catalog of concatenated strings."}]
+    assert evidence_overlap("What is a cat?", chunks) == []
+
+
+def test_overlap_matches_whole_tokens():
+    chunks = [{"text": "The cat is a domestic species."}]
+    assert evidence_overlap("What is a cat?", chunks) == ["cat"]
+
+
+def test_overlap_is_case_insensitive():
+    chunks = [{"text": "PYTHON was created by Guido van Rossum."}]
+    assert "python" in evidence_overlap("Who created Python?", chunks)
+
+
+# --- "private" / "password" are encyclopedia subjects too ---------------------
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "What is a private company?",
+        "What is private equity?",
+        "What is private property?",
+        "What is private international law?",
+        "What is a private university?",
+        "What is a private key?",
+        "What is password hashing?",
+        "What is a password manager?",
+        "How does password authentication work?",
+    ],
+)
+def test_private_and_password_as_subjects_are_answerable(question):
+    assert is_private_or_time_dependent(question) is False
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "What is your private phone number?",
+        "What is John's private salary?",
+        "What is her password?",
+        "What is my manager's private salary?",
+        "What is my manager\u2019s private salary?",  # curly apostrophe
+        "What is the password for my laptop?",
+        "What is my private recovery phrase?",
+        "What is the security code for my apartment building?",
+    ],
+)
+def test_someones_private_information_is_refused(question):
+    assert is_private_or_time_dependent(question) is True
