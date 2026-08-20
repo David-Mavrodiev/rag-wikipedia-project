@@ -13,6 +13,18 @@ End-to-end Retrieval-Augmented Generation over Wikipedia, powered by:
 - Docker + Docker Compose
 - 8 GB RAM (for model + embeddings)
 
+### Configuration
+
+All settings have working defaults, so no configuration is required to run
+locally. To override any of them, copy `backend/.env.example` to `backend/.env`
+and edit it - that file documents every setting, its default, and its allowed
+range. Two are worth knowing about up front:
+
+- `RATE_LIMIT_ENABLED` (default `true`) requires Redis; `POST /query` answers
+  503 without it. Set it to `false` for a single-machine demo.
+- `QUALITY_ADMIN_TOKEN` (default empty) gates the auto-correcting audit, which
+  rewrites and persists the refusal thresholds. Empty disables that path.
+
 ### 1. Start services
 ```bash
 docker compose up --build -d

@@ -12,18 +12,29 @@ cosmetic — without them the model fails to load on a 16 GB machine (see
 ## TL;DR — start
 
 ```powershell
-# 1) Vector DB  (run from projects\rag-wikipedia)
-#    `up -d` creates the container if it does not exist yet AND starts it, so
-#    this works on a fresh checkout. (`start` only resumes an existing one.)
-docker compose up -d qdrant
+# 1) Vector DB + rate-limiter store  (run from projects\rag-wikipedia)
+#    `up -d` creates the containers if they do not exist yet AND starts them, so
+#    this works on a fresh checkout. (`start` only resumes existing ones.)
+#
+#    Redis is NOT optional here: RATE_LIMIT_ENABLED defaults to true, and the
+#    rate-limit middleware answers POST /query with 503 when it cannot reach
+#    Redis. Skipping this line makes every demo query fail.
+docker compose up -d qdrant redis
 
-# 2) LLM — CPU-only + bounded context (see WHY below)
-$env:OLLAMA_NUM_GPU=0; $env:OLLAMA_CONTEXT_LENGTH=8192; ollama serve
+# 2) LLM — plain `ollama serve` is enough (see WHY below). The API pins its own
+#    context window on every request (LLM_NUM_CTX, default 8192), so generation
+#    no longer depends on env vars set in this particular terminal.
+ollama serve
 
 # 3) API + demo console  (run from projects\rag-wikipedia\backend, separate terminals)
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 .\.venv\Scripts\python.exe -m http.server 5500 --directory ..\demo
 ```
+
+> **No Redis on the demo machine?** Turn the limiter off instead of leaving it
+> pointed at a host that is not there — `$env:RATE_LIMIT_ENABLED="false"` in the
+> terminal that runs uvicorn. The limiter is skipped entirely and `/query`
+> answers normally.
 
 Then open <http://localhost:5500/console.html> and **warm it** (below) before demoing.
 
@@ -41,12 +52,29 @@ Then open <http://localhost:5500/console.html> and **warm it** (below) before de
 
 ---
 
-## Why those two Ollama flags
+## Why no Ollama flags any more
 
-| Flag | Without it | Why |
-|---|---|---|
-| `OLLAMA_NUM_GPU=0` | `cudaMalloc failed: out of memory` → API returns **503 LLM unavailable** | The GPU is too full to hold the model; force CPU inference. |
-| `OLLAMA_CONTEXT_LENGTH=8192` | `failed to allocate CPU buffer of size 12884901888` (12.9 GB) | `llama3.2:3b` advertises a **128k** context, so Ollama tries to allocate a huge KV cache. Retrieval only ever sends ~3 000 tokens (`token_budget`), so 8k is plenty. |
+`llama3.2:3b` advertises a **128k** context, and Ollama sizes its buffers from
+that: ~12.9 GB on CPU, or a CUDA compute buffer that will not fit a 6 GB card
+(`cudaMalloc failed: out of memory`). Either way the API returns **503 LLM
+unavailable**. Retrieval only ever sends ~3 000 tokens (`token_budget`), so the
+huge window was never needed.
+
+This used to be fixed with two environment variables. It is now fixed in the
+code: `OllamaLLM` sends `num_ctx` with every request (`LLM_NUM_CTX`, default
+8192), so a plain `ollama serve` works and the app behaves identically however
+Ollama was started.
+
+**Do not set `OLLAMA_NUM_GPU=0`.** It was over-prescribed: it avoids the OOM
+only by abandoning the GPU. Measured on the RTX 3060 Laptop (6 GB), same prompt:
+
+| configuration | result |
+|---|---|
+| bounded context, GPU | **7.3 s** |
+| CPU-only (`num_gpu=0`), default context | 70.4 s |
+| default context, GPU | OOM → 503 |
+
+Bounded context is what avoids the failure; CPU-only just costs you 10x.
 
 The Ollama **tray app auto-restarts a GPU-mode server**. If port 11434 is already taken
 (`bind: Only one usage of each socket address...`), kill it first — otherwise you are
@@ -178,8 +206,7 @@ Every row below is an error actually hit on this machine.
 | `open //./pipe/dockerDesktopLinuxEngine` | Docker Desktop not running | Launch it, wait ~30 s |
 | Qdrant container exits **101**, log says `unknown variant 'on_disk'` | Volume was written by Qdrant **1.9.2**; server is now **1.18.3** — incompatible segment format | See [Reset the Qdrant volume](#reset-the-qdrant-volume-destructive) — the container must be removed **before** the volume |
 | `/query` → **503 Vector store unavailable**, log: `'QdrantClient' object has no attribute 'query_points'` | `qdrant-client` pinned too old (`<1.10`); `vectorstore.py` uses the Query API | `pyproject.toml` must pin `qdrant-client>=1.12,<2` (fixed in commit `170e800`), then `uv sync` |
-| `/query` → **503 LLM unavailable**, log: `cudaMalloc failed` | Ollama running in GPU mode, GPU full | Kill Ollama, restart with `OLLAMA_NUM_GPU=0` |
-| `/query` → **503 LLM unavailable**, log: `failed to allocate CPU buffer of size 12884901888` | 128k-context KV cache | Restart with `OLLAMA_CONTEXT_LENGTH=8192` |
+| `/query` → **503 LLM unavailable**, log: `cudaMalloc failed` or `failed to allocate CPU buffer of size 12884901888` | Ollama sizing buffers for the model's 128k context | Should not happen: the API sends `num_ctx` itself. If it does, something is overriding it — check `LLM_NUM_CTX` and that `OllamaLLM.generate` still passes `options` |
 | `bind: Only one usage of each socket address` | Ollama tray app already holds 11434 | Kill `ollama*` processes, then `ollama serve` |
 | `uv sync` "succeeds" but the old package is still imported | The running API **file-locks** `site-packages` on Windows | Stop the API **first**, then `uv pip install --reinstall <pkg>` |
 | Console shows a correct answer as "refus contrôlé" | Stale `console.html` cached by the browser | Hard-refresh (**Ctrl+F5**) — the fix reads the backend `refused` flag |

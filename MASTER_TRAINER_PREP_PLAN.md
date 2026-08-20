@@ -145,7 +145,7 @@ conflating *uncited* with *refused*.
 > user-facing contract."*
 
 **How you verify — the standard answer:**
-1. Tests before and after (the suite is at **60 passing**).
+1. Tests before and after (the suite is at **179 passing**).
 2. A new regression test for the specific case.
 3. Lint (ruff) not worse than baseline.
 4. A live end-to-end run, not just green tests.
@@ -170,7 +170,7 @@ step, and a conclusion."* This is also what you will deliver to him in the simul
 **Rules for delivery**
 - Say the objective in the first 20 seconds.
 - Never narrate silence — if something takes 20 s, talk through what it's doing.
-- Have a **pre-warmed terminal**; the first query on a cold model takes 13–69 s.
+- Have a **pre-warmed terminal**; the first query pays the model load, warm is ~12 s.
 - If the demo breaks, that's §4 — narrate the diagnosis. A calm recovery scores
   *higher* than a clean run.
 
@@ -184,8 +184,8 @@ most of these for real. Learn the **symptom → cause → fix** triple for each.
 
 | # | Symptom (real error) | Cause | Fix |
 |---|---|---|---|
-| 1 | `cudaMalloc failed: out of memory` → API returns **503 LLM unavailable** | Ollama loading the model onto a full GPU | `OLLAMA_NUM_GPU=0` (CPU) |
-| 2 | `failed to allocate CPU buffer of size 12884901888` | 3B model advertises a **128k** context → 12.9 GB KV cache | `OLLAMA_CONTEXT_LENGTH=8192` — retrieval only sends ~3k tokens |
+| 1 | `cudaMalloc failed: out of memory` → API returns **503 LLM unavailable** | Ollama sizing CUDA buffers for the model's **128k** context; the compute buffer will not fit a 6 GB card | The app sends `num_ctx` itself (`LLM_NUM_CTX`, default 8192). Bounded context is the fix — **not** `OLLAMA_NUM_GPU=0`, which avoids it only by abandoning the GPU at ~10x latency |
+| 2 | `failed to allocate CPU buffer of size 12884901888` | Same cause on the CPU path: a 12.9 GB KV cache for 128k context | Same fix. Retrieval only ever sends ~3k tokens (`token_budget`) |
 | 3 | Qdrant exits **101**: ``unknown variant `on_disk` `` | Server v1.18.3 reading storage written by v1.9.2 | Fresh volume + re-ingest; version skips are unsupported |
 | 4 | **503 Vector store unavailable**, log: `'QdrantClient' object has no attribute 'query_points'` | Client pinned `<1.10` while the code calls the Query API | Pin `qdrant-client>=1.12`; the pin and the call site are **one decision** |
 | 5 | `bind: Only one usage of each socket address` | Ollama tray app already holds :11434 in GPU mode | Kill `ollama*`, restart with CPU env vars |

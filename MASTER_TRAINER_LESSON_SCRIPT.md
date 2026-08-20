@@ -15,16 +15,22 @@ Companion docs: [DEMO_RUNBOOK.md](DEMO_RUNBOOK.md) (stack) ·
 
 ```powershell
 # 1) Stack up - from projects\rag-wikipedia
-docker compose up -d qdrant
+#    REDIS IS NOT OPTIONAL: rate limiting is on by default, and /query answers
+#    503 when the limiter cannot reach it. Omitting it breaks the 0:45 beat.
+docker compose up -d qdrant redis
 
-# 2) Ollama, CPU-only + bounded context (separate terminal)
-$env:OLLAMA_NUM_GPU=0; $env:OLLAMA_CONTEXT_LENGTH=8192; ollama serve
+# 2) Ollama (separate terminal). No env vars needed - the API sends its own
+#    context window (LLM_NUM_CTX) with every request. Do NOT set
+#    OLLAMA_NUM_GPU=0: it works, but it abandons the GPU and costs ~10x
+#    latency on stage.
+ollama serve
 
 # 3) API + console - from projects\rag-wikipedia\backend (two more terminals)
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 .\.venv\Scripts\python.exe -m http.server 5500 --directory ..\demo
 
-# 4) WARM IT. Cold start is 13-69 s. Never let the room watch this.
+# 4) WARM IT. The first query pays the model load; warm is ~12 s
+#    (measured, GPU, tiny corpus). Never let the room watch the cold one.
 Invoke-RestMethod -Uri http://127.0.0.1:8000/query -Method Post `
   -ContentType 'application/json' `
   -Body '{"question":"Who was Abraham Lincoln?"}'
@@ -49,7 +55,7 @@ what it produces. Never rehearse an unrun demo.
 | **3:45–4:30**<br>A. INSPECT | "I never start by asking for code. First I make it prove it understands the repo." | Paste prompt **A**. Read its answer aloud, briefly. |
 | **4:30–5:30**<br>B. PLAN | "Still no code. I want the file list and what could break — that's my review checklist before a single line changes." | Paste prompt **B**. Point at the files it names. |
 | **5:30–7:00**<br>C. IMPLEMENT | Narrate while it works: "Notice I scoped it — keep 384 as the default, don't touch retrieval or the API. Scope is how you keep an agent reviewable." | Paste prompt **C**. If it runs long, talk through the plan it produced. |
-| **7:00–8:30**<br>VERIFY *(never cut)* | "This is the part people skip. I read the diff myself, then I run the tests." | `git diff` → read one hunk aloud.<br>`.\.venv\Scripts\python.exe -m pytest -q` → **69+ passing**. |
+| **7:00–8:30**<br>VERIFY *(never cut)* | "This is the part people skip. I read the diff myself, then I run the tests." | `git diff` → read one hunk aloud.<br>`.\.venv\Scripts\python.exe -m pytest -q` → **179 passing**. |
 | **8:30–9:15**<br>Judgment | "Last week the same agent added a metric that was correct — but it made the eval need the LLM, turning seconds into minutes. I kept the feature and put it behind a flag. **The agent accelerates; it doesn't absolve.**" | Optional: show `--with-groundedness` in `eval/run_eval.py`. |
 | **9:15–10:00**<br>Close | "Four things: scope it, make it plan first, verify with tests, own the diff. And the dimension detail matters — bge is 384, OpenAI's small is 1536. Vectors of different sizes aren't interchangeable, so changing embedder means re-indexing. That's why migrations aren't free." | Stop talking. Don't trail off. |
 

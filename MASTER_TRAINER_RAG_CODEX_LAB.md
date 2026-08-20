@@ -123,18 +123,19 @@ User question
 
 ## Part 2: Start The Local Lab
 
-Run Qdrant (`up -d` creates the container on a first run; `start` only resumes an
-existing one, so it fails for a participant who has never run Compose here):
+Run Qdrant and Redis (`up -d` creates the containers on a first run; `start` only
+resumes existing ones, so it fails for a participant who has never run Compose
+here). Redis is required: rate limiting is on by default and `/query` answers 503
+when the limiter cannot reach it.
 
 ```powershell
-docker compose up -d qdrant
+docker compose up -d qdrant redis
 ```
 
-Start Ollama in CPU mode for this machine:
+Start Ollama. No environment variables are needed - the API sends its own context
+window (`LLM_NUM_CTX`) with every request:
 
 ```powershell
-$env:OLLAMA_NUM_GPU=0
-$env:OLLAMA_CONTEXT_LENGTH=8192
 ollama serve
 ```
 
@@ -498,10 +499,11 @@ curl.exe -s http://localhost:11434/api/tags
 Fix:
 
 ```powershell
-$env:OLLAMA_NUM_GPU=0
-$env:OLLAMA_CONTEXT_LENGTH=8192
 ollama serve
 ```
+
+(If it still OOMs, the API is not sending `num_ctx` - check `LLM_NUM_CTX` and that
+`OllamaLLM.generate` still passes `options`.)
 
 Trainer line:
 
@@ -532,7 +534,7 @@ curl.exe -s http://localhost:6333/
 Fix:
 
 ```powershell
-docker compose up -d qdrant
+docker compose up -d qdrant redis
 ```
 
 Trainer line:
