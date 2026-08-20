@@ -1,12 +1,27 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from app.core.config import settings
+from app.core.fileio import atomic_write_text
 
-CONFIG_PATH = Path("backend/eval/runtime_config.json")
+# Anchored to this file, never to the process working directory. As a relative
+# path this landed in a different place depending on where uvicorn was started,
+# so a persisted auto-correction could silently fail to load on the next boot.
+CONFIG_PATH = Path(__file__).resolve().parents[2] / "eval" / "runtime_config.json"
+
+# Same bounds the environment ingress enforces in app.core.config. Kept here so
+# a hand-edited or truncated runtime_config.json cannot install values that
+# Settings would have rejected.
+_BOUNDS: dict[str, tuple[float, float]] = {
+    "refusal_min_score": (0.0, 1.0),
+    "refusal_high_confidence_score": (0.0, 1.0),
+    "refusal_min_margin": (0.0, 1.0),
+    "refusal_min_overlap_terms": (0, 50),
+    "retrieval_candidate_k": (1, 1000),
+}
 
 
 @dataclass(frozen=True)
@@ -16,6 +31,17 @@ class RetrievalRuntimeConfig:
     refusal_min_margin: float
     refusal_min_overlap_terms: int
     retrieval_candidate_k: int
+
+
+def validate_runtime_config(config: RetrievalRuntimeConfig) -> RetrievalRuntimeConfig:
+    """Return *config* unchanged, or raise ValueError describing the first fault."""
+    for name, (low, high) in _BOUNDS.items():
+        value = getattr(config, name)
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{name} must be a number, got {value!r}")
+        if not low <= value <= high:
+            raise ValueError(f"{name}={value} is outside the allowed range [{low}, {high}]")
+    return config
 
 
 def default_runtime_config() -> RetrievalRuntimeConfig:
@@ -38,6 +64,7 @@ def get_runtime_config() -> RetrievalRuntimeConfig:
 
 def apply_runtime_config(config: RetrievalRuntimeConfig) -> None:
     global _active_config, _previous_config
+    validate_runtime_config(config)
     _previous_config = _active_config
     _active_config = config
 
@@ -51,10 +78,19 @@ def rollback_runtime_config() -> bool:
 
 
 def save_runtime_config(path: Path = CONFIG_PATH) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(asdict(_active_config), indent=2), encoding="utf-8")
+    atomic_write_text(path, json.dumps(asdict(_active_config), indent=2))
 
 
 def load_runtime_config(path: Path = CONFIG_PATH) -> RetrievalRuntimeConfig:
     data = json.loads(path.read_text(encoding="utf-8"))
-    return RetrievalRuntimeConfig(**data)
+    if not isinstance(data, dict):
+        raise ValueError(f"{path} must contain a JSON object")
+
+    known = {field.name for field in fields(RetrievalRuntimeConfig)}
+    missing = sorted(known - data.keys())
+    if missing:
+        raise ValueError(f"{path} is missing {missing}")
+
+    # Only known keys: an unrecognised entry is ignored rather than raising
+    # TypeError from the constructor.
+    return validate_runtime_config(RetrievalRuntimeConfig(**{key: data[key] for key in known}))

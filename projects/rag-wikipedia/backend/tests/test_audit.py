@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from eval import audit
 
 
@@ -32,3 +34,38 @@ def test_audit_passes_when_all_datasets_are_consistent():
     }
 
     assert audit.audit_failures(reports, k=5) == []
+
+
+def test_failed_auto_correct_restores_the_original_config_and_returns_no_reports(monkeypatch):
+    # The last candidate's numbers describe a config that is no longer active.
+    # Returning them invites a caller to publish metrics that contradict the
+    # active_config printed beside them.
+    from app.core import runtime_config as rc
+
+    original = rc.get_runtime_config()
+    monkeypatch.setattr(audit, "evaluate_datasets", lambda base_dir, e, s, k: {"golden": {}})
+    monkeypatch.setattr(audit, "audit_failures", lambda reports, k: ["still failing"])
+
+    corrected, reports = audit.try_auto_correct(Path("."), object(), object(), k=5)
+
+    assert corrected is False
+    assert reports == {}
+    assert rc.get_runtime_config() == original
+
+
+def test_successful_auto_correct_returns_reports_for_the_active_config(monkeypatch):
+    from app.core import runtime_config as rc
+
+    original = rc.get_runtime_config()
+    measured = {"golden": {"recall@5": 1.0}}
+    monkeypatch.setattr(audit, "evaluate_datasets", lambda base_dir, e, s, k: measured)
+    monkeypatch.setattr(audit, "audit_failures", lambda reports, k: [])
+    monkeypatch.setattr(audit, "save_runtime_config", lambda: None)
+
+    corrected, reports = audit.try_auto_correct(Path("."), object(), object(), k=5)
+
+    assert corrected is True
+    assert reports == measured
+    assert rc.get_runtime_config() != original  # a candidate is now active
+
+    rc.apply_runtime_config(original)

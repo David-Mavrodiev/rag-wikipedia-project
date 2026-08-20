@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from app.core.fileio import atomic_write_text
 from app.core.quality import update_quality_state
 from app.core.runtime_config import (
     RetrievalRuntimeConfig,
@@ -67,21 +68,26 @@ def candidate_configs(base: RetrievalRuntimeConfig) -> list[RetrievalRuntimeConf
 
 
 def try_auto_correct(base_dir: Path, embedder, store, *, k: int) -> tuple[bool, dict[str, dict]]:
+    """Search candidate configs for one that clears every gate.
+
+    On success the returned reports were measured under the config that is now
+    active and persisted. On FAILURE the original config is restored and the
+    reports come back empty on purpose: the last candidate's numbers describe a
+    config that is no longer active, so handing them back invites a caller to
+    publish metrics that contradict the `active_config` beside them.
+    """
     original = get_runtime_config()
-    best_reports: dict[str, dict] = {}
 
     for candidate in candidate_configs(original):
         apply_runtime_config(candidate)
         reports = evaluate_datasets(base_dir, embedder, store, k=k)
-        failures = audit_failures(reports, k=k)
-        if not failures:
+        if not audit_failures(reports, k=k):
             save_runtime_config()
             return True, reports
-        best_reports = reports
         rollback_runtime_config()
 
     apply_runtime_config(original)
-    return False, best_reports
+    return False, {}
 
 
 def summarize_reports(reports: dict[str, dict], *, k: int) -> dict:
@@ -111,10 +117,8 @@ def write_audit_reports(
         "datasets": summarize_reports(reports, k=k),
         "active_config": asdict(get_runtime_config()),
     }
-    (base_dir / "audit_report.json").write_text(
-        json.dumps(audit_report, indent=2),
-        encoding="utf-8",
-    )
+    # Atomic: the API reads this file to serve /quality, from another process.
+    atomic_write_text(base_dir / "audit_report.json", json.dumps(audit_report, indent=2))
 
     lines = ["# Evaluation Audit Report", "", f"- status: {audit_report['status']}"]
     lines.extend(f"- {failure}" for failure in failures)
