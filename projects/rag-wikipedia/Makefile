@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test lint
+.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test coverage coverage-frontend lint
 
 up:
 	docker compose up --build -d
@@ -30,6 +30,15 @@ eval-audit:
 
 test:
 	cd backend && uv run pytest tests/ -v
+
+# Terminal summary + browsable HTML (backend/htmlcov/index.html) + coverage.xml
+# for CI tooling. Config (source packages, branch mode, exclusions) lives in
+# backend/pyproject.toml under [tool.coverage.*].
+coverage:
+	cd backend && uv run pytest tests/ --cov --cov-report=term-missing --cov-report=html --cov-report=xml
+
+coverage-frontend:
+	cd frontend && npm run test:coverage
 
 lint:
 	cd backend && uv run ruff check app/ pipeline/ eval/ tests/
