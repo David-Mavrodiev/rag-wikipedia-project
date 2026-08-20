@@ -9,6 +9,108 @@ see [MASTER_TRAINER_PREP_PLAN.md](MASTER_TRAINER_PREP_PLAN.md).
 
 ---
 
+## Quick recovery: `MCP startup interrupted ... codex_apps`
+
+Use this section first if Codex starts slowly or prints:
+
+```text
+MCP startup interrupted. The following servers were not initialized:
+  codex_apps
+```
+
+### Fast diagnosis
+
+Run:
+
+```powershell
+codex doctor
+codex features list | Select-String "^apps"
+codex mcp list
+codex --version
+Get-Content "$env:USERPROFILE\.codex\version.json"
+```
+
+Interpretation:
+
+- If `apps` is enabled, Codex may be loading the remote ChatGPT Apps connector layer.
+- If an old MCP server points into `AppData\Local\OpenAI\Codex\bin\...`, it may be a
+  stale Codex install.
+- If `codex --version` does not match `latest_version`, check PATH before assuming
+  `codex update` can fix it.
+
+### Preferred fix when app functionality must stay available
+
+If you need Sites, Gmail, Slack, Drive, Calendar, GitHub, or other app-backed
+functionality, keep `apps` enabled. First remove stale local MCP entries and refresh
+the apps cache:
+
+```powershell
+codex mcp remove node_repl
+codex features enable apps
+```
+
+What we found on 2026-08-19: `codex features enable apps` is the correct final state
+when connector functionality must remain available. It writes this setting to
+`~/.codex/config.toml`:
+
+```toml
+[features]
+apps = true
+```
+
+If the command runs from inside an active Codex session, the local startup guard may
+print only `Active Codex process detected` and suppress the normal command details.
+In that case, verify the setting directly:
+
+```powershell
+Select-String -Path $env:USERPROFILE\.codex\config.toml -Pattern "^apps\s*=" -Context 1,1
+```
+
+Then clear stale apps caches:
+
+```powershell
+Remove-Item -Recurse -Force "$env:USERPROFILE\.codex\cache\codex_apps_tools",
+                            "$env:USERPROFILE\.codex\cache\codex_apps_server_info",
+                            "$env:USERPROFILE\.codex\cache\codex_app_directory"
+```
+
+Verify:
+
+```powershell
+codex doctor
+```
+
+Expected result after the fix: `17 ok`, `0 warn`, `0 fail`, and no
+`codex_apps` startup warning.
+
+If the warning comes back with `apps` enabled, the stale `node_repl` entry was not the
+only cause. At that point the remaining cause is likely the size or startup cost of
+the remote apps connector layer. Keep `apps` enabled if those capabilities matter, and
+use `codex doctor`, cache clearing, Codex updates, and plugin/app access checks before
+falling back to disabling apps.
+
+### Fallback when startup reliability matters more than app access
+
+Use this only when you can temporarily give up app-backed connector functionality:
+
+```powershell
+codex features disable apps
+```
+
+Trade-off: `codex features disable apps` disables the ChatGPT Apps connector layer in
+Codex, including connector access for Sites, Gmail, Slack, Drive, Calendar, and GitHub.
+Core coding work remains available.
+
+To restore connector apps later, run:
+
+```powershell
+codex features enable apps
+```
+
+Expect the first restart after re-enabling apps to be slower while caches rebuild.
+
+---
+
 ## 1. The problem
 
 Every single launch of `codex` printed:
@@ -237,3 +339,8 @@ Be precise if asked what the fix was: **two** changes landed, not one. Removing 
 stale `node_repl` server (§5) cut startup 43 s → 10 s and cleared two errors;
 disabling `apps` removed the warning itself and took startup to 6 s. The one-flag
 line is the headline, not the whole story.
+
+Current preference: keep app-backed functionality available. Use
+`codex features enable apps` after stale MCP cleanup and cache refresh. Treat
+`codex features disable apps` as the fallback for cases where startup reliability is
+more important than connector access.
