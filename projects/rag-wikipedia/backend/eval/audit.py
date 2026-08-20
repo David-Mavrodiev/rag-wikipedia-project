@@ -26,9 +26,18 @@ def load_jsonl(path: Path) -> list[dict]:
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
 
 
-def evaluate_datasets(base_dir: Path, embedder, store, *, k: int) -> dict[str, dict]:
+def evaluate_datasets(base_dir: Path, embedder, store, *, k: int, llm=None) -> dict[str, dict]:
+    """Score every suite. Retrieval-only unless *llm* is supplied.
+
+    Passing an llm turns on groundedness and END-TO-END refusal scoring for all
+    suites - which is the honest measure, but costs one generation per case and
+    makes the audit take minutes instead of seconds. Left off by default; wire a
+    flag to this parameter when that trade is worth it.
+    """
     return {
-        name: evaluate_golden(load_jsonl(base_dir / f"{name}.jsonl"), embedder, store, k=k)
+        name: evaluate_golden(
+            load_jsonl(base_dir / f"{name}.jsonl"), embedder, store, llm, k=k
+        )
         for name in DATASET_NAMES
     }
 

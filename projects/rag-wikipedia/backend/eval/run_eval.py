@@ -105,19 +105,21 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
     When groundedness is not measured the key is OMITTED from the report rather
     than reported as 0.0 — "not measured" must not look like "badly grounded".
     """
-    from app.core.refusal import decide_evidence
+    from app.core.refusal import decide_evidence, is_refusal
     from app.core.retrieval import retrieve
     from eval.metrics import mrr, refusal_accuracy
 
     answerable, unanswerable = validate_golden_set(golden)
-    measure_groundedness = llm is not None
-    if measure_groundedness:
+    measure_generation = llm is not None
+    if measure_generation:
         from app.core.prompt import build_prompt
         from eval.metrics import groundedness
 
     recall_scores: list[float] = []
     reciprocal_rank_scores: list[float] = []
     groundedness_scores: list[float] = []
+    e2e_answerable_refused: list[bool] = []
+    e2e_unanswerable_refused: list[bool] = []
     cases: list[dict] = []
 
     for item in answerable:
@@ -160,11 +162,19 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
             ],
         }
 
-        if measure_groundedness:
+        if measure_generation:
             answer = llm.generate(build_prompt(question, chunks)) if chunks else ""
             groundedness_score = groundedness(answer, texts)
             groundedness_scores.append(groundedness_score)
             case_report["groundedness"] = groundedness_score
+
+            # Three layers, kept separate on purpose. `refused` above is the
+            # RETRIEVAL decision; the model can still decline evidence that
+            # retrieval accepted, and the combination is what the user sees.
+            answer_refused = is_refusal(answer)
+            case_report["answer_refused"] = answer_refused
+            case_report["end_to_end_refused"] = bool(refused or answer_refused)
+            e2e_answerable_refused.append(case_report["end_to_end_refused"])
             logger.info(
                 "Q: %r | recall@%s=%.2f | RR=%.2f | groundedness=%.2f",
                 question[:50],
@@ -185,6 +195,19 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
         chunks, refused = retrieve(question, embedder, store, top_k=k)
         evidence = decide_evidence(question, chunks)
         refused_flags.append(refused)
+
+        # Only worth generating when retrieval ACCEPTED an unanswerable question:
+        # that is the false accept the model still has a chance to catch. When
+        # retrieval already refused, the API short-circuits and never calls the
+        # LLM, so end-to-end is a refusal without spending a generation.
+        e2e_refused = refused
+        answer_refused = None
+        if measure_generation and not refused:
+            answer = llm.generate(build_prompt(question, chunks)) if chunks else ""
+            answer_refused = is_refusal(answer)
+            e2e_refused = bool(answer_refused)
+        if measure_generation:
+            e2e_unanswerable_refused.append(bool(e2e_refused))
         logger.info("Q: %r | refused=%s", question[:50], refused)
         cases.append(
             {
@@ -194,6 +217,14 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
                 "expected_refusal": True,
                 "refused": refused,
                 "correct": refused is True,
+                **(
+                    {
+                        "answer_refused": answer_refused,
+                        "end_to_end_refused": bool(e2e_refused),
+                    }
+                    if measure_generation
+                    else {}
+                ),
                 "evidence_reason": evidence.reason,
                 "top_score": evidence.top_score,
                 "score_margin": evidence.score_margin,
@@ -237,9 +268,25 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
         "n_unanswerable": len(unanswerable),
         "cases": cases,
     }
-    if measure_groundedness:
+    if measure_generation:
         report["groundedness"] = (
             sum(groundedness_scores) / len(answerable) if answerable else 0.0
+        )
+        # END-TO-END counterparts, reported ALONGSIDE the retrieval metrics and
+        # never replacing them: the pair is what reveals whether the model is
+        # catching what retrieval let through, or refusing what it accepted.
+        n_unans = len(e2e_unanswerable_refused)
+        n_ans = len(e2e_answerable_refused)
+        report["e2e_refusal_accuracy"] = (
+            sum(1 for flag in e2e_unanswerable_refused if flag) / n_unans if n_unans else 0.0
+        )
+        report["e2e_answerable_refusal_rate"] = (
+            sum(1 for flag in e2e_answerable_refused if flag) / n_ans if n_ans else 0.0
+        )
+        report["e2e_false_accept_rate"] = (
+            sum(1 for flag in e2e_unanswerable_refused if not flag) / n_unans
+            if n_unans
+            else 0.0
         )
     return report
 

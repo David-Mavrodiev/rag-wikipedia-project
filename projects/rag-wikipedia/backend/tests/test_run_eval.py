@@ -186,3 +186,74 @@ def test_answerable_refusal_counts_as_metric_failure(monkeypatch):
 
     assert report["recall@5"] == 0.0
     assert report["answerable_refusal_rate"] == 1.0
+
+
+# --- end-to-end refusal: retrieval accepting is NOT the same as answering ----
+
+
+class RefusingLLM:
+    """Retrieval finds evidence, the model declines to use it (the gravity case)."""
+
+    def __init__(self):
+        self.prompts = []
+
+    def generate(self, prompt: str) -> str:
+        self.prompts.append(prompt)
+        return "I don't know based on the provided context."
+
+
+def test_model_refusal_is_recorded_end_to_end(monkeypatch):
+    # THE finding: decide_evidence accepts, the model refuses. The report must
+    # show both layers instead of only the retrieval verdict.
+    _patch_retrieve(monkeypatch)
+
+    report = run_eval.evaluate_golden(
+        _complete_golden_set(), object(), object(), RefusingLLM(), k=5
+    )
+
+    answerable = [c for c in report["cases"] if not c["expected_refusal"]]
+    assert all(c["refused"] is False for c in answerable)            # retrieval accepted
+    assert all(c["answer_refused"] is True for c in answerable)      # model declined
+    assert all(c["end_to_end_refused"] is True for c in answerable)  # user saw a refusal
+
+    # and the aggregate makes the gap visible
+    assert report["answerable_refusal_rate"] == 0.0        # retrieval view: perfect
+    assert report["e2e_answerable_refusal_rate"] == 1.0    # reality: refused every one
+
+
+def test_answering_model_is_not_marked_refused(monkeypatch):
+    _patch_retrieve(monkeypatch)
+
+    report = run_eval.evaluate_golden(_complete_golden_set(), object(), object(), FakeLLM(), k=5)
+
+    answerable = [c for c in report["cases"] if not c["expected_refusal"]]
+    assert all(c["end_to_end_refused"] is False for c in answerable)
+    assert report["e2e_answerable_refusal_rate"] == 0.0
+
+
+def test_fast_path_omits_every_e2e_key(monkeypatch):
+    # No llm -> the keys must be ABSENT, not 0.0. "Not measured" must never read
+    # as "never refuses".
+    _patch_retrieve(monkeypatch)
+
+    report = run_eval.evaluate_golden(_complete_golden_set(), object(), object(), k=5)
+
+    for key in ("e2e_refusal_accuracy", "e2e_answerable_refusal_rate", "e2e_false_accept_rate"):
+        assert key not in report
+    assert all("answer_refused" not in c for c in report["cases"])
+    assert all("end_to_end_refused" not in c for c in report["cases"])
+
+
+def test_unanswerable_refused_by_retrieval_costs_no_generation(monkeypatch):
+    # When retrieval already refuses, the API short-circuits and never calls the
+    # LLM. The eval must mirror that instead of burning a generation per case.
+    _patch_retrieve(monkeypatch)
+
+    llm = RefusingLLM()
+    report = run_eval.evaluate_golden(_complete_golden_set(), object(), object(), llm, k=5)
+
+    # 15 answerable cases generate; the 5 unanswerable ones are refused by
+    # retrieval, so they must not add any further prompts.
+    assert len(llm.prompts) == 15
+    assert report["e2e_refusal_accuracy"] == 1.0
+    assert report["e2e_false_accept_rate"] == 0.0
