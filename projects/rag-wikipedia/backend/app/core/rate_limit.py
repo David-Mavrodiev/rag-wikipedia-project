@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import logging
 
+from opentelemetry import trace
 from redis import RedisError
 from redis.asyncio import Redis
 from redis.exceptions import NoScriptError
@@ -197,6 +198,11 @@ class RateLimitMiddleware:
         client_key = _client_key(scope)
         key_hash = _hash_client_key(client_key)
 
+        # Tracing is registered outside this middleware precisely so this span
+        # exists here. The same hash the log lines carry, so the two join.
+        span = trace.get_current_span()
+        span.set_attribute("rag.client_hash", key_hash)
+
         try:
             decision = await check_rate_limit(client_key)
         except RateLimitBackendUnavailable:
@@ -209,6 +215,7 @@ class RateLimitMiddleware:
             return
 
         if not decision.allowed:
+            span.set_attribute("rag.rate_limited", True)
             logger.info("Rate limit exceeded client=%s path=/query", key_hash)
             await _send_json(
                 send,

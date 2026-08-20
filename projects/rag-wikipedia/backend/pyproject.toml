@@ -20,6 +20,20 @@ dependencies = [
     "httpx>=0.27",
     "ollama>=0.2",
     "redis>=5.0",
+    # Tracing. The api package is the only hard requirement of app/core - it is
+    # a no-op without an SDK, which is what lets the instrumentation ship
+    # independently of the decision about where traces go. The rest are imported
+    # lazily by configure_tracing().
+    #
+    # The instrumentation packages are versioned on a SEPARATE, still-pre-1.0
+    # series (0.48b0 pairs with SDK 1.27) and are released in lockstep with it,
+    # so the two floors have to move together.
+    "opentelemetry-api>=1.27,<2",
+    "opentelemetry-sdk>=1.27,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.27,<2",
+    "opentelemetry-instrumentation-fastapi>=0.48b0",
+    "opentelemetry-instrumentation-httpx>=0.48b0",
+    "opentelemetry-instrumentation-redis>=0.48b0",
 ]
 
 [project.optional-dependencies]
