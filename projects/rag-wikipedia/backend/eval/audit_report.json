@@ -1,0 +1,37 @@
+{
+  "status": "healthy",
+  "failures": [],
+  "datasets": {
+    "golden": {
+      "recall@5": 1.0,
+      "precision@5": 0.7350000000000001,
+      "mrr": 0.9645833333333333,
+      "refusal_accuracy": 1.0,
+      "false_accept_rate": 0.0,
+      "answerable_refusal_rate": 0.0
+    },
+    "holdout": {
+      "recall@5": 1.0,
+      "precision@5": 0.9333333333333333,
+      "mrr": 1.0,
+      "refusal_accuracy": 1.0,
+      "false_accept_rate": 0.0,
+      "answerable_refusal_rate": 0.0
+    },
+    "adversarial": {
+      "recall@5": 0.8,
+      "precision@5": 0.6,
+      "mrr": 0.675,
+      "refusal_accuracy": 1.0,
+      "false_accept_rate": 0.0,
+      "answerable_refusal_rate": 0.1
+    }
+  },
+  "active_config": {
+    "refusal_min_score": 0.45,
+    "refusal_high_confidence_score": 0.78,
+    "refusal_min_margin": 0.02,
+    "refusal_min_overlap_terms": 1,
+    "retrieval_candidate_k": 20
+  }
+}
