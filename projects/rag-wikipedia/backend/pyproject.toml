@@ -19,6 +19,15 @@ dependencies = [
     "tiktoken>=0.7",
     "httpx>=0.27",
     "ollama>=0.2",
+    # Auth: PyJWT (with cryptography, for RS256 id_token verification and
+    # Fernet-encrypted IdP secrets), bcrypt for password hashes, SQLAlchemy +
+    # aiosqlite for the user store (swap the driver for Postgres),
+    # email-validator backs pydantic's EmailStr.
+    "pyjwt[crypto]>=2.8",
+    "bcrypt>=4.1",
+    "sqlalchemy[asyncio]>=2.0",
+    "aiosqlite>=0.20",
+    "email-validator>=2.1",
 ]
 
 [project.optional-dependencies]

@@ -7,6 +7,10 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    location /auth {
+        proxy_pass ${API_UPSTREAM}/auth;
+    }
+
     location /query {
         proxy_pass ${API_UPSTREAM}/query;
     }

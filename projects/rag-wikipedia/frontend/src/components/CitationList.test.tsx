@@ -13,8 +13,12 @@ test('renders nothing when no citations', () => {
 
 test('renders citation titles', () => {
   render(<CitationList citations={citations} />)
-  expect(screen.getByText(/\[1\] Python/)).toBeInTheDocument()
-  expect(screen.getByText(/\[2\] ML/)).toBeInTheDocument()
+  // The marker is its own element, spaced by flex gap rather than a text node,
+  // so the label is asserted in parts.
+  expect(screen.getByTestId('citation-toggle-1')).toHaveTextContent('[1]')
+  expect(screen.getByTestId('citation-toggle-1')).toHaveTextContent('Python')
+  expect(screen.getByTestId('citation-toggle-2')).toHaveTextContent('[2]')
+  expect(screen.getByTestId('citation-toggle-2')).toHaveTextContent('ML')
 })
 
 test('expands citation on click', () => {

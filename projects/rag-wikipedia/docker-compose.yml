@@ -49,8 +49,33 @@ services:
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
       - PROFILE=${PROFILE:-tiny}
+      # Users live in SQLite by default; point this at postgresql+asyncpg://…
+      # to move them to a real database server.
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./data/app.db}
+      - JWT_SECRET=${JWT_SECRET:-}
+      # Protects each tenant's IdP client secret at rest. Generate with:
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      - SECRET_ENCRYPTION_KEY=${SECRET_ENCRYPTION_KEY:-}
+      # First account to receive the admin role, so somebody can register the
+      # first organization.
+      - BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL:-}
+      - SESSION_IDLE_TIMEOUT_MINUTES=${SESSION_IDLE_TIMEOUT_MINUTES:-30}
+      - SESSION_ABSOLUTE_LIFETIME_HOURS=${SESSION_ABSOLUTE_LIFETIME_HOURS:-8}
+      # The demo is served over plain http, so the session cookie cannot be
+      # marked Secure or the browser would drop it. Set this to true (and serve
+      # over https) anywhere else.
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      # Both point at the frontend, which reverse-proxies /auth to this service.
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - OAUTH_REDIRECT_BASE_URL=${OAUTH_REDIRECT_BASE_URL:-http://localhost:5173}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
     volumes:
       - hf_cache:/root/.cache/huggingface
+      # keeps registered accounts across container rebuilds
+      - api_data:/app/data
     depends_on:
       qdrant:
         condition: service_healthy
@@ -77,3 +102,4 @@ volumes:
   qdrant_data:
   ollama_data:
   hf_cache:
+  api_data:

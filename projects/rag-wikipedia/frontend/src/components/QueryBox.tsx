@@ -16,17 +16,22 @@ export default function QueryBox({ onSubmit, loading }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit} data-testid="query-form">
+    <form className="card inrow" onSubmit={handleSubmit} data-testid="query-form">
       <input
+        className="input"
         type="text"
         value={value}
         onChange={(event) => setValue(event.target.value)}
-        placeholder="Ask a question about Wikipedia..."
+        placeholder="Ask a question about Wikipedia…"
         disabled={loading}
         data-testid="query-input"
-        style={{ width: '70%', padding: '0.5rem' }}
       />
-      <button type="submit" disabled={loading || !value.trim()} data-testid="query-submit">
+      <button
+        className="button"
+        type="submit"
+        disabled={loading || !value.trim()}
+        data-testid="query-submit"
+      >
         {loading ? 'Loading…' : 'Ask'}
       </button>
     </form>

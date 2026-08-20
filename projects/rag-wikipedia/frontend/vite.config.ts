@@ -14,6 +14,7 @@ export default defineConfig({
     // `api:8000` belongs only to nginx.conf.template, which runs inside the
     // Compose network. Override with VITE_DEV_PROXY_TARGET if the API is elsewhere.
     proxy: {
+      '/auth': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
       '/query': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
       '/health': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
     },

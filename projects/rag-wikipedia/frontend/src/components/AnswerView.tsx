@@ -4,12 +4,9 @@ interface Props {
 
 export default function AnswerView({ answer }: Props) {
   return (
-    <div
-      data-testid="answer-view"
-      style={{ margin: '1rem 0', padding: '1rem', background: '#f5f5f5' }}
-    >
+    <div className="card" data-testid="answer-view">
       <h3>Answer</h3>
-      <p>{answer}</p>
+      <p className="answer">{answer}</p>
     </div>
   )
 }

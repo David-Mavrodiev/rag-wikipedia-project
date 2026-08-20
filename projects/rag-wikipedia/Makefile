@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest eval eval-groundedness test lint
+.PHONY: up down auth-up auth-down pull-model ingest eval eval-groundedness test lint
 
 up:
 	docker compose up --build -d
@@ -8,6 +8,14 @@ pull-model:
 
 down:
 	docker compose down
+
+# Auth-only stack: API + frontend, no Qdrant, no Ollama, no model downloads.
+# /query returns 503 there; everything under /auth and /admin works.
+auth-up:
+	docker compose -f docker-compose.auth.yml up --build -d
+
+auth-down:
+	docker compose -f docker-compose.auth.yml down
 
 # These run `uv run` from here on purpose: pyproject.toml in this directory
 # declares a uv workspace with `backend` as a member, so uv resolves the shared

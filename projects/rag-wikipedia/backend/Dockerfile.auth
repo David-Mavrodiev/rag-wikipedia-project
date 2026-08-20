@@ -1,0 +1,22 @@
+# Auth/API image: the same application without the ingestion and model stack.
+# Builds in about a minute instead of pulling ~3 GB of torch, so it is the one
+# to use when you are working on authentication rather than retrieval.
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY pyproject.toml .
+
+# The same pinned versions as the full image, minus the three heavyweight
+# packages. Filtering the real manifest instead of keeping a second hand-written
+# list means these versions cannot quietly drift apart.
+RUN python -c "import tomllib,sys; heavy=('sentence-transformers','prefect','datasets'); deps=tomllib.load(open('pyproject.toml','rb'))['project']['dependencies']; sys.stdout.write(chr(10).join(d for d in deps if not d.startswith(heavy)))" > requirements-auth.txt \
+    && pip install --no-cache-dir -r requirements-auth.txt
+
+# retrieval.py builds a tiktoken encoding at import time, which downloads the
+# BPE file on first use. Fetch it now so the container starts offline.
+RUN python -c "import tiktoken; tiktoken.get_encoding('cl100k_base')"
+
+COPY app ./app
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

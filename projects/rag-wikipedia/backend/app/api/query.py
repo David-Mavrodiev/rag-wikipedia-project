@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from functools import lru_cache
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.citations import build_citations, extract_citation_indices
 from app.core.config import settings
@@ -12,6 +12,7 @@ from app.core.llm import OllamaLLM
 from app.core.prompt import build_prompt
 from app.core.refusal import REFUSAL_MESSAGE, is_refusal
 from app.core.retrieval import retrieve
+from app.core.security import require_user
 from app.core.vectorstore import QdrantStore
 from app.models.query import Citation, QueryRequest, QueryResponse
 
@@ -34,7 +35,10 @@ def _llm() -> OllamaLLM:
     return OllamaLLM(model=settings.llm_model, base_url=settings.ollama_url)
 
 
-@router.post("/query", response_model=QueryResponse)
+# Declared as a route dependency, not a handler argument: the identity is not
+# used here, and this way FastAPI rejects an unauthenticated caller with 401
+# before it parses or validates their request body.
+@router.post("/query", response_model=QueryResponse, dependencies=[Depends(require_user)])
 async def query(request: QueryRequest) -> QueryResponse:
     try:
         chunks, is_empty = retrieve(request.question, _embedder(), _store())

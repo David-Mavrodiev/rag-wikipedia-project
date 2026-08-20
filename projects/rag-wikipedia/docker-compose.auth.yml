@@ -1,0 +1,57 @@
+# Authentication-only stack: API + frontend, no Qdrant and no Ollama.
+#
+# Everything under /auth and /admin works, and so does the sign-in UI. /query
+# answers `503 Vector store unavailable` by design — the retrieval and model
+# services are exactly what this file leaves out.
+#
+#   docker compose -f docker-compose.auth.yml up --build -d
+#
+# Runs under its own project name so it cannot recreate or clobber the
+# containers and volumes of the full stack in docker-compose.yml.
+name: rag-wikipedia-auth
+
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.auth
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./data/app.db
+      - JWT_SECRET=${JWT_SECRET:-}
+      - SECRET_ENCRYPTION_KEY=${SECRET_ENCRYPTION_KEY:-}
+      - BOOTSTRAP_ADMIN_EMAIL=${BOOTSTRAP_ADMIN_EMAIL:-}
+      - SESSION_IDLE_TIMEOUT_MINUTES=${SESSION_IDLE_TIMEOUT_MINUTES:-30}
+      - SESSION_ABSOLUTE_LIFETIME_HOURS=${SESSION_ABSOLUTE_LIFETIME_HOURS:-8}
+      # Served over plain http here, so a Secure cookie would never be stored.
+      - COOKIE_SECURE=${COOKIE_SECURE:-false}
+      # Both point at the frontend, which reverse-proxies /auth to this service.
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - OAUTH_REDIRECT_BASE_URL=${OAUTH_REDIRECT_BASE_URL:-http://localhost:5173}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID:-}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET:-}
+    volumes:
+      # keeps registered accounts across container rebuilds
+      - api_data:/app/data
+    healthcheck:
+      # python:slim has no wget/curl
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  api_data:

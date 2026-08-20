@@ -25,26 +25,28 @@ export default function CitationList({ citations }: Props) {
   }
 
   return (
-    <div data-testid="citation-list">
+    <div className="card" data-testid="citation-list">
       <h3>Sources</h3>
-      {citations.map((citation) => (
-        <div
-          key={citation.index}
-          style={{ marginBottom: '0.5rem', border: '1px solid #ddd', padding: '0.5rem' }}
-        >
-          <button onClick={() => toggle(citation.index)} data-testid={`citation-toggle-${citation.index}`}>
-            [{citation.index}] {citation.title}
-          </button>
-          {expanded.has(citation.index) && (
-            <p
-              data-testid={`citation-excerpt-${citation.index}`}
-              style={{ marginTop: '0.5rem', fontSize: '0.9em' }}
+      <div className="cites">
+        {citations.map((citation) => (
+          <div className="cite" key={citation.index}>
+            <button
+              className="cite-toggle"
+              type="button"
+              onClick={() => toggle(citation.index)}
+              data-testid={`citation-toggle-${citation.index}`}
             >
-              {citation.excerpt}
-            </p>
-          )}
-        </div>
-      ))}
+              <span className="idx">[{citation.index}]</span>
+              {citation.title}
+            </button>
+            {expanded.has(citation.index) && (
+              <p className="excerpt" data-testid={`citation-excerpt-${citation.index}`}>
+                {citation.excerpt}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
