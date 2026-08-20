@@ -49,3 +49,12 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# ---------- Misc logs / deploy scratch ----------
+*.log
+
+# generated eval output
+projects/rag-wikipedia/backend/eval/*_report.md
+projects/rag-wikipedia/backend/eval/report.json
+projects/rag-wikipedia/backend/eval/report.md
+projects/rag-wikipedia/demo/report.json

@@ -9,9 +9,14 @@ export default defineConfig({
     setupFiles: './src/test-setup.ts',
   },
   server: {
+    // `npm run dev` runs Vite on the developer HOST, where the Compose service
+    // name `api` does not resolve — the dev proxy must target localhost.
+    // `api:8000` belongs only to nginx.conf.template, which runs inside the
+    // Compose network. Override with VITE_DEV_PROXY_TARGET if the API is elsewhere.
     proxy: {
-      '/query': 'http://api:8000',
-      '/health': 'http://api:8000',
+      '/query': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
+      '/health': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
+      '/quality': process.env.VITE_DEV_PROXY_TARGET || 'http://localhost:8000',
     },
   },
 })

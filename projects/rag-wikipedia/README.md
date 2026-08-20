@@ -13,6 +13,18 @@ End-to-end Retrieval-Augmented Generation over Wikipedia, powered by:
 - Docker + Docker Compose
 - 8 GB RAM (for model + embeddings)
 
+### Configuration
+
+All settings have working defaults, so no configuration is required to run
+locally. To override any of them, copy `backend/.env.example` to `backend/.env`
+and edit it - that file documents every setting, its default, and its allowed
+range. Two are worth knowing about up front:
+
+- `RATE_LIMIT_ENABLED` (default `true`) requires Redis; `POST /query` answers
+  503 without it. Set it to `false` for a single-machine demo.
+- `QUALITY_ADMIN_TOKEN` (default empty) gates the auto-correcting audit, which
+  rewrites and persists the refusal thresholds. Empty disables that path.
+
 ### 1. Start services
 ```bash
 docker compose up --build -d
@@ -48,6 +60,46 @@ make test
 make eval
 ```
 Reports recall@5 and MRR on the answerable golden questions and refusal accuracy on the unanswerable ones (`backend/eval/golden.jsonl`). Exits non-zero if recall@5 or refusal accuracy falls below the 0.8 gate.
+
+## Evaluation
+
+The default evaluation is retrieval-only, so it can run quickly in CI without
+Ollama:
+
+```bash
+make eval
+```
+
+It scores a 60-case golden set: 40 answerable Wikipedia questions and 20
+unanswerable/private/out-of-corpus questions. The gate requires:
+
+- `recall@5 >= 0.80`
+- `refusal_accuracy >= 0.80`
+
+Each run writes:
+
+- `backend/eval/report.json` for machine-readable metrics and per-question diagnostics.
+- `backend/eval/report.md` for a reviewer-friendly failure analysis.
+
+For slower generation-quality checks, run:
+
+```bash
+make eval-groundedness
+```
+
+Groundedness is reported only; retrieval and refusal remain the quality gates.
+
+To check for golden-set overfitting, run the audit suite:
+
+```bash
+make eval-audit
+```
+
+The audit compares the visible golden set against holdout and adversarial sets,
+flags large golden-vs-holdout gaps, and writes `backend/eval/audit_report.json`
+plus `backend/eval/audit_report.md`. While the API is running, internal operators
+can call `POST /quality/audit` to refresh the runtime quality state exposed by
+`GET /quality`.
 
 ## Profiles
 | Profile | Articles | Notes |

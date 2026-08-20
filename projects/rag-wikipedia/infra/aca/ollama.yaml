@@ -1,0 +1,19 @@
+location: eastus
+name: ollama
+type: Microsoft.App/containerApps
+properties:
+  managedEnvironmentId: /subscriptions/e3efefd1-7593-41cf-bc35-868cad854855/resourceGroups/Rag-Project/providers/Microsoft.App/managedEnvironments/rag-env
+  workloadProfileName: ollama-d4
+  configuration:
+    activeRevisionsMode: Single
+    ingress: { external: false, targetPort: 11434, transport: http }
+  template:
+    containers:
+      - image: ollama/ollama:latest
+        name: ollama
+        resources: { cpu: 3.5, memory: 8Gi }
+        volumeMounts:
+          - { volumeName: models, mountPath: /root/.ollama }
+    scale: { minReplicas: 1, maxReplicas: 1 }
+    volumes:
+      - { name: models, storageType: AzureFile, storageName: ollama-models }

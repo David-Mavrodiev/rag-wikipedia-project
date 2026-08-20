@@ -38,12 +38,13 @@ class QdrantStore:
         self._client.upsert(collection_name=self._collection, points=structs)
 
     def search(self, vector: list[float], top_k: int = 5) -> list[dict[str, Any]]:
-        results = self._client.search(
+        # query_points replaced the removed search() in qdrant-client >= 1.12
+        results = self._client.query_points(
             collection_name=self._collection,
-            query_vector=vector,
+            query=vector,
             limit=top_k,
             with_payload=True,
-        )
+        ).points
         return [
             {
                 "score": result.score,

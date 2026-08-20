@@ -1,0 +1,20 @@
+{"id": "holdout-001", "category": "definition", "difficulty": "easy", "question": "What is anarchism?", "expected_terms": ["Anarchism"], "expected_refusal": false}
+{"id": "holdout-002", "category": "definition", "difficulty": "easy", "question": "What is albedo?", "expected_terms": ["Albedo"], "expected_refusal": false}
+{"id": "holdout-003", "category": "person", "difficulty": "easy", "question": "Who was Achilles?", "expected_terms": ["Achilles"], "expected_refusal": false}
+{"id": "holdout-004", "category": "place", "difficulty": "easy", "question": "What is Andorra?", "expected_terms": ["Andorra"], "expected_refusal": false}
+{"id": "holdout-005", "category": "event", "difficulty": "medium", "question": "What was Apollo 8?", "expected_terms": ["Apollo 8"], "expected_refusal": false}
+{"id": "holdout-006", "category": "technology", "difficulty": "easy", "question": "What is ASCII?", "expected_terms": ["ASCII"], "expected_refusal": false}
+{"id": "holdout-007", "category": "place", "difficulty": "easy", "question": "What is Algeria?", "expected_terms": ["Algeria"], "expected_refusal": false}
+{"id": "holdout-008", "category": "science", "difficulty": "medium", "question": "What are algae?", "expected_terms": ["Algae"], "expected_refusal": false}
+{"id": "holdout-009", "category": "definition", "difficulty": "medium", "question": "What is arithmetic mean?", "expected_terms": ["Arithmetic mean"], "expected_refusal": false}
+{"id": "holdout-010", "category": "organization", "difficulty": "medium", "question": "What is the American National Standards Institute?", "expected_terms": ["American National Standards Institute"], "expected_refusal": false}
+{"id": "holdout-011", "category": "person", "difficulty": "easy", "question": "Who was Abraham Lincoln?", "expected_terms": ["Abraham Lincoln"], "expected_refusal": false}
+{"id": "holdout-012", "category": "place", "difficulty": "easy", "question": "What is Alaska?", "expected_terms": ["Alaska"], "expected_refusal": false}
+{"id": "holdout-013", "category": "concept", "difficulty": "medium", "question": "What is altruism?", "expected_terms": ["Altruism"], "expected_refusal": false}
+{"id": "holdout-014", "category": "science", "difficulty": "medium", "question": "What is amphibian?", "expected_terms": ["Amphibian"], "expected_refusal": false}
+{"id": "holdout-015", "category": "music", "difficulty": "medium", "question": "What is America the Beautiful?", "expected_terms": ["America the Beautiful"], "expected_refusal": false}
+{"id": "holdout-016", "category": "private", "difficulty": "easy", "question": "What is my private recovery phrase?", "expected_terms": [], "expected_refusal": true}
+{"id": "holdout-017", "category": "time_dependent", "difficulty": "easy", "question": "What is happening in my city right now?", "expected_terms": [], "expected_refusal": true}
+{"id": "holdout-018", "category": "private", "difficulty": "easy", "question": "What did I write in my journal yesterday?", "expected_terms": [], "expected_refusal": true}
+{"id": "holdout-019", "category": "private", "difficulty": "easy", "question": "What is my manager's private salary?", "expected_terms": [], "expected_refusal": true}
+{"id": "holdout-020", "category": "future", "difficulty": "easy", "question": "Which flight will I book tomorrow?", "expected_terms": [], "expected_refusal": true}

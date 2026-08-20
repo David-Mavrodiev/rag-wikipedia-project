@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from app.core.refusal import REFUSAL_MESSAGE
+
 
 def test_health(client):
     response = client.get("/health")
@@ -28,7 +30,11 @@ def test_query_returns_refusal_when_no_context(client):
 
     assert response.status_code == 200
     data = response.json()
-    assert "don't know" in data["answer"].lower() or data["citations"] == []
+    # Assert the explicit state, not the old `refusal-text OR no-citations` OR,
+    # which also passed for a grounded answer the model forgot to cite.
+    assert data["refused"] is True
+    assert data["answer"] == REFUSAL_MESSAGE
+    assert data["citations"] == []
 
 
 def test_query_returns_answer_with_citations(client):

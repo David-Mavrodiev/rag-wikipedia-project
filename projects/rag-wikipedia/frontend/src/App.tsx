@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import AnswerView from './components/AnswerView'
 import CitationList from './components/CitationList'
+import QualityPanel from './components/QualityPanel'
 import QueryBox from './components/QueryBox'
 
 export interface Citation {
@@ -15,7 +16,8 @@ export interface QueryResult {
   citations: Citation[]
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || ''
+// strip trailing slashes so a base ending in "/" doesn't produce "//query"
+const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
 
 export default function App() {
   const [result, setResult] = useState<QueryResult | null>(null)
@@ -47,6 +49,7 @@ export default function App() {
   return (
     <div className="app">
       <h1>RAG Wikipedia</h1>
+      <QualityPanel />
       <QueryBox onSubmit={handleQuery} loading={loading} />
       {error && <p className="error">{error}</p>}
       {result && (

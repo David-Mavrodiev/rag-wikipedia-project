@@ -1,0 +1,19 @@
+location: eastus
+name: qdrant
+type: Microsoft.App/containerApps
+properties:
+  managedEnvironmentId: /subscriptions/e3efefd1-7593-41cf-bc35-868cad854855/resourceGroups/Rag-Project/providers/Microsoft.App/managedEnvironments/rag-env
+  workloadProfileName: Consumption
+  configuration:
+    activeRevisionsMode: Single
+    ingress: { external: false, targetPort: 6333, transport: http }
+  template:
+    containers:
+      - image: qdrant/qdrant:v1.18.3
+        name: qdrant
+        resources: { cpu: 1.0, memory: 2Gi }
+        volumeMounts:
+          - { volumeName: data, mountPath: /qdrant/storage }
+    scale: { minReplicas: 1, maxReplicas: 1 }
+    volumes:
+      - { name: data, storageType: AzureFile, storageName: qdrant-data }

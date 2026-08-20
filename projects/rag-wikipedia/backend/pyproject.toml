@@ -6,16 +6,20 @@ dependencies = [
     "fastapi>=0.111",
     "uvicorn[standard]>=0.30",
     "pydantic-settings>=2.3",
-    # Pin to the client minor matching the pinned qdrant server (v1.9.2 in
-    # docker-compose). Client >=1.10 removes QdrantClient.search and warns on
-    # version-incompatibility with the 1.9 server.
-    "qdrant-client>=1.9,<1.10",
+    # Must provide the Query API (query_points), which vectorstore.py calls and
+    # the pinned Qdrant server (v1.18.3 in docker-compose) exposes.
+    # Verified against the client source: query_points is present from 1.10
+    # (absent in 1.9.x), and the legacy search() was removed in 1.16. So 1.10
+    # is the true floor; >=1.12 is a deliberately conservative pin — it is the
+    # range this project has actually been run and tested against.
+    "qdrant-client>=1.12,<2",
     "sentence-transformers>=3.0",
     "prefect>=3,<4",
     "datasets>=2.19",
     "tiktoken>=0.7",
     "httpx>=0.27",
     "ollama>=0.2",
+    "redis>=5.0",
 ]
 
 [project.optional-dependencies]

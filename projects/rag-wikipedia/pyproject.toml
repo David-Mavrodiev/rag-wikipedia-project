@@ -7,3 +7,10 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+# providers.py is a DORMANT module: it is 100% commented out (0 non-comment
+# lines) and its comment lines mirror the layout of the real code they document.
+# Re-wrapping them to 100 chars would distort that mapping, so long lines are
+# deliberate here. Everything else in the project still enforces E501.
+"**/app/core/providers.py" = ["E501"]

@@ -1,0 +1,34 @@
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /query {
+        proxy_pass ${API_UPSTREAM}/query;
+    }
+
+    location /health {
+        proxy_pass ${API_UPSTREAM}/health;
+    }
+
+    # Reading the quality state is public: the dashboard's metrics table should
+    # render for every visitor. Exact match, GET only.
+    location = /quality {
+        limit_except GET HEAD { deny all; }
+        proxy_pass ${API_UPSTREAM}/quality;
+    }
+
+    # Running an audit is NOT public. It loads the embedder, re-scores every
+    # suite, and overwrites the quality state this API reports, so an anonymous
+    # caller could pin the CPU and flip the dashboard's verdict. Refused at the
+    # edge; reachable from inside the network, and locally where nginx is not in
+    # the path at all. Auto-correction is separately token-gated in the app, so
+    # this is the outer of two layers rather than the only one.
+    location /quality/ {
+        return 403;
+    }
+}

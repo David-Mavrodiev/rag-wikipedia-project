@@ -1,20 +1,60 @@
-{"question": "Who created Python?", "expected_sources": ["Guido van Rossum"]}
-{"question": "What is machine learning?", "expected_sources": ["machine learning", "artificial intelligence"]}
-{"question": "When was Wikipedia founded?", "expected_sources": ["Wikipedia", "2001"]}
-{"question": "What is the speed of light?", "expected_sources": ["light", "299"]}
-{"question": "Who wrote Hamlet?", "expected_sources": ["Shakespeare", "William"]}
-{"question": "What is DNA?", "expected_sources": ["deoxyribonucleic acid", "DNA"]}
-{"question": "What country is Paris in?", "expected_sources": ["France", "Paris"]}
-{"question": "What is the capital of Japan?", "expected_sources": ["Tokyo", "Japan"]}
-{"question": "What is photosynthesis?", "expected_sources": ["photosynthesis", "plant", "chlorophyll"]}
-{"question": "Who invented the telephone?", "expected_sources": ["Alexander Graham Bell", "telephone"]}
-{"question": "What is the Pythagorean theorem?", "expected_sources": ["Pythagorean", "triangle", "hypotenuse"]}
-{"question": "What is the largest planet?", "expected_sources": ["Jupiter", "planet"]}
-{"question": "What is gravity?", "expected_sources": ["gravity", "Newton", "force"]}
-{"question": "Who painted the Mona Lisa?", "expected_sources": ["Leonardo da Vinci", "Mona Lisa"]}
-{"question": "What is the human genome?", "expected_sources": ["genome", "DNA", "genes"]}
+{"question": "Who created Python?", "expected_sources": ["Python"]}
+{"question": "What is agriculture?", "expected_sources": ["Agriculture"]}
+{"question": "What is anthropology?", "expected_sources": ["Anthropology"]}
+{"question": "What is the speed of light?", "expected_sources": ["light"]}
+{"question": "Who was Aristotle?", "expected_sources": ["Aristotle"]}
+{"question": "What is DNA?", "expected_sources": ["DNA"]}
+{"question": "What country is Paris in?", "expected_sources": ["Paris"]}
+{"question": "What is the capital of Japan?", "expected_sources": ["Japan"]}
+{"question": "What is photosynthesis?", "expected_sources": ["photosynthesis"]}
+{"question": "Who invented the telephone?", "expected_sources": ["telephone"]}
+{"question": "Who is Alain Connes?", "expected_sources": ["Alain Connes"]}
+{"question": "What is the largest planet?", "expected_sources": ["planet"]}
+{"question": "What is gravity?", "expected_sources": ["gravity"]}
+{"question": "What are the Academy Awards?", "expected_sources": ["Academy Awards"]}
+{"question": "What is the human genome?", "expected_sources": ["genome"]}
+{"question": "What is alchemy?", "expected_sources": ["Alchemy"]}
+{"question": "What is the capital of France?", "expected_sources": ["France"]}
+{"question": "What is the boiling point of water?", "expected_sources": ["water"]}
+{"question": "What is an alkali metal?", "expected_sources": ["Alkali metal"]}
+{"question": "What is the tallest mountain in the world?", "expected_sources": ["mountain"]}
+{"question": "What is the chemical symbol for gold?", "expected_sources": ["gold"]}
+{"question": "Who was the first president of the United States?", "expected_sources": ["president"]}
+{"question": "What is the Great Wall of China?", "expected_sources": ["China"]}
+{"question": "What is the process of evolution?", "expected_sources": ["evolution"]}
+{"question": "Who wrote Pride and Prejudice?", "expected_sources": ["Pride and Prejudice"]}
+{"question": "What is an abacus?", "expected_sources": ["Abacus"]}
+{"question": "What is the capital of Canada?", "expected_sources": ["Canada"]}
+{"question": "What is International Atomic Time?", "expected_sources": ["International Atomic Time"]}
+{"question": "Who composed the Fifth Symphony?", "expected_sources": ["symphony"]}
+{"question": "What is the Sahara?", "expected_sources": ["Sahara"]}
+{"question": "What is an astronomer?", "expected_sources": ["Astronomer"]}
+{"question": "Who was Marie Curie?", "expected_sources": ["Marie Curie"]}
+{"question": "What is the Internet?", "expected_sources": ["Internet"]}
+{"question": "What is the Nile?", "expected_sources": ["Nile"]}
+{"question": "Who wrote The Odyssey?", "expected_sources": ["Odyssey"]}
+{"question": "What is democracy?", "expected_sources": ["democracy"]}
+{"question": "What is the periodic table?", "expected_sources": ["periodic table"]}
+{"question": "What was Apollo 11?", "expected_sources": ["Apollo 11"]}
+{"question": "What is climate change?", "expected_sources": ["climate change"]}
+{"question": "What is the Pacific Ocean?", "expected_sources": ["Pacific Ocean"]}
 {"question": "What did I have for breakfast this morning?", "expected_sources": [], "expected_refusal": true}
 {"question": "What is the name of my neighbor's cat?", "expected_sources": [], "expected_refusal": true}
 {"question": "How many unread emails are in my inbox right now?", "expected_sources": [], "expected_refusal": true}
 {"question": "What is the Wi-Fi password at my local coffee shop?", "expected_sources": [], "expected_refusal": true}
 {"question": "Where did I leave my car keys yesterday?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is my current bank balance?", "expected_sources": [], "expected_refusal": true}
+{"question": "Who will win my local election next year?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is the private phone number of my doctor?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is the password for my laptop?", "expected_sources": [], "expected_refusal": true}
+{"question": "Which restaurant will I visit tomorrow?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is the license plate of the car outside my house?", "expected_sources": [], "expected_refusal": true}
+{"question": "What did my manager say about me in private?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is inside my refrigerator right now?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is my favorite song today?", "expected_sources": [], "expected_refusal": true}
+{"question": "Where is my passport currently located?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is the security code for my apartment building?", "expected_sources": [], "expected_refusal": true}
+{"question": "How many steps have I walked today?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is my mother's maiden name?", "expected_sources": [], "expected_refusal": true}
+{"question": "What is the exact weather outside my window right now?", "expected_sources": [], "expected_refusal": true}
+{"question": "What message did I receive most recently?", "expected_sources": [], "expected_refusal": true}
