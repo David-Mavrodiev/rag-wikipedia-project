@@ -1,9 +1,11 @@
 # RAG over Wikipedia — Annotated Test Inventory
 
-> Current snapshot: **69 backend pytest tests** across 13 files, plus **7 frontend
-> Vitest component tests** across 3 files. The original backend annotations below are
+> Current snapshot: **179 backend pytest tests** across 18 files, plus **11 frontend
+> Vitest component tests** across 4 files. The original backend annotations below are
 > kept as teaching notes; the current audit sections call out tests added since this
-> file was first written.
+> file was first written. Where a file has grown since it was annotated, the
+> annotation shows the original tests only — the audit below is the authoritative
+> inventory.
 > Companion to `ANNOTATED_CODE.md` (the source). Run backend tests with `make test`
 > from `projects/rag-wikipedia`.
 
@@ -13,11 +15,11 @@ The suite mixes three kinds of test on purpose:
 
 | Kind | What it does | Files |
 |---|---|---|
-| **Pure unit** | Tests deterministic logic without network, models, or stores | `test_chunking`, `test_config`, `test_generation`, `test_metrics`, refusal parsing in `test_refusal` |
-| **Mocked wiring** | Tests API/retrieval/pipeline/eval flow by faking slow dependencies | `test_retrieval`, `test_api`, `test_pipeline`, `test_run_eval`, API cases in `test_refusal` |
+| **Pure unit** | Tests deterministic logic without network, models, or stores | `test_chunking`, `test_config`, `test_generation`, `test_metrics`, `test_runtime_config`, `test_llm`, refusal parsing in `test_refusal` |
+| **Mocked wiring** | Tests API/retrieval/pipeline/eval flow by faking slow dependencies | `test_retrieval`, `test_api`, `test_pipeline`, `test_run_eval`, `test_rate_limit`, `test_quality`, `test_startup_config`, `test_audit`, API cases in `test_refusal` |
 | **Contract / integration-lite** | Uses real in-process components where mocks previously hid risk | `test_vectorstore` with in-memory Qdrant, FastAPI `TestClient` route tests |
-| **Eval coverage** | Protects RAG quality gates and groundedness opt-in behavior | `test_run_eval`, `test_metrics` |
-| **Frontend component** | Verifies presentational/query components with Vitest and React Testing Library | `AnswerView.test.tsx`, `CitationList.test.tsx`, `QueryBox.test.tsx` |
+| **Eval coverage** | Protects RAG quality gates and groundedness opt-in behavior | `test_run_eval`, `test_metrics`, `test_audit` |
+| **Frontend component** | Verifies presentational/query components with Vitest and React Testing Library | `AnswerView.test.tsx`, `CitationList.test.tsx`, `QueryBox.test.tsx`, `QualityPanel.test.tsx` |
 
 The credibility-critical paths get the most coverage: **refusal logic, citation extraction, chunking determinism, the query path, eval gates, and the Qdrant contract.** The contract tests exist because mocking the vector store is *exactly* what let a real client API break (`.search()` removed) reach production once — so those tests now run against the real thing.
 
@@ -489,28 +491,36 @@ def test_query_qdrant_down(client):               # a retrieval exception → 50
 
 ## Current coverage audit
 
-Backend pytest currently collects **69 tests**:
+Backend pytest currently collects **179 tests** across 18 files
+(`uv run pytest --collect-only -q`):
 
 ```text
-test_api.py             6
-test_bench_ingest.py    6
-test_chunking.py        5
-test_config.py          2
-test_generation.py      6
-test_health.py          1
+test_refusal.py         50
+test_run_eval.py        16
+test_runtime_config.py  16
 test_metrics.py         15
-test_pipeline.py        1
-test_refusal.py         13
-test_retrieval.py       3
-test_run_eval.py        6
-test_vectorstore.py     5
+test_config.py          14
+test_quality.py         12
+test_llm.py              7
+test_api.py              6
+test_bench_ingest.py     6
+test_generation.py       6
+test_retrieval.py        6
+test_chunking.py         5
+test_startup_config.py   5
+test_vectorstore.py      5
+test_audit.py            4
+test_rate_limit.py       4
+test_health.py           1
+test_pipeline.py         1
 ```
 
-Frontend Vitest currently has **7 component tests**:
+Frontend Vitest currently has **11 component tests** across 4 files:
 
 ```text
 AnswerView.test.tsx     1
 CitationList.test.tsx   3
+QualityPanel.test.tsx   4
 QueryBox.test.tsx       3
 ```
 
@@ -534,24 +544,74 @@ separates hard retrieval refusals from soft LLM refusals.
 `backend/tests/test_run_eval.py` covers the eval harness behavior added after the
 original 44-test snapshot. It verifies that groundedness is reported only when an LLM
 is supplied, the fast path never calls the LLM, the CLI flag defaults off, and
-groundedness remains report-only rather than part of the pass/fail gate.
+groundedness remains report-only rather than part of the pass/fail gate. It also pins
+the scoring bug where recall matched titles casefolded while precision compared them
+raw, so a corpus title whose case differed from `golden.jsonl` scored recall 1.0 and
+precision 0.0 for the same case.
+
+`backend/tests/test_rate_limit.py` covers the Redis token-bucket middleware: 429 once
+the bucket is empty, rejection *before* any expensive query work runs, `/health` left
+unlimited, and a fail-closed 503 when Redis is unreachable rather than silently
+serving unlimited traffic.
+
+`backend/tests/test_quality.py` covers the `/quality` surface. The audit is dispatched
+to a worker thread rather than awaited on the event loop, a second concurrent audit
+gets 409 instead of interleaving mutations of the shared runtime config, auto-correction
+is refused without an admin token, a truncated or non-object `audit_report.json`
+degrades to `unknown` instead of raising a 500, and POST returns the same response
+shape as GET so the dashboard does not blank out after an audit.
+
+`backend/tests/test_runtime_config.py` covers the persisted retrieval config: bounds
+validation on every field, an absolute config path that does not depend on the process
+working directory, atomic writes that leave no temp files and never expose a partial
+read, and rejection of missing keys, unknown-key tolerance, and non-object files.
+
+`backend/tests/test_startup_config.py` covers boot behavior: a persisted config is
+re-applied and logged at INFO, and missing, truncated, or out-of-range files fall back
+to defaults instead of failing startup or silently applying bad thresholds.
+
+`backend/tests/test_llm.py` pins the context window the Ollama client requests. Ollama
+sizes its compute buffers from the context length, so leaving it to the server default
+made generation depend on environment variables set in whatever terminal launched
+`ollama serve`.
+
+`backend/tests/test_audit.py` covers the overfit gate — the golden/holdout recall gap —
+and the auto-correction contract: on failure the original config is restored and no
+reports are returned, because the last candidate's numbers describe a configuration
+that is no longer active.
+
+`backend/tests/test_refusal.py` grew from the refusal-text contract into the full
+refusal-decision suite. Beyond the original parsing matrix it now pins that evidence
+overlap matches whole tokens rather than substrings (`"art"` must not match
+*particles*), and that answerable questions are never short-circuited as private or
+time-dependent — the bug that made *"Who won World War I?"*, *"What is alternating
+current?"* and *"What is ME/CFS?"* hard-refuse before retrieval ever ran.
 
 Frontend component tests cover the visible query flow at component level:
 `AnswerView` renders answer text, `CitationList` renders nothing for empty citations
-and expands citation detail on click, and `QueryBox` handles input submission plus
-loading-disabled state.
+and expands citation detail on click, `QueryBox` handles input submission plus
+loading-disabled state, and `QualityPanel` renders the metrics table, runs an audit,
+disables the button when a deployment refuses audits at the edge, and reports a
+concurrent audit without disabling it.
 
 ---
 
 ## Known gaps
 
 - No numeric pytest/Vitest coverage report is configured.
-- No live service integration test starts FastAPI, Qdrant, Ollama, and the frontend
-  proxy together.
+- No live service integration test starts FastAPI, Qdrant, Redis, Ollama, and the
+  frontend proxy together.
 - No deployment smoke test verifies a deployed revision's health, query, refusal, and
   frontend behavior.
-- Frontend reproducibility is incomplete until a package lockfile is committed and
-  tests can run from `npm ci` in CI.
+- The frontend suite is not wired into CI. `package-lock.json` is now committed and
+  the suite runs reproducibly, so this is a workflow gap rather than a dependency one.
+- No static type-checking gate on the backend (the frontend has `tsc --noEmit`).
+- **The eval suites score the retrieval decision, not what the user receives.**
+  `false_accept_rate` reads 0.00 on golden, holdout and adversarial, yet a live query
+  can still be accepted on weak evidence and refused only by the model. Every
+  `expected_refusal` case in the suites also contains a literal trigger word from the
+  private/time-dependent pattern list, so refusal accuracy on those sets partly grades
+  that list against itself.
 
 ---
 
@@ -563,8 +623,14 @@ make test                                   # backend pytest, verbose
 make lint                                   # backend ruff
 
 cd frontend
-npm test                                    # frontend Vitest, if deps are installed
+npm ci                                      # reproducible install from the lockfile
+npm run test -- --run                       # frontend Vitest, single run
+npx tsc --noEmit                            # frontend type check
 ```
+
+No Qdrant, Redis, Ollama or Docker is needed for either suite: the vector-store
+contract tests use an in-memory Qdrant, and everything else is mocked. That is what
+lets `.github/workflows/backend-ci.yml` run lint and tests with no services attached.
 
 ## What to say about your tests in an interview
 
@@ -572,4 +638,6 @@ npm test                                    # frontend Vitest, if deps are insta
 - **"I mock the slow dependencies for unit tests, but I keep one real contract test against an in-memory Qdrant"** — because mocking the store is exactly what let a client API break slip into production once; now it fails in CI instead.
 - **"Idempotency is a property test"** — I ingest the same articles twice and assert the vector count doesn't change, which proves the deterministic-ID design.
 - **"Validation and failure mapping are tested"** — empty/oversized input → 422; a dead dependency → 503; a refusal is a normal 200.
-- **"I do not overclaim coverage"** — the suite has strong behavioral coverage, but numeric line/branch coverage is not configured yet.
+- **"A test that cannot fail is worse than no test"** — `test_retrieval.py` had a refusal test whose query tripped an earlier short-circuit, so it never reached the branch it named, and it patched `settings` where the code reads runtime config. It passed for two wrong reasons. It now asserts the decision *reason*, not just the outcome.
+- **"I check that a new test fails against the old code"** — before keeping any regression test, I revert the fix and confirm the test goes red. That is the only evidence that it tests what its name claims.
+- **"I do not overclaim coverage"** — the suite has strong behavioral coverage, but numeric line/branch coverage is not configured yet, and the eval numbers describe retrieval rather than the answer the user finally receives.
