@@ -33,6 +33,11 @@ export default function QualityPanel() {
   const [quality, setQuality] = useState<QualityState | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // Deployments refuse /quality/audit at the edge: it is CPU-heavy and mutates
+  // the reported quality state, so it is not a public operation. Discover that
+  // from the response rather than from a build flag, so the same bundle behaves
+  // correctly whether it is served by nginx or by the dev server.
+  const [auditUnavailable, setAuditUnavailable] = useState(false)
 
   const loadQuality = async () => {
     setLoading(true)
@@ -55,6 +60,15 @@ export default function QualityPanel() {
     setError(null)
     try {
       const response = await fetch(`${API_BASE}/quality/audit`, { method: 'POST' })
+      if (response.status === 403 || response.status === 404 || response.status === 405) {
+        setAuditUnavailable(true)
+        setError('Audits are not available here. Run `make eval-audit` from the CLI.')
+        return
+      }
+      if (response.status === 409) {
+        setError('An audit is already running. Try again shortly.')
+        return
+      }
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`)
       }
@@ -81,7 +95,7 @@ export default function QualityPanel() {
             {statusLabel(quality?.status || 'unknown')}
           </p>
         </div>
-        <button type="button" onClick={runAudit} disabled={loading}>
+        <button type="button" onClick={runAudit} disabled={loading || auditUnavailable}>
           {loading ? 'Checking...' : 'Run audit'}
         </button>
       </div>

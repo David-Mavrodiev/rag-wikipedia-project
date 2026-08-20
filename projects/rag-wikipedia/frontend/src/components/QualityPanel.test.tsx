@@ -60,3 +60,41 @@ test('runs audit and refreshes metrics', async () => {
   await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/quality/audit', { method: 'POST' }))
   expect(await screen.findByText('golden')).toBeInTheDocument()
 })
+
+test('disables the audit button when the deployment refuses audits', async () => {
+  // nginx returns 403 for /quality/audit in deployed stacks: it is CPU-heavy
+  // and mutates the reported quality state, so it is not a public operation.
+  const fetchMock = vi.spyOn(globalThis, 'fetch')
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => qualityPayload,
+  } as Response)
+  fetchMock.mockResolvedValueOnce({ ok: false, status: 403 } as Response)
+
+  render(<QualityPanel />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Run audit' }))
+
+  expect(await screen.findByText(/Run `make eval-audit` from the CLI/)).toBeInTheDocument()
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Run audit' })).toBeDisabled(),
+  )
+})
+
+test('reports a concurrent audit without disabling the button', async () => {
+  const fetchMock = vi.spyOn(globalThis, 'fetch')
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => qualityPayload,
+  } as Response)
+  fetchMock.mockResolvedValueOnce({ ok: false, status: 409 } as Response)
+
+  render(<QualityPanel />)
+
+  fireEvent.click(await screen.findByRole('button', { name: 'Run audit' }))
+
+  expect(await screen.findByText(/already running/)).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Run audit' })).toBeEnabled()
+})
