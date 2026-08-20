@@ -44,12 +44,21 @@ def _expected_titles(item: dict) -> list[str]:
     return item.get("expected_titles") or []
 
 
+def _title_key(title: str) -> str:
+    """One normalization rule for every title comparison.
+
+    Recall matched titles casefolded while precision compared them raw, so a
+    corpus title whose case differed from golden.jsonl scored recall 1.0 and
+    precision 0.0 for the same case — and the precision gate failed on a
+    retrieval that had actually succeeded.
+    """
+    return title.strip().casefold()
+
+
 def _match_expected_titles(chunks: list[dict], expected_titles: list[str]) -> list[str]:
-    retrieved_titles = [chunk.get("title", "").lower() for chunk in chunks]
+    retrieved_titles = {_title_key(chunk.get("title", "")) for chunk in chunks}
     return [
-        expected
-        for expected in expected_titles
-        if any(expected.lower() == title for title in retrieved_titles)
+        expected for expected in expected_titles if _title_key(expected) in retrieved_titles
     ]
 
 
@@ -72,16 +81,20 @@ def score_answerable_case(item: dict, chunks: list[dict], refused: bool, *, k: i
     elif expected_titles:
         recall_score = len(matched_titles) / len(expected_titles)
         rr_score = reciprocal_rank([chunk.get("title", "") for chunk in chunks], expected_titles)
-        relevant = sum(1 for chunk in chunks[:k] if chunk.get("title", "") in matched_titles)
+        matched_keys = {_title_key(title) for title in matched_titles}
+        relevant = sum(
+            1 for chunk in chunks[:k] if _title_key(chunk.get("title", "")) in matched_keys
+        )
         precision_score = relevant / k if k else 0.0
     else:
         recall_score = recall_at_k(texts, expected_terms, k=k)
         rr_score = reciprocal_rank(texts, expected_terms)
-        precision_score = sum(
+        relevant = sum(
             1
             for text in texts[:k]
             if any(keyword.lower() in text.lower() for keyword in expected_terms)
-        ) / k
+        )
+        precision_score = relevant / k if k else 0.0
 
     return {
         "recall": recall_score,

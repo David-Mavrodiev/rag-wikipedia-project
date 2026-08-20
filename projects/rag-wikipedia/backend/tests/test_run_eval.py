@@ -257,3 +257,68 @@ def test_unanswerable_refused_by_retrieval_costs_no_generation(monkeypatch):
     assert len(llm.prompts) == 15
     assert report["e2e_refusal_accuracy"] == 1.0
     assert report["e2e_false_accept_rate"] == 0.0
+
+
+# --- title scoring: recall and precision must agree on normalization --------
+
+def _title_case_chunks() -> list[dict]:
+    # Corpus title casing differs from the golden file's, which is normal:
+    # golden.jsonl is hand-written, titles come from the dump.
+    return [
+        {"score": 0.95, "text": "Python is a programming language.", "title": "PYTHON"},
+    ]
+
+
+def test_precision_matches_recall_when_title_case_differs():
+    # The bug: recall matched on a casefolded title while precision compared raw
+    # strings, so this case scored recall 1.0 / precision 0.0 and dragged the
+    # precision gate below 0.6 on a retrieval that had actually succeeded.
+    score = run_eval.score_answerable_case(
+        {"question": "Who created Python?", "expected_titles": ["Python"]},
+        _title_case_chunks(),
+        refused=False,
+        k=1,
+    )
+
+    assert score["recall"] == 1.0
+    assert score["precision"] == 1.0
+    assert score["matched_titles"] == ["Python"]
+    assert score["missing_titles"] == []
+
+
+def test_title_scoring_ignores_surrounding_whitespace():
+    score = run_eval.score_answerable_case(
+        {"question": "Who created Python?", "expected_titles": ["Python"]},
+        [{"score": 0.95, "text": "Python is a language.", "title": "  python  "}],
+        refused=False,
+        k=1,
+    )
+
+    assert score["recall"] == 1.0
+    assert score["precision"] == 1.0
+
+
+def test_unmatched_title_still_scores_zero():
+    # The normalization must not turn a genuine miss into a match.
+    score = run_eval.score_answerable_case(
+        {"question": "Who created Python?", "expected_titles": ["Python"]},
+        [{"score": 0.95, "text": "France is in Europe.", "title": "France"}],
+        refused=False,
+        k=1,
+    )
+
+    assert score["recall"] == 0.0
+    assert score["precision"] == 0.0
+    assert score["missing_titles"] == ["Python"]
+
+
+def test_score_answerable_case_tolerates_zero_k_on_the_term_path():
+    # k=0 used to divide by zero on the term path while the title path guarded.
+    score = run_eval.score_answerable_case(
+        {"question": "Who created Python?", "expected_sources": ["Python"]},
+        _title_case_chunks(),
+        refused=False,
+        k=0,
+    )
+
+    assert score["precision"] == 0.0
