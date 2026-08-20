@@ -9,6 +9,7 @@ from app.api.health import router as health_router
 from app.api.quality import router as quality_router
 from app.api.query import router as query_router
 from app.core.config import settings
+from app.core.logging import configure_logging
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.runtime_config import (
     CONFIG_PATH,
@@ -16,8 +17,9 @@ from app.core.runtime_config import (
     get_runtime_config,
     load_runtime_config,
 )
+from app.core.tracing import TRACE_ID_HEADER, configure_tracing
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+configure_logging()
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,16 @@ app.add_middleware(
     allow_origins=[origin.strip() for origin in settings.allowed_origins.split(",")],
     allow_methods=["*"],
     allow_headers=["*"],
+    # Without this the trace id is on the wire but fetch() refuses to hand it to
+    # the page, so the browser can never show the id a bug report needs.
+    expose_headers=[TRACE_ID_HEADER],
 )
 app.include_router(health_router)
 app.include_router(quality_router)
 app.include_router(query_router)
+
+# LAST, deliberately: Starlette makes the most recently added middleware the
+# outermost one, so this is what puts the server span outside CORS and outside
+# the rate limiter. Registered any earlier and every 429 - the traffic most
+# likely to be complained about - would produce no trace at all.
+configure_tracing(app)
