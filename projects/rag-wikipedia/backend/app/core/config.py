@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -41,6 +43,25 @@ class Settings(BaseSettings):
     # Required only for the auto-correcting audit, which PERSISTS new retrieval
     # thresholds. Empty means that path is disabled rather than open.
     quality_admin_token: str = ""
+
+    # Observability. See docs/request-tracing.md.
+    #
+    # Tracing is OFF by default and that is close to free: with no SDK
+    # configured the OpenTelemetry API resolves to no-ops, so the spans written
+    # throughout app/core cost nothing until this is flipped. Enabling it with
+    # no OTLP endpoint is also valid - spans are created and dropped, which is
+    # what a local run or a test wants.
+    log_format: Literal["text", "json"] = "text"
+    tracing_enabled: bool = False
+    otlp_endpoint: str = ""
+    trace_console_export: bool = False
+    trace_service_name: str = "rag-api"
+    trace_sample_ratio: float = Field(default=1.0, ge=0.0, le=1.0)
+
+    # Questions are user input and prompts run to thousands of tokens. Hashes,
+    # lengths and counts are always recorded; the text itself only when this is
+    # deliberately turned on, because a telemetry backend is a third party.
+    trace_capture_content: bool = False
 
 
 settings = Settings()

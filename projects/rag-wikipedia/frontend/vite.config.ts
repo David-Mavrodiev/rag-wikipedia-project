@@ -7,6 +7,18 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test-setup.ts',
+    coverage: {
+      provider: 'v8',
+      // 'text' for the terminal, 'html' to browse uncovered lines, 'lcov' so CI
+      // and editor gutter extensions can consume the same run.
+      reporter: ['text', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,tsx}'],
+      // main.tsx is the DOM bootstrap and test-setup.ts is harness wiring —
+      // neither has behaviour worth asserting, so counting them would only
+      // depress the number without pointing at a real gap.
+      exclude: ['src/main.tsx', 'src/test-setup.ts', 'src/**/*.test.{ts,tsx}'],
+    },
   },
   server: {
     // `npm run dev` runs Vite on the developer HOST, where the Compose service
