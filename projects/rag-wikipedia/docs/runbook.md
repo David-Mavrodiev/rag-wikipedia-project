@@ -2,12 +2,27 @@
 
 ## Services
 
-| Service  | Port  | Health endpoint |
-|----------|-------|----------------|
-| api      | 8000  | GET /health    |
-| frontend | 5173  | HTTP 200       |
-| qdrant   | 6333  | GET /healthz   |
-| ollama   | 11434 | GET /          |
+| Service  | Port                | Health endpoint |
+|----------|---------------------|----------------|
+| api      | 8000                | GET /health    |
+| frontend | 5173                | HTTP 200       |
+| qdrant   | 6333                | GET /healthz   |
+| ollama   | 11434               | GET /          |
+| redis    | 127.0.0.1:6379      | `redis-cli ping` |
+
+**Redis is not optional.** Rate limiting is enabled by default and
+`POST /query` answers **503** when the limiter cannot reach it. Set
+`RATE_LIMIT_ENABLED=false` for a single-machine run without Redis. It is bound
+to loopback deliberately: this Redis has no password.
+
+## API surface
+
+| Method | Path             | Notes |
+|--------|------------------|-------|
+| GET    | `/health`        | liveness; never rate limited |
+| POST   | `/query`         | rate limited; 429 over budget, 503 if Redis is unreachable |
+| GET    | `/quality`       | last audit verdict and metrics; public |
+| POST   | `/quality/audit` | re-scores every suite. 409 if one is already running. `?auto_correct=true` rewrites and persists the refusal thresholds and requires `X-Quality-Token`. Refused at the nginx edge in deployed stacks |
 
 ## Common tasks
 

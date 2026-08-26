@@ -165,19 +165,44 @@ def docs() -> list[Path]:
     return [p for p in paths if p.is_file()]
 
 
+ANY_BEGIN = re.compile(r"<!--\s*docs-check:begin\s+([a-z0-9-]+)\s*-->")
+
+
 def sync_blocks(write: bool) -> list[str]:
     problems = []
     for path in docs():
         text = path.read_text(encoding="utf-8")
         updated = text
+
+        # Every begin marker must be one this tool knows about AND must parse.
+        # Without this an unrecognised or malformed pair is silently skipped, so
+        # a doc can carry a permanently empty block while the check reports OK -
+        # which is exactly the drift this tool exists to prevent.
+        for m in ANY_BEGIN.finditer(text):
+            name = m.group(1)
+            if name not in BLOCKS:
+                problems.append(
+                    f"{path.relative_to(ROOT)}: unknown generated block {name!r}"
+                )
+                continue
+            pattern = re.compile(
+                re.escape(BEGIN.format(name=name)) + r"\n.*?\n?" + re.escape(END), re.S
+            )
+            if not pattern.search(text):
+                problems.append(
+                    f"{path.relative_to(ROOT)}: block {name!r} has a begin marker "
+                    f"but no parsable end marker on its own line"
+                )
+
         for name, fn in BLOCKS.items():
             pattern = re.compile(
-                re.escape(BEGIN.format(name=name)) + r"\n.*?\n" + re.escape(END), re.S
+                re.escape(BEGIN.format(name=name)) + r"\n.*?\n?" + re.escape(END), re.S
             )
             if not pattern.search(updated):
                 continue
             fresh = BEGIN.format(name=name) + "\n" + fn() + "\n" + END
             updated = pattern.sub(lambda _m: fresh, updated)
+
         if updated != text:
             if write:
                 path.write_text(updated, encoding="utf-8")

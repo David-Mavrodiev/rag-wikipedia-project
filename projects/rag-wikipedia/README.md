@@ -36,7 +36,7 @@ make pull-model
 ```
 The Ollama healthcheck only proves the server is up — generation fails with 503 until the model is pulled. Weights persist in the `ollama_data` volume, so this is a one-time step; the embedding model (~130 MB) downloads automatically on first use and is cached in the `hf_cache` volume.
 
-### 3. Ingest Wikipedia (tiny profile ~500 articles)
+### 3. Ingest Wikipedia (tiny profile)
 ```bash
 PROFILE=tiny make ingest
 ```
@@ -45,7 +45,7 @@ PROFILE=tiny make ingest
 ```bash
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
-  -d '{"question": "Who created Python?"}'
+  -d '{"question": "Who was Abraham Lincoln?"}'
 ```
 
 Or open http://localhost:5173 in your browser.
@@ -59,7 +59,8 @@ make test
 ```bash
 make eval
 ```
-Reports recall@5 and MRR on the answerable golden questions and refusal accuracy on the unanswerable ones (`backend/eval/golden.jsonl`). Exits non-zero if recall@5 or refusal accuracy falls below the 0.8 gate.
+See [Evaluation](#evaluation) below for what it measures and which gates it
+enforces — kept in one place so the two descriptions cannot drift apart.
 
 ## Evaluation
 
@@ -70,11 +71,38 @@ Ollama:
 make eval
 ```
 
-It scores a 60-case golden set: 40 answerable Wikipedia questions and 20
-unanswerable/private/out-of-corpus questions. The gate requires:
+The suites and the gates it enforces:
 
-- `recall@5 >= 0.80`
-- `refusal_accuracy >= 0.80`
+<!-- docs-check:begin eval-suites -->
+| suite | cases | answerable | unanswerable |
+|---|---:|---:|---:|
+| `golden.jsonl` | 60 | 40 | 20 |
+| `holdout.jsonl` | 20 | 15 | 5 |
+| `adversarial.jsonl` | 20 | 10 | 10 |
+
+Gates enforced (all unconditional):
+
+- `recall@k >= 0.8`
+- `precision@k >= 0.6`
+- `refusal_accuracy >= 0.8`
+- `false_accept_rate <= 0.1`
+<!-- docs-check:end -->
+
+All four gates are unconditional — a missing subset cannot silently skip one,
+because `validate_golden_set` rejects an incomplete suite up front.
+
+**The suites must match the ingested corpus.** They target the 60 articles of
+the `tiny` profile and every `expected_titles` entry is an article that really
+exists in it. Running them against a different profile measures nothing useful:
+an earlier version of these suites asked about the speed of light and the
+telephone, which have no article in `tiny`, and still scored `recall@5 = 1.000`
+because the expectation was matched as a substring of the retrieved text.
+
+Each unanswerable subset deliberately mixes two kinds of case: questions with a
+personal or time-bound trigger word, which the intent filter catches, and
+ordinary questions this corpus simply cannot answer, which only the *evidence*
+gate can catch. Without the second kind, refusal accuracy grades the keyword
+list against itself.
 
 Each run writes:
 
@@ -104,7 +132,7 @@ can call `POST /quality/audit` to refresh the runtime quality state exposed by
 ## Profiles
 | Profile | Articles | Notes |
 |---------|----------|-------|
-| `tiny`  | ~500     | Fast, for development |
+| `tiny`  | ~60 articles / ~1k chunks | Fast, for development. The eval suites target this profile. |
 | `real`  | ~25 000  | Full quality pass |
 
 ## Swapping models

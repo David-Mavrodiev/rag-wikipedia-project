@@ -492,6 +492,37 @@ def test_query_qdrant_down(client):               # a retrieval exception → 50
 ## Current coverage audit
 
 <!-- docs-check:begin test-inventory -->
+Backend: **192 tests** across 18 files.
+
+```text
+test_refusal.py          56
+test_run_eval.py         21
+test_runtime_config.py   16
+test_metrics.py          15
+test_config.py           14
+test_quality.py          13
+test_llm.py              7
+test_api.py              6
+test_bench_ingest.py     6
+test_generation.py       6
+test_retrieval.py        6
+test_audit.py            5
+test_chunking.py         5
+test_startup_config.py   5
+test_vectorstore.py      5
+test_rate_limit.py       4
+test_health.py           1
+test_pipeline.py         1
+```
+
+Frontend: **11 tests** across 4 files.
+
+```text
+AnswerView.test.tsx      1
+CitationList.test.tsx    3
+QualityPanel.test.tsx    4
+QueryBox.test.tsx        3
+```
 <!-- docs-check:end -->
 
 This project does **not** currently configure numeric line or branch coverage. Treat

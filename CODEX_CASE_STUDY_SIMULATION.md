@@ -1,5 +1,10 @@
 # Codex Case Study Simulation: Trainer-Led RAG Repository Lab
 
+> **Status: point-in-time record, 18 Aug 2026.** Kept as evidence of what was
+> true then, not maintained against the current code. Where it disagrees with
+> the repository, the repository is right. Living references:
+> `README.md`, `DEMO_RUNBOOK.md`, `ANNOTATED_CODE.md`, `TESTS_ANNOTATED.md`.
+
 > Current recording choice: use **add `groundedness` to the evaluation report** as
 > the primary Codex feature, following `MASTER_TRAINER_PREP_PLAN.md`. The `/stats`
 > endpoint described below remains a backup lab exercise for live diagnostics.

@@ -19,15 +19,23 @@ projects/rag-wikipedia/
 ├── backend/
 │   ├── app/
 │   │   ├── core/      config.py, chunking.py, embeddings.py, vectorstore.py,
-│   │   │              retrieval.py, prompt.py, citations.py, llm.py
+│   │   │              retrieval.py, prompt.py, citations.py, llm.py,
+│   │   │              refusal.py, rate_limit.py, quality.py,
+│   │   │              runtime_config.py, fileio.py
 │   │   ├── models/    query.py
-│   │   ├── api/        query.py, health.py
+│   │   ├── api/       query.py, health.py, quality.py
 │   │   └── main.py
 │   ├── pipeline/      sources.py, tasks.py, flow.py
-│   ├── eval/          metrics.py, run_eval.py, golden.jsonl
+│   ├── eval/          metrics.py, run_eval.py, audit.py, bench_ingest.py,
+│   │                  golden.jsonl, holdout.jsonl, adversarial.jsonl
+│   ├── .env.example
 │   ├── Dockerfile
 │   └── pyproject.toml
-├── frontend/          App.tsx, components/{QueryBox,AnswerView,CitationList}.tsx
+├── frontend/          App.tsx, components/{QueryBox,AnswerView,CitationList,
+│                      QualityPanel}.tsx, nginx.conf.template
+├── demo/              console.html
+├── scripts/           docs_check.py
+├── infra/aca/         backing-apps.json, qdrant.yaml, ollama.yaml
 ├── docker-compose.yml
 └── Makefile
 ```
@@ -60,6 +68,45 @@ class Settings(BaseSettings):  # a single typed object holding every setting; su
 
 settings = Settings()  # instantiate once at import time; every module imports this shared object
 ```
+
+> **This snapshot is the original ten settings.** `Settings` has since grown to
+> cover refusal thresholds, retrieval controls, rate limiting, the quality admin
+> token and the LLM context window — and every numeric field now carries an
+> explicit `Field(ge=, le=)` range, so an out-of-band value fails at startup
+> instead of silently changing retrieval. The authoritative list is generated
+> below; `backend/.env.example` documents each one with its default and range.
+
+<!-- docs-check:begin settings -->
+`Settings` exposes **23 settings** (env var = the upper-case name); see `backend/.env.example`.
+
+```text
+QDRANT_URL
+OLLAMA_URL
+EMBED_MODEL
+LLM_MODEL
+COLLECTION
+LLM_NUM_CTX
+TOP_K
+PROFILE
+TOKEN_BUDGET
+REFUSAL_THRESHOLD
+REFUSAL_MIN_SCORE
+REFUSAL_HIGH_CONFIDENCE_SCORE
+REFUSAL_MIN_MARGIN
+REFUSAL_MIN_OVERLAP_TERMS
+RETRIEVAL_CANDIDATE_K
+ALLOWED_ORIGINS
+RATE_LIMIT_ENABLED
+RATE_LIMIT_REDIS_URL
+RATE_LIMIT_QUERY_PER_MINUTE
+RATE_LIMIT_QUERY_BURST
+RATE_LIMIT_CLIENT_HEADER
+RATE_LIMIT_REDIS_TIMEOUT_SECONDS
+QUALITY_ADMIN_TOKEN
+```
+<!-- docs-check:end -->
+>
+> `backend/.env.example` documents each one with its default and range.
 
 ## `backend/app/core/embeddings.py` — the Embedder interface + a concrete model
 
@@ -833,6 +880,157 @@ if __name__ == "__main__":
 
 # FRONTEND (React + Vite + TypeScript)
 
+
+---
+
+## `backend/app/core/refusal.py` — deciding when NOT to answer
+
+The most consequential file in the repository. A wrong decision here is either a
+hallucination the corpus never supported, or a refusal of a question the corpus
+answers perfectly well. Both destroy trust, and the second is the one that looks
+like a broken demo.
+
+Three separate mechanisms, applied in order:
+
+**1. Intent filter — `is_private_or_time_dependent(query)`.** A pattern list that
+short-circuits into a hard refusal *before retrieval runs*. It covers questions
+no static Wikipedia snapshot can answer: personal (`my`, `mine`, `myself`,
+`did I`), time-bound (`today`, `tomorrow`, `currently`, `current <changing
+thing>`), and secret material (a possessive plus `private`/`password`,
+`security code`).
+
+Every pattern here is narrower than it looks, and the reason is scars:
+
+| pattern | why it is not the bare word |
+|---|---|
+| `did/do/can/… i` | bare `\bi\b` refused **"Who won World War I?"** |
+| `current <president\|price\|…>` | bare `\bcurrent\b` refused **"What is alternating current?"** |
+| possessive + `private` | bare `\bprivate\b` refused **"What is private equity?"** |
+| possessive + `password` | bare `\bpassword\b` refused **"What is password hashing?"** |
+| — no `me` pattern at all — | `(tell\|show\|give) me` refused **"Tell me about Apollo."** |
+
+A match here is expensive: it prevents retrieval from ever running, so an
+over-broad pattern costs far more than a missing one.
+
+**2. Evidence gate — `decide_evidence(query, results)`.** Given retrieved
+chunks, it returns an `EvidenceDecision` carrying `refused`, a machine-readable
+`reason`, the top score, the score margin and the overlapping terms. The reason
+is what makes a refusal debuggable — `no_results`, `score_below_minimum`,
+`sufficient_overlap`, `high_confidence_vector_match`,
+`insufficient_evidence_overlap`.
+
+`evidence_overlap` tokenizes both the query and the evidence and intersects the
+sets. It used to test `term in combined_text`, so `"art"` matched *particles*
+and `"cat"` matched *concatenated* — inflating the overlap count and turning
+refusals into false accepts.
+
+**3. Answer classifier — `is_refusal(answer)`.** Text only, deliberately. A
+grounded answer that omits its `[n]` markers is still an answer; conflating
+"uncited" with "refused" is the exact bug this function exists to prevent.
+Tolerant of case, wrapping quotes and curly apostrophes, because model output is
+not byte-stable.
+
+The five numbers the gate uses live in `app/core/runtime_config.py`, not in the
+module, because the auto-correcting audit can rewrite and persist them at
+runtime.
+
+**Known limitation, measured rather than assumed:** with
+`refusal_min_overlap_terms = 1`, one shared common word is enough to accept.
+*"Who won World War I?"* is accepted on evidence drawn from *Animal Farm* and
+*Apollo 11*. The generation layer catches it — the model refuses — but the
+retrieval decision alone is wrong. The honest eval suites report this as a
+false-accept rate around 0.45, and no threshold combination fixes it without
+also refusing *"Who was Abraham Lincoln?"*. It needs a design change, not a
+tuning pass.
+
+---
+
+## `backend/app/core/rate_limit.py` — the Redis token bucket
+
+Pure ASGI middleware, not a FastAPI dependency, so it runs *before* routing and
+rejects a request before any expensive work begins.
+
+- **Scope.** `POST /query` only. `/health` must answer for container probes, and
+  `/quality/audit` is protected by its own lock and token instead — coupling it
+  to Redis would recreate the 503 this middleware can cause.
+- **Algorithm.** A token bucket in a Lua script, so check-and-decrement is
+  atomic. `capacity` = `RATE_LIMIT_QUERY_BURST`, refill rate =
+  `RATE_LIMIT_QUERY_PER_MINUTE / 60000` per ms.
+- **The clock is read inside the script** via `redis.call("TIME")`. Passing the
+  caller's clock in as an argument cost a round-trip and let two callers refill
+  the same bucket from different readings. Redis replicates script *effects*,
+  so a non-deterministic call is safe here.
+- **Fails closed.** If Redis is unreachable the middleware answers **503**, it
+  does not silently serve unlimited traffic. Socket connect and read deadlines
+  are set explicitly, because redis-py defaults both to `None` and a stalled
+  connection would otherwise hang the request instead of hitting that 503.
+- **Client identity** comes from `RATE_LIMIT_CLIENT_HEADER` when set, otherwise
+  the socket peer. Behind a proxy that does not forward the client address,
+  every browser shares one bucket — set the header and make the proxy send it.
+- Keys are hashed before they reach the logs.
+
+**Operationally this is the single most common cause of a dead demo:** rate
+limiting is on by default, so `docker compose up -d qdrant` without `redis`
+gives you a stack where every `/query` returns 503.
+
+---
+
+## `backend/app/api/quality.py` + `app/core/quality.py` — the quality surface
+
+What the dashboard's Evaluation panel talks to.
+
+**`GET /quality`** returns the last audit verdict: `status`, `updated_at`,
+`metrics`, `active_config`, `reason`. It reads an in-process singleton, falling
+back to `eval/audit_report.json` when no audit has run in this process — which
+is why that file is committed rather than ignored. The read is defensive: a
+truncated or non-object report degrades to `unknown` rather than 500ing, and the
+report is written atomically so the window is small to begin with.
+
+**`POST /quality/audit`** re-scores all three suites. Four things protect it:
+
+1. **It runs in a worker thread.** The audit loads the embedder, hits Qdrant and
+   scores every case — roughly 12 s. Awaiting that inline froze the event loop
+   for the whole duration.
+2. **An `asyncio.Lock`**, so a second caller gets **409** instead of interleaving
+   `apply`/`rollback` on the shared runtime config.
+3. **`?auto_correct=true` requires `X-Quality-Token`.** That path rewrites *and
+   persists* the refusal thresholds. With no token configured it is disabled
+   (503), not open. Plain scoring stays unauthenticated so the button works.
+4. **nginx refuses `/quality/audit` at the edge** in deployed stacks. Plain
+   scoring is still CPU-heavy and still overwrites the reported state.
+
+The response is deliberately the same shape as `GET`, plus `failures` and
+`corrected`. The two used to disagree — POST returned `datasets` where GET
+returned `metrics` — so the panel's table went blank right after a successful
+audit.
+
+`QualityState` is **per process**. With more than one uvicorn worker, an audit
+updates only the worker that served it. Single worker today; a shared store is
+required before scaling out.
+
+---
+
+## `backend/app/core/runtime_config.py` — thresholds that change at runtime
+
+Five values — `refusal_min_score`, `refusal_high_confidence_score`,
+`refusal_min_margin`, `refusal_min_overlap_terms`, `retrieval_candidate_k` —
+that the auto-correcting audit may rewrite while the process is running.
+
+- **Validated at every ingress.** `Settings` enforces ranges with
+  `Field(ge=, le=)`, and `load_runtime_config` re-checks identical bounds, so a
+  hand-edited `runtime_config.json` cannot install a value the environment would
+  have rejected.
+- **Written atomically** (`fileio.atomic_write_text`: temp file, fsync,
+  `os.replace`), because the API reads this file from another process.
+- **`CONFIG_PATH` is absolute**, anchored to `__file__`. As a relative path it
+  resolved against the working directory, so where the file landed depended on
+  where uvicorn was started.
+- **Restored at startup** by `app.main.restore_runtime_config`, and logged at
+  INFO on every boot. A config that is merely *wrong* rather than malformed —
+  say a `refusal_min_score` of 0.99, which refuses everything — is still valid,
+  so that log line is the only place a human sees that the running thresholds
+  are not the defaults.
+
 ## `frontend/src/App.tsx` — top-level component and API call
 
 ```tsx
@@ -1055,10 +1253,23 @@ asyncio_mode = "auto"                          # let pytest run async tests with
 testpaths = ["tests"]
 ```
 
-## `docker-compose.yml` — the four services
+## `docker-compose.yml` — the five services
 
 ```yaml
 services:
+  redis:
+    image: redis:7-alpine                       # backs the /query rate limiter
+    ports: ["127.0.0.1:6379:6379"]              # LOOPBACK ONLY: this Redis has no password, so publishing
+                                                # on 0.0.0.0 put an unauthenticated data store on every
+                                                # interface. `api` reaches it over the compose network and
+                                                # never needed the published port — that mapping exists
+                                                # only so the CLI audit can run from the host.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   qdrant:
     image: qdrant/qdrant:v1.18.3                # vector DB; Query API needs server >=1.10. Do NOT start
                                                 # this over a v1.9.2 volume — it panics (exit 101). Fresh
@@ -1073,7 +1284,8 @@ services:
       retries: 5
 
   ollama:
-    image: ollama/ollama:latest                 # the self-hosted LLM server
+    image: ollama/ollama:latest@sha256:f1a705f2…  # pinned by digest: `latest` silently changed
+                                                # the model runtime between runs
     ports: ["11434:11434"]
     volumes: [ollama_data:/root/.ollama]        # persist pulled model weights (~2 GB) across restarts
     healthcheck:

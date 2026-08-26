@@ -113,6 +113,28 @@ h1 {
 }
 ```
 
+## `frontend/src/components/QualityPanel.tsx` — the evaluation panel
+
+Renders the last audit verdict beside the answer view, and offers a **Run audit**
+button. Three details matter:
+
+- **It reads `metrics`, not `datasets`.** `GET /quality` and `POST /quality/audit`
+  return the same shape; they did not always, and while POST returned `datasets`
+  the table went blank immediately after a successful audit.
+- **It discovers the deployment's policy from the response**, not from a build
+  flag — one bundle is served both by the Vite dev server and by nginx, so a
+  compile-time constant would be wrong in one of them. `403/404/405` means audits
+  are refused at the edge: the button disables itself and points at
+  `make eval-audit`. `409` means an audit is already running and the button stays
+  enabled.
+- **The status is slugified before it becomes a class name.** It is
+  server-supplied, so it is not pasted into the DOM verbatim.
+
+`GET /quality` is proxied publicly by nginx; `POST /quality/audit` is not. See
+`nginx.conf.template`.
+
+---
+
 ## `frontend/vite.config.ts` — Vite build + dev-proxy + test config
 
 ```ts

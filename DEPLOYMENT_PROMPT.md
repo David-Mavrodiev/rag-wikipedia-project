@@ -1,5 +1,10 @@
 # Prompt: Deploy the RAG-over-Wikipedia System to Azure
 
+> **Status: point-in-time record, 3 Jul 2026.** Kept as evidence of what was
+> true then, not maintained against the current code. Where it disagrees with
+> the repository, the repository is right. Living references:
+> `README.md`, `DEMO_RUNBOOK.md`, `ANNOTATED_CODE.md`, `TESTS_ANNOTATED.md`.
+
 Deploy the existing multi-service app (FastAPI API, React frontend, Qdrant, Ollama) to **Azure Container Apps (ACA)** using the **Azure CLI**. The resource group **already exists** — do not create or delete it. Everything else is created by the steps below. Each step ends with a **Verify** check (test-per-component).
 
 > Best practices applied: managed-identity image pulls (no ACR admin), internal-only ingress for Qdrant/Ollama, HTTPS ingress, ports matched to app listeners, no hardcoded credentials in images.

@@ -19,9 +19,13 @@ A black-box, **eval-first** Retrieval-Augmented Generation service. It answers n
 
 ```
                        Browser (React + Vite)
-                                │  POST /query
-                                ▼
-                        FastAPI  (/query, /health)
+                                │  POST /query          GET /quality
+                                ▼                            │
+                      RateLimitMiddleware ──► Redis          │
+                        (token bucket, ASGI)                 │
+                                │  429 / 503                 │
+                                ▼                            ▼
+              FastAPI  (/query, /health, /quality, /quality/audit)
                                 │
         ┌───────────────┬───────┴────────┬──────────────────┐
         ▼               ▼                ▼                  ▼
@@ -37,7 +41,33 @@ Ingestion (Prefect, offline):
   (deterministic point IDs = idempotent / resumable)
 ```
 
-**Query path:** embed question → Qdrant top-k (cosine) → if empty **or** top-1 score < `refusal_threshold` → **refuse**; else assemble context within a token budget → prompt the LLM with inline `[n]` citation markers → extract the indices the model actually cited → return `{answer, citations[]}`.
+<!-- docs-check:begin services -->
+Compose runs **5 services**: `redis`, `qdrant`, `ollama`, `api`, `frontend`.
+<!-- docs-check:end -->
+
+**Query path:** rate-limit check (Redis token bucket; **503 if Redis is
+unreachable**, so Redis is a hard dependency of `/query` unless
+`RATE_LIMIT_ENABLED=false`) → **intent filter**: a personal or time-bound
+question is refused before retrieval runs → embed question → Qdrant top-k
+(cosine) → **evidence gate** `decide_evidence`: refuse on no results, on a
+top score below the minimum, or on insufficient term overlap with the retrieved
+text; accept on sufficient overlap or a high-confidence vector match → assemble
+context within a token budget → prompt the LLM with inline `[n]` citation
+markers → extract the indices the model actually cited → return
+`{answer, citations[], refused}`.
+
+The refusal decision therefore has **three independent layers**: the intent
+filter (before retrieval), the evidence gate (after retrieval), and the model
+itself (which can decline evidence retrieval accepted). `refused` in the API
+response is the retrieval decision *or* a model refusal; the eval harness
+reports them separately, because they disagree — see §8.
+
+**Quality path:** `GET /quality` serves the last audit verdict from an
+in-process singleton, falling back to `eval/audit_report.json`.
+`POST /quality/audit` re-scores every suite on a worker thread under a lock
+(409 if one is running); `?auto_correct=true` rewrites and persists the five
+retrieval thresholds and requires `X-Quality-Token`. nginx refuses that path at
+the edge in deployed stacks.
 
 ---
 

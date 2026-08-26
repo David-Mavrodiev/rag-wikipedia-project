@@ -1,5 +1,10 @@
 # Engineering Quality Assessment
 
+> **Status: point-in-time record, 18 Aug 2026.** Kept as evidence of what was
+> true then, not maintained against the current code. Where it disagrees with
+> the repository, the repository is right. Living references:
+> `README.md`, `DEMO_RUNBOOK.md`, `ANNOTATED_CODE.md`, `TESTS_ANNOTATED.md`.
+
 This document evaluates the RAG Wikipedia project across testing, typing, architecture,
 review workflow, security, dependency management, reliability, asynchronous processing,
 load testing, and deployment operations.
