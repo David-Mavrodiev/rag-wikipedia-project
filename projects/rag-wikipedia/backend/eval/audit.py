@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.fileio import atomic_write_text
-from app.core.quality import update_quality_state
+from app.core.quality import build_provenance, update_quality_state
 from app.core.runtime_config import (
     RetrievalRuntimeConfig,
     apply_runtime_config,
@@ -126,12 +126,16 @@ def write_audit_reports(
     failures: list[str],
     *,
     k: int,
+    provenance: dict | None = None,
 ) -> None:
     audit_report = {
         "status": audit_status(failures),
         "failures": failures,
         "datasets": summarize_reports(reports, k=k),
         "active_config": asdict(get_runtime_config()),
+        # WHAT this was measured against. Metrics without it cannot be compared
+        # between runs or trusted by anyone who did not produce them.
+        "provenance": provenance or {},
     }
     # Atomic: the API reads this file to serve /quality, from another process.
     atomic_write_text(base_dir / "audit_report.json", json.dumps(audit_report, indent=2))
@@ -177,12 +181,14 @@ def main(argv: list[str] | None = None) -> None:
             failures = []
 
     status = audit_status(failures)
-    write_audit_reports(base_dir, reports, failures, k=k)
+    provenance = build_provenance(store=store, top_k=k)
+    write_audit_reports(base_dir, reports, failures, k=k, provenance=provenance)
     update_quality_state(
         status=status,
         metrics=summarize_reports(reports, k=k),
         active_config=asdict(get_runtime_config()),
         reason="Audit passed." if not failures else "; ".join(failures),
+        provenance=provenance,
     )
 
     print(json.dumps({"status": status, "failures": failures}, indent=2))

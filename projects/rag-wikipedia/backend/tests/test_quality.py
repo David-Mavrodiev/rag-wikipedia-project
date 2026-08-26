@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 from app.core import quality as quality_state
 from app.core.quality import update_quality_state
 from app.core.runtime_config import get_runtime_config
@@ -253,3 +255,52 @@ def test_invalid_golden_set_returns_422_not_a_torn_down_request(client, monkeypa
 
     assert response.status_code == 422
     assert "20 cases" in response.json()["detail"]
+
+
+# --- provenance: metrics without their conditions are unfalsifiable ---------
+
+def test_provenance_records_what_was_measured(monkeypatch):
+    from app.core.quality import build_provenance
+
+    store = MagicMock()
+    store.count.return_value = 6358
+
+    prov = build_provenance(store=store, top_k=5)
+
+    # The same code and suites score differently on a 60-article corpus and a
+    # 500-article one, so a report that does not say which is unreadable.
+    assert prov["vector_count"] == 6358
+    assert prov["top_k"] == 5
+    assert prov["profile"] and prov["collection"] and prov["embed_model"]
+    assert prov["generated_at"]
+    assert set(prov["gates"]) == {
+        "recall",
+        "precision",
+        "refusal_accuracy",
+        "false_accept_rate_max",
+    }
+
+
+def test_provenance_survives_an_unreadable_collection():
+    # A missing collection must not take the audit down with it.
+    from app.core.quality import build_provenance
+
+    store = MagicMock()
+    store.count.side_effect = RuntimeError("collection not found")
+
+    prov = build_provenance(store=store, top_k=5)
+
+    assert prov["vector_count"] is None
+    assert prov["profile"]
+
+
+def test_audit_response_carries_provenance(client, monkeypatch):
+    _mock_audit(monkeypatch)
+
+    posted = client.post("/quality/audit").json()
+    fetched = client.get("/quality").json()
+
+    assert "provenance" in posted and "provenance" in fetched
+    assert posted["provenance"]["top_k"] == 5
+    # POST and GET must keep the same shape - they diverged once before.
+    assert set(posted) == set(fetched) | {"failures", "corrected"}

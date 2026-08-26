@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness
 
 up:
 	docker compose up --build -d
@@ -49,3 +49,8 @@ docs-check:
 
 docs-write:
 	uv run python scripts/docs_check.py --write
+
+# Fail if audit_report.json predates a change that could invalidate its numbers.
+# Needs full git history: a shallow clone cannot resolve commit ancestry.
+audit-freshness:
+	uv run python scripts/audit_freshness.py

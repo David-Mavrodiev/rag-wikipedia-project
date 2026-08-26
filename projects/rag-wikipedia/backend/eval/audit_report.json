@@ -41,5 +41,20 @@
     "refusal_min_margin": 0.02,
     "refusal_min_overlap_terms": 1,
     "retrieval_candidate_k": 20
+  },
+  "provenance": {
+    "generated_at": "2026-08-26T17:56:33.485244+00:00",
+    "git_sha": "79bf0a171cc61ad2859815aee641b49cd774f2e5",
+    "profile": "tiny",
+    "collection": "wikipedia",
+    "vector_count": 6358,
+    "embed_model": "BAAI/bge-small-en-v1.5",
+    "top_k": 5,
+    "gates": {
+      "recall": 0.8,
+      "precision": 0.6,
+      "refusal_accuracy": 0.8,
+      "false_accept_rate_max": 0.1
+    }
   }
 }

@@ -10,7 +10,7 @@ from fastapi import APIRouter, Header, HTTPException
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
-from app.core.quality import get_quality_state, update_quality_state
+from app.core.quality import build_provenance, get_quality_state, update_quality_state
 from app.core.runtime_config import get_runtime_config
 
 router = APIRouter()
@@ -74,6 +74,7 @@ def _run_audit(auto_correct: bool) -> dict:
         metrics=summarize_reports(reports, k=k),
         active_config=asdict(get_runtime_config()),
         reason="Audit passed." if not failures else "; ".join(failures),
+        provenance=build_provenance(store=store, top_k=k),
     )
     # Same shape GET /quality returns, plus the two audit-only fields. The two
     # used to disagree - POST returned `datasets` where GET returned `metrics`,
