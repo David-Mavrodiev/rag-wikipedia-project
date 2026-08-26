@@ -23,8 +23,24 @@ MAX_GOLDEN_HOLDOUT_GAP = 0.10
 DATASET_NAMES = ("golden", "holdout", "adversarial")
 
 
+def audit_status(failures: list[str]) -> str:
+    """The one place that decides the audit verdict.
+
+    This expression previously existed in three copies - twice here and once in
+    app/api/quality.py - which is three chances for the dashboard, the CLI and
+    the written report to disagree.
+    """
+    return "healthy" if not failures else "suspect_overfit"
+
+
 def load_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    # strip() before the truthiness test: a whitespace-only line is falsy only
+    # after stripping, and json.loads(" ") raises.
+    return [
+        json.loads(stripped)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if (stripped := line.strip())
+    ]
 
 
 def evaluate_datasets(base_dir: Path, embedder, store, *, k: int, llm=None) -> dict[str, dict]:
@@ -112,7 +128,7 @@ def write_audit_reports(
     k: int,
 ) -> None:
     audit_report = {
-        "status": "healthy" if not failures else "suspect_overfit",
+        "status": audit_status(failures),
         "failures": failures,
         "datasets": summarize_reports(reports, k=k),
         "active_config": asdict(get_runtime_config()),
@@ -160,7 +176,7 @@ def main(argv: list[str] | None = None) -> None:
             reports = corrected_reports
             failures = []
 
-    status = "healthy" if not failures else "suspect_overfit"
+    status = audit_status(failures)
     write_audit_reports(base_dir, reports, failures, k=k)
     update_quality_state(
         status=status,

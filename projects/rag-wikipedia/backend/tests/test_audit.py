@@ -69,3 +69,19 @@ def test_successful_auto_correct_returns_reports_for_the_active_config(monkeypat
     assert rc.get_runtime_config() != original  # a candidate is now active
 
     rc.apply_runtime_config(original)
+
+
+def test_load_jsonl_skips_blank_and_whitespace_only_lines(tmp_path):
+    # `if line` is only falsy for a truly empty string, so a line of spaces
+    # reached json.loads(" ") and raised.
+    path = tmp_path / "suite.jsonl"
+    path.write_text(
+        '{"question": "a"}\n'
+        "\n"
+        "   \n"
+        "\t\n"
+        '  {"question": "b"}  \n',
+        encoding="utf-8",
+    )
+
+    assert audit.load_jsonl(path) == [{"question": "a"}, {"question": "b"}]

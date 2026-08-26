@@ -15,12 +15,25 @@ logger = logging.getLogger(__name__)
 class QualityState:
     status: str = "unknown"
     updated_at: str | None = None
-    metrics: dict[str, float | int | str] = field(default_factory=dict)
+    # dataset name -> metric name -> value. Every caller passes
+    # summarize_reports(...), which is nested; the old flat annotation was wrong.
+    metrics: dict[str, dict[str, float]] = field(default_factory=dict)
     active_config: dict[str, float | int] = field(default_factory=dict)
     reason: str = "No audit has been run in this process."
 
 
+# PER PROCESS. With more than one uvicorn worker, POST /quality/audit updates
+# only the worker that served it, so GET /quality can answer differently
+# depending on which worker responds. The audit_report.json fallback masks this
+# only while status is still "unknown". Running multiple workers requires moving
+# this into a shared store; the deployment runs a single worker today.
 _state = QualityState()
+
+
+def reset_quality_state() -> None:
+    """Restore the pristine state. For tests, which otherwise leak into each other."""
+    global _state
+    _state = QualityState()
 
 
 def _load_audit_report() -> dict | None:
@@ -70,7 +83,7 @@ def get_quality_state() -> dict:
 def update_quality_state(
     *,
     status: str,
-    metrics: dict[str, float | int | str],
+    metrics: dict[str, dict[str, float]],
     active_config: dict[str, float | int],
     reason: str,
 ) -> None:

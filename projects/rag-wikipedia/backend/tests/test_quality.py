@@ -234,3 +234,22 @@ def test_quality_endpoint_survives_a_non_object_audit_report(client, monkeypatch
 
     assert response.status_code == 200
     assert response.json()["status"] == "unknown"
+
+
+def test_invalid_golden_set_returns_422_not_a_torn_down_request(client, monkeypatch):
+    # validate_golden_set used to raise SystemExit - a BaseException that slips
+    # past Starlette's exception middleware, so the request died without a
+    # response instead of reporting bad input.
+    from eval.run_eval import InvalidGoldenSet
+
+    _mock_audit(monkeypatch)
+
+    def explode(base_dir, embedder, store, k):
+        raise InvalidGoldenSet("golden.jsonl must contain >= 20 cases")
+
+    monkeypatch.setattr("eval.audit.evaluate_datasets", explode)
+
+    response = client.post("/quality/audit")
+
+    assert response.status_code == 422
+    assert "20 cases" in response.json()["detail"]

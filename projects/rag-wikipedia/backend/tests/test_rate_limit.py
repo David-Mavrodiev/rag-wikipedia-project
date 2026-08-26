@@ -36,10 +36,12 @@ class FakeRedis:
 @pytest.fixture
 def rate_limited_client(client, monkeypatch):
     fake_redis = FakeRedis()
-    settings.rate_limit_enabled = True
-    settings.rate_limit_query_per_minute = 1
-    settings.rate_limit_query_burst = 1
-    settings.rate_limit_client_header = ""
+    # monkeypatch restores these after the test; direct assignment leaked a
+    # 1-request-per-minute limit into every test that ran afterwards.
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    monkeypatch.setattr(settings, "rate_limit_query_per_minute", 1)
+    monkeypatch.setattr(settings, "rate_limit_query_burst", 1)
+    monkeypatch.setattr(settings, "rate_limit_client_header", "")
     monkeypatch.setattr(rate_limit, "_redis_client", fake_redis)
     monkeypatch.setattr(rate_limit, "_rate_limit_script_sha", None)
     return client

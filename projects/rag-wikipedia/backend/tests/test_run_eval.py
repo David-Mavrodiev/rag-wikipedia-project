@@ -1,3 +1,4 @@
+import pytest
 from eval import run_eval
 
 
@@ -322,3 +323,71 @@ def test_score_answerable_case_tolerates_zero_k_on_the_term_path():
     )
 
     assert score["precision"] == 0.0
+
+
+# --- the golden-set rejection branch --------------------------------------
+
+@pytest.mark.parametrize(
+    ("golden", "why"),
+    [
+        ([{"question": f"q{i}"} for i in range(19)], "too few cases"),
+        (
+            [{"question": f"q{i}"} for i in range(20)],
+            "no unanswerable cases",
+        ),
+        (
+            [{"question": f"q{i}", "expected_refusal": True} for i in range(20)],
+            "no answerable cases",
+        ),
+    ],
+)
+def test_incomplete_golden_set_is_rejected(golden, why):
+    # _complete_golden_set sits exactly on MIN_CASES and MIN_UNANSWERABLE, so
+    # nothing exercised the rejection branch at all.
+    with pytest.raises(run_eval.InvalidGoldenSet):
+        run_eval.validate_golden_set(golden)
+
+
+def test_invalid_golden_set_is_a_valueerror_not_systemexit():
+    # It used to raise SystemExit. That is a BaseException: it slips past
+    # Starlette's exception middleware and tears down the request instead of
+    # producing a response, and /quality/audit reaches this function.
+    assert issubclass(run_eval.InvalidGoldenSet, ValueError)
+    assert not issubclass(run_eval.InvalidGoldenSet, SystemExit)
+
+
+# --- an answerable case that was refused is not a PASS ---------------------
+
+def test_markdown_marks_a_refused_answerable_case_as_fail(tmp_path):
+    report = {
+        "recall@5": 0.0,
+        "mrr": 0.0,
+        "precision@5": 0.0,
+        "refusal_accuracy": 1.0,
+        "answerable_refusal_rate": 1.0,
+        "false_accept_rate": 0.0,
+        "n_answerable": 1,
+        "n_unanswerable": 0,
+        "cases": [
+            {
+                "question": "Who was Aristotle?",
+                "expected_refusal": False,
+                "refused": True,
+                "recall": 0.0,
+                "reciprocal_rank": 0.0,
+                "matched_sources": [],
+                "missing_sources": [],   # nothing missing -> used to read PASS
+                "matched_titles": [],
+                "missing_titles": [],
+                "evidence_reason": "insufficient_evidence_overlap",
+                "top_score": 0.5,
+                "score_margin": 0.01,
+                "overlap_terms": [],
+                "retrieved": [],
+            }
+        ],
+    }
+    path = tmp_path / "report.md"
+    run_eval.write_markdown_report(report, path, k=5)
+
+    assert "### FAIL: Who was Aristotle?" in path.read_text(encoding="utf-8")

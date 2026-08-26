@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     rate_limit_query_per_minute: int = Field(default=10, ge=1)
     rate_limit_query_burst: int = Field(default=20, ge=1)
     rate_limit_client_header: str = ""
+    # Deadline for every Redis call the limiter makes. redis-py defaults both
+    # socket timeouts to None, so without this a stalled Redis hangs the request
+    # instead of failing closed to 503.
+    rate_limit_redis_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 
     # Required only for the auto-correcting audit, which PERSISTS new retrieval
     # thresholds. Empty means that path is disabled rather than open.
