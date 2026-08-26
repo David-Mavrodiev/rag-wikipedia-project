@@ -32,7 +32,10 @@ codex features enable apps
 codex doctor
 ```
 
-What we found on 2026-08-19: `codex features enable apps` is the right final state
+What we found on 2026-08-19, on **Codex CLI v0.147.0** (`codex --version`): the
+commands below and the top-level `apps` setting are valid for that version — check
+`codex features --help` before assuming they still are on a newer one, since this
+surface has moved before. `codex features enable apps` is the right final state
 when those Codex app/plugin capabilities need to remain available. Confirm it by
 checking that `~/.codex/config.toml` contains:
 
@@ -69,12 +72,16 @@ The risky path lived in:
 Collection ownership is now established atomically by creation itself:
 
 - `claim_collection()` calls Qdrant `create_collection()` directly.
-- A successful create is treated as proof that this benchmark run owns the collection.
+- A successful create proves this run owned the name **at the moment of creation** —
+  which is what closes the original check-then-create race. It is not a guarantee
+  that the name is still ours at cleanup: another process could delete and recreate
+  it in between. That residual window is accepted rather than fixed, because the
+  default collection name is a per-run UUID that nothing else has a reason to touch.
 - If creation fails and the collection exists, the benchmark exits with a refusal
   message instead of running.
 - If creation fails for another reason, such as a bad config or unavailable server,
   the original error is re-raised instead of being hidden.
-- Cleanup remains safe because it only runs after `claim_collection()` succeeds.
+- Cleanup only runs after `claim_collection()` succeeds.
 
 Regression coverage was added in:
 
