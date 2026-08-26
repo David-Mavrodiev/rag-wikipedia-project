@@ -43,8 +43,8 @@
     "retrieval_candidate_k": 20
   },
   "provenance": {
-    "generated_at": "2026-08-26T17:56:33.485244+00:00",
-    "git_sha": "79bf0a171cc61ad2859815aee641b49cd774f2e5",
+    "generated_at": "2026-08-26T18:00:15.751130+00:00",
+    "git_sha": "d5a024a75ae76cd7d549e6b4275399faaa618423",
     "profile": "tiny",
     "collection": "wikipedia",
     "vector_count": 6358,
