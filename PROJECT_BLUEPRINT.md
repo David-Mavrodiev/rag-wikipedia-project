@@ -925,6 +925,20 @@ if __name__ == "__main__":
 
 ```yaml
 services:
+  redis:
+    # Backs the /query rate limiter. NOT OPTIONAL: rate limiting is on by
+    # default and the middleware answers 503 when it cannot reach Redis, so a
+    # stack started without this service has a dead /query. Set
+    # RATE_LIMIT_ENABLED=false for a single-machine run instead.
+    image: redis:7-alpine
+    # Loopback only - this Redis has no password.
+    ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   qdrant:
     # Query API (/points/query) requires server >=1.10. Upgrading over storage
     # written by 1.9.2 panics at boot ("unknown variant `on_disk`", exit 101):
@@ -940,7 +954,8 @@ services:
       retries: 5
 
   ollama:
-    image: ollama/ollama:latest
+    # Pinned by digest - `latest` changed the runtime between runs.
+    image: ollama/ollama:latest@sha256:f1a705f2…
     ports: ["11434:11434"]
     volumes: [ollama_data:/root/.ollama]
     healthcheck:
@@ -959,6 +974,7 @@ services:
       - PROFILE=${PROFILE:-tiny}
     volumes: [hf_cache:/root/.cache/huggingface]
     depends_on:
+      redis:  { condition: service_healthy }
       qdrant: { condition: service_healthy }
       ollama: { condition: service_healthy }
     healthcheck:
@@ -998,24 +1014,44 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ### 6.22 Infra — `Makefile`
 
 ```makefile
-.PHONY: up down pull-model ingest eval test lint
-up:           ; docker compose up --build -d
-pull-model:   ; docker compose exec ollama ollama pull llama3.2:3b
-down:         ; docker compose down
-ingest:       ; PROFILE=$(PROFILE) uv run python backend/pipeline/flow.py
-eval:         ; uv run python backend/eval/run_eval.py
-test:         ; cd backend && uv run pytest tests/ -v
-lint:         ; cd backend && uv run ruff check app/ pipeline/ eval/ tests/
+.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test lint docs-check
+up:                ; docker compose up --build -d
+pull-model:        ; docker compose exec ollama ollama pull llama3.2:3b
+down:              ; docker compose down
+ingest:            ; PROFILE=$(PROFILE) uv run python backend/pipeline/flow.py
+eval:              ; uv run python backend/eval/run_eval.py
+eval-groundedness: ; uv run python backend/eval/run_eval.py --with-groundedness
+eval-audit:        ; uv run python backend/eval/audit.py
+test:              ; cd backend && uv run pytest tests/ -v
+lint:              ; cd backend && uv run ruff check app/ pipeline/ eval/ tests/
+docs-check:        ; uv run python scripts/docs_check.py
 ```
+
+`eval` is retrieval-only and takes seconds. `eval-groundedness` adds one LLM
+call per answerable case, so it needs Ollama and takes minutes — that is why it
+is a separate target rather than a default. `eval-audit` scores golden, holdout
+and adversarial together and writes `audit_report.json`, which `GET /quality`
+serves. `docs-check` verifies this document's own factual claims.
 *(Real Makefile uses tab-indented recipe lines, not `;`.)*
 
 ### 6.23 Frontend (React + Vite + TS) — spec
 
-- `src/App.tsx`: state `{result, loading, error}`; `handleQuery(q)` → `POST ${API_BASE}/query`, where `const API_BASE = import.meta.env.VITE_API_BASE_URL || ''` (empty = same-origin nginx proxy locally; Azure bakes the URL at build). Renders `<QueryBox>`, `<AnswerView>`, `<CitationList>`. `Citation = {index, title, source_id, excerpt}`. *(A hardened variant on `hadi-dev` normalizes the base with `.replace(/\/+$/, '')` so a trailing slash can't produce `//query`.)*
+- `src/App.tsx`: state `{result, loading, error}`; `handleQuery(q)` → `POST ${API_BASE}/query`, where `const API_BASE = import.meta.env.VITE_API_BASE_URL || ''` (empty = same-origin nginx proxy locally; Azure bakes the URL at build). Renders `<QueryBox>`, `<AnswerView>`, `<CitationList>`. `Citation = {index, title, source_id, excerpt}`. The response also carries
+**`refused: bool`** — the client must not infer a refusal from an empty
+`citations[]`, because a correct grounded answer can omit its `[n]` markers. *(A hardened variant on `hadi-dev` normalizes the base with `.replace(/\/+$/, '')` so a trailing slash can't produce `//query`.)*
 - `QueryBox`: form (`data-testid="query-form"`) with input (`query-input`) + submit (`query-submit`); calls `onSubmit(trimmed)`; both disabled while `loading`.
 - `AnswerView`: renders the `answer` string.
 - `CitationList`: renders each citation as an expandable item (`[index] title` → `excerpt`).
-- `nginx.conf` (prod): serve `dist/`; `location /query` and `/health` `proxy_pass http://api:8000`.
+- `QualityPanel`: fetches `GET /quality` on mount and renders the per-suite metrics
+  table; the **Run audit** button POSTs `/quality/audit`. It reads `metrics` (POST
+  and GET return the same shape), slugifies the server-supplied `status` before
+  using it as a class name, and derives the deployment's policy from the response
+  — 403/404/405 disables the button and points at `make eval-audit`, 409 reports a
+  concurrent audit.
+- `nginx.conf.template` (prod): serve `dist/`; `location /query` and `/health`
+  `proxy_pass ${API_UPSTREAM}`; `location = /quality` GET-only and public; and
+  `location /quality/` returns **403** — running an audit is CPU-heavy and
+  overwrites the reported quality state, so it is not a public operation.
 - `frontend/Dockerfile`: node:20-alpine build (`ARG VITE_API_BASE_URL=""`) → nginx:alpine serving `dist/`.
 
 ### 6.24 `demo/console.html` — single-file live demo UI
