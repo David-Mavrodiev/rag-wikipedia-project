@@ -32,7 +32,7 @@ fails if it drifts.
 ## Inventory
 
 <!-- docs-check:begin test-inventory -->
-Backend: **192 tests** across 18 files.
+Backend: **196 tests** across 18 files.
 
 ```text
 test_refusal.py          56
@@ -48,11 +48,11 @@ test_generation.py       6
 test_retrieval.py        6
 test_audit.py            5
 test_chunking.py         5
+test_pipeline.py         5
 test_startup_config.py   5
 test_vectorstore.py      5
 test_rate_limit.py       4
 test_health.py           1
-test_pipeline.py         1
 ```
 
 Frontend: **11 tests** across 4 files.
@@ -95,7 +95,7 @@ with mocks:
 | Quality endpoint | `test_quality.py` | The audit runs off the event loop, a concurrent audit gets 409, auto-correction is token-gated, an unreadable report degrades instead of 500ing, and POST returns the same shape as GET |
 | Startup restore | `test_startup_config.py` | A persisted retrieval config is re-applied and logged at boot; missing, truncated or out-of-range files fall back to defaults |
 | Audit gates | `test_audit.py` | The golden/holdout recall-gap gate, and that a failed auto-correction restores the original config and returns no reports |
-| Ingestion pipeline | `test_pipeline.py` | Re-ingesting the same articles preserves vector count through deterministic IDs |
+| Ingestion pipeline | `test_pipeline.py` | Re-ingesting preserves vector count through deterministic IDs, **and is resumable**: a second run skips embedding entirely, a partially ingested article re-embeds only its missing chunks, and `--force` re-embeds everything |
 | Eval harness | `test_run_eval.py` | Groundedness is opt-in, the fast path avoids LLM calls, gates do not depend on groundedness, and precision and recall agree on title normalization |
 | Benchmark safety | `test_bench_ingest.py` | Benchmark collections cannot overwrite the primary collection, and ownership is established by creating the collection rather than by checking first |
 

@@ -55,5 +55,29 @@ class QdrantStore:
             for result in results
         ]
 
+    def existing_ids(self, point_ids: list[str]) -> set[str]:
+        """Return the subset of *point_ids* already stored.
+
+        Used to make ingestion resumable: embedding is ~97% of ingestion time,
+        so skipping work that is already done is what turns a 15-hour run into
+        one that can be interrupted and continued. The upsert was always
+        idempotent thanks to deterministic IDs - the expensive part was not.
+
+        Qdrant stores our 32-char hex IDs as dashed UUIDs and echoes them back
+        in that form, so the response is normalized before comparison. Lookup by
+        the bare hex form works; the two spellings denote the same point.
+        """
+        if not point_ids:
+            return set()
+
+        found = self._client.retrieve(
+            collection_name=self._collection,
+            ids=list(point_ids),
+            with_payload=False,
+            with_vectors=False,
+        )
+        stored = {str(record.id).replace("-", "") for record in found}
+        return {pid for pid in point_ids if pid.replace("-", "") in stored}
+
     def count(self) -> int:
         return self._client.count(collection_name=self._collection).count

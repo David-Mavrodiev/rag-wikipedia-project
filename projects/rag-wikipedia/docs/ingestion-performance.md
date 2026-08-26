@@ -75,13 +75,25 @@ upsert never overlap, and multiple CPU cores are left idle.
 `sentence-transformers` default `batch_size=32`, batches are small and dominated by
 per-call overhead; larger batches (256–512) use CPU/GPU far more efficiently.
 
-### 4. No resumability — the killer for long runs
-A re-run streams from the start and **re-embeds every article**. Deterministic
-point IDs make the *upsert* idempotent
+### 4. No resumability — the killer for long runs — **FIXED**
+A re-run used to stream from the start and **re-embed every article**.
+Deterministic point IDs made the *upsert* idempotent
 ([../backend/app/core/chunking.py](../backend/app/core/chunking.py)), but the
-expensive embedding work is repeated. There is no checkpoint and no "skip if
-already ingested" step, so any interruption during a 15-hour run means starting
-over. (This is exactly why the earlier host sleep/resume crashes were so costly,
+expensive embedding work was repeated, so any interruption during a 15-hour run
+meant starting over.
+
+`ingest_flow` now checks each article's point IDs against Qdrant before
+embedding ([../backend/pipeline/flow.py](../backend/pipeline/flow.py) via
+`QdrantStore.existing_ids`). Chunks already stored are skipped; a partially
+ingested article re-embeds only its missing chunks. A re-run therefore costs one
+cheap ID lookup per article instead of the whole embedding bill, and an
+interrupted run continues where it stopped.
+
+`make ingest-force` re-embeds regardless — required when `EMBED_MODEL` or the
+chunk size changes, because the point IDs stay the same while the vectors they
+should hold do not.
+
+The original text is kept below for the record. (This is exactly why the earlier host sleep/resume crashes were so costly,
 and it is already flagged as the main gap in
 [ingestion-status-report.md](ingestion-status-report.md).)
 

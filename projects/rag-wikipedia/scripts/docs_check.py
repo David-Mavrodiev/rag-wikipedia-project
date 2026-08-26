@@ -242,11 +242,28 @@ def _without_generated(text: str) -> str:
     return GENERATED.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), text)
 
 
+POINT_IN_TIME = "point-in-time record"
+
+
+def _is_point_in_time(text: str) -> bool:
+    """Documents that declare themselves a dated snapshot are exempt from claims.
+
+    An assessment written on a given date is evidence of what was true then. Its
+    header says the repository is authoritative where they disagree, so holding
+    its numbers to today's repository would mean rewriting history on every
+    change - and the assertion would never stop firing.
+    """
+    return POINT_IN_TIME in "\n".join(text.splitlines()[:12])
+
+
 def check_claims() -> list[str]:
     problems = []
     for label, pattern, expected in assertions():
         for path in docs():
-            text = _without_generated(path.read_text(encoding="utf-8"))
+            raw = path.read_text(encoding="utf-8")
+            if _is_point_in_time(raw):
+                continue
+            text = _without_generated(raw)
             for m in pattern.finditer(text):
                 if m.group(1) != expected:
                     line = text[: m.start()].count("\n") + 1

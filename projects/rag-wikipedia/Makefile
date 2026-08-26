@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test lint docs-check docs-write
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write
 
 up:
 	docker compose up --build -d
@@ -13,8 +13,16 @@ down:
 # declares a uv workspace with `backend` as a member, so uv resolves the shared
 # workspace environment (.venv here) from either location. Verified: running
 # from here and from backend/ both resolve the same interpreter.
+# Resumable: chunks already in Qdrant are skipped, so an interrupted run can be
+# re-issued and costs one cheap ID lookup per article instead of re-embedding.
 ingest:
 	PROFILE=$(PROFILE) uv run python backend/pipeline/flow.py
+
+# Re-embed and overwrite everything. Needed when EMBED_MODEL or the chunk size
+# changes: the deterministic point IDs stay the same while the vectors they
+# should hold do not, so a normal run would keep the stale ones.
+ingest-force:
+	PROFILE=$(PROFILE) uv run python backend/pipeline/flow.py --force
 
 # Fast path: retrieval-only, seconds, no LLM needed.
 eval:
