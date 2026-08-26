@@ -29,6 +29,13 @@ function statusLabel(status: string): string {
   return status.replace(/_/g, ' ')
 }
 
+// The status is server-supplied. Normalising keeps an unexpected value from
+// becoming arbitrary class-name text in the DOM.
+function statusSlug(status: string): string {
+  const slug = status.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return slug || 'unknown'
+}
+
 export default function QualityPanel() {
   const [quality, setQuality] = useState<QualityState | null>(null)
   const [loading, setLoading] = useState(false)
@@ -91,7 +98,7 @@ export default function QualityPanel() {
       <div className="quality-header">
         <div>
           <h2 id="quality-title">Evaluation Metrics</h2>
-          <p className={`quality-status quality-status-${quality?.status || 'unknown'}`}>
+          <p className={`quality-status quality-status-${statusSlug(quality?.status || 'unknown')}`}>
             {statusLabel(quality?.status || 'unknown')}
           </p>
         </div>

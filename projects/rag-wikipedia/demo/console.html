@@ -94,7 +94,7 @@
 
   <main>
     <section class="chat">
-      <div class="msgs" id="msgs">
+      <div class="msgs" id="msgs" role="log" aria-live="polite" aria-atomic="false">
         <div class="empty" id="empty">
           <b>Posez une question sur le corpus Wikipédia (EN).</b><br>
           Le système renvoie une réponse <b>ancrée avec citations</b>, ou <b>refuse</b> si le contexte ne la soutient pas. Essayez un exemple ci-dessous.
@@ -129,7 +129,7 @@
         <div class="mrow"><span class="l">Embedder</span><span class="v">bge-small · 384-d</span></div>
         <div class="mrow"><span class="l">LLM</span><span class="v">llama3.2:3b</span></div>
         <div class="mrow"><span class="l">Vector DB</span><span class="v" id="s-vec">Qdrant · cosine</span></div>
-        <div class="mrow"><span class="l">top-k · seuil</span><span class="v">5 · 0,30</span></div>
+        <div class="mrow"><span class="l">candidats · seuil refus</span><span class="v" id="s-topk">— · —</span></div>
         <div class="mrow"><span class="l">Budget contexte</span><span class="v">3 000 tokens</span></div>
         <p class="note">Réponse ancrée avec marqueurs <code>[n]</code> ; refus si aucun contexte ou score &lt; seuil. LLM &amp; embedder interchangeables par configuration.</p>
       </div>
@@ -252,6 +252,24 @@
   })();
 
   // vector count (best effort)
+  // The refusal threshold and candidate-k are rewritten at runtime by the
+  // auto-correcting audit, so printing them as constants could show a value the
+  // API is no longer using. Read the live ones.
+  (async function runtimeConfig(){
+    try{
+      const r = await fetch(API_BASE + '/quality');
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const cfg = (await r.json()).active_config || {};
+      const score = cfg.refusal_min_score;
+      const k = cfg.retrieval_candidate_k;
+      $('s-topk').textContent =
+        (k === undefined ? '—' : 'k=' + k) + ' · ' +
+        (score === undefined ? '—' : String(score).replace('.', ','));
+    }catch(e){
+      $('s-topk').textContent = 'indisponible';
+    }
+  })();
+
   (async function vec(){
     try{
       const r = await fetch('http://localhost:6333/collections/wikipedia');

@@ -9,7 +9,8 @@ properties:
     ingress: { external: false, targetPort: 11434, transport: http }
   template:
     containers:
-      - image: ollama/ollama:latest
+      # Pinned by digest - `latest` is not a deployable identifier.
+      - image: ollama/ollama:latest@sha256:f1a705f2bd113fb8d15f85f7c217f0dc5f6bebda6b0cc42b82c3ad165ffcb9dc
         name: ollama
         resources: { cpu: 3.5, memory: 8Gi }
         volumeMounts:
