@@ -212,3 +212,24 @@ def test_private_and_password_as_subjects_are_answerable(question):
 )
 def test_someones_private_information_is_refused(question):
     assert is_private_or_time_dependent(question) is True
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Tell me about Apollo.",
+        "Tell me about Aristotle.",
+        "Show me the history of Alaska.",
+        "Give me a summary of Anarchism.",
+        "Find me the definition of ASCII.",
+    ],
+)
+def test_tell_me_about_a_topic_is_answerable(question):
+    # "Tell me about X" is an ordinary encyclopedia query. Treating the bare
+    # word "me" as personal intent refused the corpus's own articles -
+    # "Tell me about Apollo." is adversarial case adv-004, expected ANSWERABLE.
+    assert is_private_or_time_dependent(question) is False
+
+
+def test_me_still_refused_when_the_question_is_actually_personal():
+    assert is_private_or_time_dependent("What did my manager say about me in private?") is True

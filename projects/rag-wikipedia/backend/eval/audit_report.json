@@ -4,7 +4,7 @@
   "datasets": {
     "golden": {
       "recall@5": 1.0,
-      "precision@5": 0.7350000000000001,
+      "precision@5": 0.7150000000000001,
       "mrr": 0.9645833333333333,
       "refusal_accuracy": 1.0,
       "false_accept_rate": 0.0,
@@ -12,19 +12,19 @@
     },
     "holdout": {
       "recall@5": 1.0,
-      "precision@5": 0.9333333333333333,
+      "precision@5": 0.9466666666666667,
       "mrr": 1.0,
       "refusal_accuracy": 1.0,
       "false_accept_rate": 0.0,
       "answerable_refusal_rate": 0.0
     },
     "adversarial": {
-      "recall@5": 0.8,
-      "precision@5": 0.6,
-      "mrr": 0.675,
+      "recall@5": 0.9,
+      "precision@5": 0.72,
+      "mrr": 0.775,
       "refusal_accuracy": 1.0,
       "false_accept_rate": 0.0,
-      "answerable_refusal_rate": 0.1
+      "answerable_refusal_rate": 0.0
     }
   },
   "active_config": {

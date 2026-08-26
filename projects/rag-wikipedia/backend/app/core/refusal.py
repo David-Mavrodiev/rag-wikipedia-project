@@ -65,14 +65,21 @@ _STOPWORDS = {
 # word alone.
 _PRIVATE_OR_TIME_DEPENDENT_PATTERNS = (
     # First person, possessive or reflexive. "my" is unambiguous by itself;
-    # "i" and "me" are not (Roman numerals, abbreviations), so they match only
-    # beside the verb or preposition that makes the question personal.
+    # "i" is not (Roman numerals, abbreviations), so it matches only beside the
+    # verb that makes the question personal.
     r"\bmy\b",
     r"\bmine\b",
     r"\bmyself\b",
     r"\b(?:did|do|have|had|can|could|should|will|would|am) i\b",
-    r"\b(?:tell|show|give|send|call|email|text|remind|find) me\b",
-    r"\b(?:to|for|about|from|with) me\b",
+    # "me" is deliberately absent. "Tell me about Apollo", "Show me the history
+    # of Alaska" and "Give me a summary of Anarchism" are ordinary ways to ask
+    # an answerable question, and matching them refused the corpus's own
+    # articles — "Tell me about Apollo." is adversarial case adv-004, expected
+    # ANSWERABLE. Every genuinely personal question in the three suites is
+    # already caught by "my"/"mine"/"myself" or a time word, so the "me" forms
+    # carried no refusal case of their own; they only produced false refusals.
+    # It went unnoticed because answerable_refusal_rate is reported but never
+    # gated, so the suite stayed green while the demo refused real questions.
     # Time-dependent. "current" is an ordinary noun in physics, geography and
     # electronics, so only the adverb and the "current <changing thing>" forms
     # qualify.
