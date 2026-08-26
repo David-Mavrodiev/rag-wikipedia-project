@@ -1,6 +1,6 @@
 # RAG over Wikipedia — Annotated Test Inventory
 
-> Current snapshot: **179 backend pytest tests** across 18 files, plus **11 frontend
+> Current snapshot: **192 backend pytest tests** across 18 files, plus **11 frontend
 > Vitest component tests** across 4 files. The original backend annotations below are
 > kept as teaching notes; the current audit sections call out tests added since this
 > file was first written. Where a file has grown since it was annotated, the
@@ -491,38 +491,8 @@ def test_query_qdrant_down(client):               # a retrieval exception → 50
 
 ## Current coverage audit
 
-Backend pytest currently collects **179 tests** across 18 files
-(`uv run pytest --collect-only -q`):
-
-```text
-test_refusal.py         50
-test_run_eval.py        16
-test_runtime_config.py  16
-test_metrics.py         15
-test_config.py          14
-test_quality.py         12
-test_llm.py              7
-test_api.py              6
-test_bench_ingest.py     6
-test_generation.py       6
-test_retrieval.py        6
-test_chunking.py         5
-test_startup_config.py   5
-test_vectorstore.py      5
-test_audit.py            4
-test_rate_limit.py       4
-test_health.py           1
-test_pipeline.py         1
-```
-
-Frontend Vitest currently has **11 component tests** across 4 files:
-
-```text
-AnswerView.test.tsx     1
-CitationList.test.tsx   3
-QualityPanel.test.tsx   4
-QueryBox.test.tsx       3
-```
+<!-- docs-check:begin test-inventory -->
+<!-- docs-check:end -->
 
 This project does **not** currently configure numeric line or branch coverage. Treat
 the counts above as test inventory and behavioral coverage, not as a percentage claim.

@@ -6,42 +6,64 @@ integration-style coverage, and what coverage gaps remain.
 
 ## Current Snapshot
 
-The project currently has:
+Numeric line/branch coverage is **not configured**; the counts below are a test
+inventory, not a percentage claim.
 
-| Area | Current coverage |
-|---|---:|
-| Backend pytest tests | 179 tests |
-| Backend test files | 18 files |
-| Frontend Vitest tests | 11 tests |
-| Frontend test files | 4 files |
-| Numeric line/branch coverage | Not configured |
-
-The backend suite was verified with:
+Reproduce with:
 
 ```bash
 cd projects/rag-wikipedia/backend
 uv run pytest -q
 uv run ruff check app/ pipeline/ eval/ tests/
+
+cd ../frontend
+npm ci && npm run test -- --run
+npx tsc --noEmit
 ```
 
-Latest local result:
+Backend lint and tests run in CI on every push and pull request, on Python 3.12;
+the frontend suite is not wired into CI yet.
+
+The inventory below is **generated** by `scripts/docs_check.py` from
+`pytest --collect-only`, not maintained by hand — this document previously
+claimed 69 tests while the suite had grown well past it. `make docs-check`
+fails if it drifts.
+
+## Inventory
+
+<!-- docs-check:begin test-inventory -->
+Backend: **192 tests** across 18 files.
 
 ```text
-179 passed, 1 warning
-All checks passed!
+test_refusal.py          56
+test_run_eval.py         21
+test_runtime_config.py   16
+test_metrics.py          15
+test_config.py           14
+test_quality.py          13
+test_llm.py              7
+test_api.py              6
+test_bench_ingest.py     6
+test_generation.py       6
+test_retrieval.py        6
+test_audit.py            5
+test_chunking.py         5
+test_startup_config.py   5
+test_vectorstore.py      5
+test_rate_limit.py       4
+test_health.py           1
+test_pipeline.py         1
 ```
 
-The frontend suite runs from a committed `package-lock.json`:
+Frontend: **11 tests** across 4 files.
 
-```bash
-cd projects/rag-wikipedia/frontend
-npm run test -- --run     # 11 passed
-npx tsc --noEmit          # clean
+```text
+AnswerView.test.tsx      1
+CitationList.test.tsx    3
+QualityPanel.test.tsx    4
+QueryBox.test.tsx        3
 ```
-
-Both were run on Python 3.12, matching the version pinned in
-`.github/workflows/backend-ci.yml`. Backend lint and tests run in CI on every push
-and pull request; the frontend suite is not wired into CI yet.
+<!-- docs-check:end -->
 
 ## Unit Test Coverage
 

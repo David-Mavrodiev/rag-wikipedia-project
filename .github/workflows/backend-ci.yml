@@ -56,6 +56,12 @@ jobs:
         working-directory: projects/rag-wikipedia/backend
         run: uv run --locked ruff check app/ pipeline/ eval/ tests/
 
+      # Documented facts must match the repository. The test count alone was
+      # once wrong in six different ways across seven files.
+      - name: Docs check
+        working-directory: projects/rag-wikipedia
+        run: uv run --locked python scripts/docs_check.py
+
       # No Qdrant or Ollama service is needed: the suite uses an in-memory Qdrant
       # for the contract tests and mocks the embedder and LLM everywhere else.
       - name: Tests

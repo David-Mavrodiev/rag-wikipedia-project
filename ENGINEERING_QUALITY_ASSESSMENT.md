@@ -47,7 +47,7 @@ Backend tests are under `projects/rag-wikipedia/backend/tests/` and cover:
 - Evaluation harness and its gates: `test_run_eval.py`.
 - Ingestion benchmark safety and collection ownership: `test_bench_ingest.py`.
 
-The suite is **69 tests** as of this writing (`cd projects/rag-wikipedia/backend && uv run pytest -q`).
+The suite is **192 tests** as of this writing (`cd projects/rag-wikipedia/backend && uv run pytest -q`).
 
 Frontend component tests are under `projects/rag-wikipedia/frontend/src/components/`
 and use Vitest plus React Testing Library:

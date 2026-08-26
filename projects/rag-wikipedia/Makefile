@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test lint
+.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test lint docs-check docs-write
 
 up:
 	docker compose up --build -d
@@ -33,3 +33,11 @@ test:
 
 lint:
 	cd backend && uv run ruff check app/ pipeline/ eval/ tests/
+
+# Verify the documentation's factual claims against the repository. Generated
+# blocks are rewritten from source; inline claims are asserted.
+docs-check:
+	uv run python scripts/docs_check.py
+
+docs-write:
+	uv run python scripts/docs_check.py --write
