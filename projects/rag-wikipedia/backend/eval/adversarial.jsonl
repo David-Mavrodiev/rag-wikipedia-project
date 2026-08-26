@@ -1,20 +1,20 @@
-{"id": "adv-001", "category": "near_match", "difficulty": "hard", "question": "What is Python in the Apollo myth?", "expected_terms": ["Python"], "expected_refusal": false}
-{"id": "adv-002", "category": "near_match", "difficulty": "hard", "question": "What does apple mean in agriculture?", "expected_terms": ["Agriculture"], "expected_refusal": false}
-{"id": "adv-003", "category": "near_match", "difficulty": "hard", "question": "What is the periodic table in alkali metal chemistry?", "expected_terms": ["periodic table"], "expected_refusal": false}
-{"id": "adv-004", "category": "ambiguous", "difficulty": "hard", "question": "Tell me about Apollo.", "expected_terms": ["Apollo"], "expected_refusal": false}
-{"id": "adv-005", "category": "ambiguous", "difficulty": "hard", "question": "What is acid used for?", "expected_terms": ["Acid"], "expected_refusal": false}
-{"id": "adv-006", "category": "near_match", "difficulty": "hard", "question": "What does alpha mean in science?", "expected_terms": ["Alpha"], "expected_refusal": false}
-{"id": "adv-007", "category": "near_match", "difficulty": "hard", "question": "What is astronomy about?", "expected_terms": ["Astronomer"], "expected_refusal": false}
-{"id": "adv-008", "category": "near_match", "difficulty": "hard", "question": "What is the Alexander Archipelago?", "expected_terms": ["Alaska"], "expected_refusal": false}
-{"id": "adv-009", "category": "near_match", "difficulty": "hard", "question": "What is the ancient Olympic Games?", "expected_terms": ["Olympic Games"], "expected_refusal": false}
-{"id": "adv-010", "category": "near_match", "difficulty": "hard", "question": "What is aquaculture in agriculture?", "expected_terms": ["Agriculture"], "expected_refusal": false}
-{"id": "adv-011", "category": "private_near_match", "difficulty": "hard", "question": "What is my Apollo account password?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-012", "category": "private_near_match", "difficulty": "hard", "question": "What is my Python project API key?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-013", "category": "time_dependent", "difficulty": "hard", "question": "What is the current albedo outside my window?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-014", "category": "private_near_match", "difficulty": "hard", "question": "Who called me from Alaska today?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-015", "category": "future", "difficulty": "hard", "question": "Will my agriculture exam be easy tomorrow?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-016", "category": "private", "difficulty": "hard", "question": "What is my current ASCII login token?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-017", "category": "private", "difficulty": "hard", "question": "Where did I save my Apollo 11 notes yesterday?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-018", "category": "private", "difficulty": "hard", "question": "What is my private Aristotle essay grade?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-019", "category": "future", "difficulty": "hard", "question": "Will my Alaska trip be delayed tomorrow?", "expected_terms": [], "expected_refusal": true}
-{"id": "adv-020", "category": "time_dependent", "difficulty": "hard", "question": "What is happening to my agriculture stocks right now?", "expected_terms": [], "expected_refusal": true}
+{"id": "adv-001", "category": "near_match", "question": "In Greek mythology, what creature did Apollo slay at Delphi?", "expected_titles": ["Apollo"], "expected_refusal": false}
+{"id": "adv-002", "category": "near_match", "question": "Which Apollo mission first landed humans on the Moon?", "expected_titles": ["Apollo 11"], "expected_refusal": false}
+{"id": "adv-003", "category": "near_match", "question": "Which Apollo mission first orbited the Moon?", "expected_titles": ["Apollo 8"], "expected_refusal": false}
+{"id": "adv-004", "category": "ambiguous", "question": "Tell me about Apollo.", "expected_titles": ["Apollo"], "expected_refusal": false}
+{"id": "adv-005", "category": "near_match", "question": "What does the pH scale measure about an acid?", "expected_titles": ["Acid"], "expected_refusal": false}
+{"id": "adv-006", "category": "near_match", "question": "What is the scientific study of farming called?", "expected_titles": ["Agricultural science"], "expected_refusal": false}
+{"id": "adv-007", "category": "near_match", "question": "Which alkali metal is the lightest?", "expected_titles": ["Alkali metal"], "expected_refusal": false}
+{"id": "adv-008", "category": "near_match", "question": "Which novel by George Orwell features farm animals?", "expected_titles": ["Animal Farm"], "expected_refusal": false}
+{"id": "adv-009", "category": "near_match", "question": "Which US state is the largest by area?", "expected_titles": ["Alaska"], "expected_refusal": false}
+{"id": "adv-010", "category": "near_match", "question": "Who wrote Brave New World?", "expected_titles": ["Aldous Huxley"], "expected_refusal": false}
+{"id": "adv-011", "category": "private_near_match", "question": "What is my Apollo account password?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-012", "category": "private_near_match", "question": "Where did I save my Apollo 11 notes yesterday?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-013", "category": "time_dependent", "question": "What is the current albedo outside my window?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-014", "category": "future", "question": "Will my Alaska trip be delayed tomorrow?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-015", "category": "private", "question": "What is my private Aristotle essay grade?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-016", "category": "out_of_corpus", "question": "What is the Python programming language?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-017", "category": "out_of_corpus", "question": "Who was Apollo Creed?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-018", "category": "out_of_corpus", "question": "How much did the Alaska Purchase cost in modern dollars?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-019", "category": "out_of_corpus", "question": "What is alkaline battery chemistry?", "expected_titles": [], "expected_refusal": true}
+{"id": "adv-020", "category": "out_of_corpus", "question": "Who directed the film Alien?", "expected_titles": [], "expected_refusal": true}

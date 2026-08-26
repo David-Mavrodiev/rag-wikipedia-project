@@ -1,29 +1,37 @@
 {
-  "status": "healthy",
-  "failures": [],
+  "status": "suspect_overfit",
+  "failures": [
+    "golden: refusal_accuracy=0.55 < 0.8",
+    "golden: false_accept_rate=0.45 > 0.1",
+    "holdout: precision@5=0.57 < 0.6",
+    "holdout: refusal_accuracy=0.40 < 0.8",
+    "holdout: false_accept_rate=0.60 > 0.1",
+    "adversarial: refusal_accuracy=0.50 < 0.8",
+    "adversarial: false_accept_rate=0.50 > 0.1"
+  ],
   "datasets": {
     "golden": {
       "recall@5": 1.0,
-      "precision@5": 0.7150000000000001,
-      "mrr": 0.9645833333333333,
-      "refusal_accuracy": 1.0,
-      "false_accept_rate": 0.0,
+      "precision@5": 0.9400000000000001,
+      "mrr": 1.0,
+      "refusal_accuracy": 0.55,
+      "false_accept_rate": 0.45,
       "answerable_refusal_rate": 0.0
     },
     "holdout": {
       "recall@5": 1.0,
-      "precision@5": 0.9466666666666667,
-      "mrr": 1.0,
-      "refusal_accuracy": 1.0,
-      "false_accept_rate": 0.0,
+      "precision@5": 0.5733333333333334,
+      "mrr": 0.9666666666666667,
+      "refusal_accuracy": 0.4,
+      "false_accept_rate": 0.6,
       "answerable_refusal_rate": 0.0
     },
     "adversarial": {
-      "recall@5": 0.9,
-      "precision@5": 0.72,
-      "mrr": 0.775,
-      "refusal_accuracy": 1.0,
-      "false_accept_rate": 0.0,
+      "recall@5": 1.0,
+      "precision@5": 0.6599999999999999,
+      "mrr": 0.95,
+      "refusal_accuracy": 0.5,
+      "false_accept_rate": 0.5,
       "answerable_refusal_rate": 0.0
     }
   },
