@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline
 
 up:
 	docker compose up --build -d
@@ -54,3 +54,21 @@ docs-write:
 # Needs full git history: a shallow clone cannot resolve commit ancestry.
 audit-freshness:
 	uv run python scripts/audit_freshness.py
+
+# The collection holding the committed evaluation corpus. Separate from the
+# working `wikipedia` collection on purpose: the published measurement must
+# describe a fixed corpus, not whatever a local ingest happens to contain.
+EVAL_COLLECTION ?= wikipedia_eval
+
+# Ingest the committed fixture. No network, no Hugging Face - deterministic.
+# Resumable, so re-running costs an ID lookup per article rather than re-embedding.
+eval-corpus:
+	PROFILE=fixture COLLECTION=$(EVAL_COLLECTION) uv run python backend/pipeline/flow.py
+
+# The canonical audit: fixed corpus in, audit_report.json out. This is exactly
+# what CI runs, so a local result and a CI result are comparable.
+# PROFILE must match the ingest: provenance records settings.profile, so
+# auditing with a different one would label the fixture corpus as something
+# else - the precise inaccuracy provenance exists to prevent.
+audit-baseline:
+	PROFILE=fixture COLLECTION=$(EVAL_COLLECTION) uv run python backend/eval/audit.py

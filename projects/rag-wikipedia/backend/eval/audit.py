@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -18,6 +19,8 @@ from app.core.runtime_config import (
     save_runtime_config,
 )
 from eval.run_eval import evaluate_golden, gate_failures, write_markdown_report
+
+logger = logging.getLogger(__name__)
 
 MAX_GOLDEN_HOLDOUT_GAP = 0.10
 DATASET_NAMES = ("golden", "holdout", "adversarial")
@@ -120,6 +123,37 @@ def summarize_reports(reports: dict[str, dict], *, k: int) -> dict:
     }
 
 
+HISTORY_PATH_NAME = "audit_history.jsonl"
+
+
+def append_history(base_dir: Path, audit_report: dict) -> None:
+    """Append one line per audit run, so quality has a shape over time.
+
+    audit_report.json only ever holds the latest run, which answers "how are we
+    now" and not "when did this change, and what changed with it". One line per
+    run, keyed by the commit it measured, answers both and costs a few hundred
+    bytes.
+
+    Append-only and best-effort: a history write must never fail an audit, and a
+    duplicated run for the same commit is preferable to losing one.
+    """
+    entry = {
+        "generated_at": (audit_report.get("provenance") or {}).get("generated_at"),
+        "git_sha": (audit_report.get("provenance") or {}).get("git_sha"),
+        "vector_count": (audit_report.get("provenance") or {}).get("vector_count"),
+        "profile": (audit_report.get("provenance") or {}).get("profile"),
+        "status": audit_report.get("status"),
+        "n_failures": len(audit_report.get("failures") or []),
+        "datasets": audit_report.get("datasets"),
+    }
+    path = base_dir / HISTORY_PATH_NAME
+    try:
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")
+    except OSError as exc:
+        logger.warning("Could not append audit history to %s: %s", path, exc)
+
+
 def write_audit_reports(
     base_dir: Path,
     reports: dict[str, dict],
@@ -139,6 +173,8 @@ def write_audit_reports(
     }
     # Atomic: the API reads this file to serve /quality, from another process.
     atomic_write_text(base_dir / "audit_report.json", json.dumps(audit_report, indent=2))
+
+    append_history(base_dir, audit_report)
 
     lines = ["# Evaluation Audit Report", "", f"- status: {audit_report['status']}"]
     lines.extend(f"- {failure}" for failure in failures)

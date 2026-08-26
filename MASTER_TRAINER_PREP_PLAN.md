@@ -145,7 +145,7 @@ conflating *uncited* with *refused*.
 > user-facing contract."*
 
 **How you verify — the standard answer:**
-1. Tests before and after (the suite is at **199 passing**).
+1. Tests before and after (the suite is at **210 passing**).
 2. A new regression test for the specific case.
 3. Lint (ruff) not worse than baseline.
 4. A live end-to-end run, not just green tests.

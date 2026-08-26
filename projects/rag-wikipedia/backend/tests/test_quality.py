@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock
 
 from app.core import quality as quality_state
@@ -304,3 +305,53 @@ def test_audit_response_carries_provenance(client, monkeypatch):
     assert posted["provenance"]["top_k"] == 5
     # POST and GET must keep the same shape - they diverged once before.
     assert set(posted) == set(fetched) | {"failures", "corrected"}
+
+
+# --- a deployment must not present a foreign measurement as its own ---------
+
+def _report_measuring(collection: str, profile: str = "tiny") -> str:
+    return json.dumps(
+        {
+            "status": "healthy",
+            "failures": [],
+            "datasets": {"golden": {"recall@5": 1.0}},
+            "active_config": {"retrieval_candidate_k": 20},
+            "provenance": {"collection": collection, "profile": profile, "vector_count": 123},
+        }
+    )
+
+
+def test_committed_report_is_labelled_as_measured_elsewhere(client, monkeypatch, tmp_path):
+    from app.core.config import settings
+
+    path = tmp_path / "audit_report.json"
+    path.write_text(_report_measuring(settings.collection), encoding="utf-8")
+    monkeypatch.setattr(quality_state, "AUDIT_REPORT_PATH", path)
+
+    body = client.get("/quality").json()
+
+    # It matches this deployment, so it is served - but never as if this
+    # deployment had measured it.
+    assert body["status"] == "healthy"
+    assert body["source"] == "committed_report"
+
+
+def test_report_for_a_different_corpus_is_refused(client, monkeypatch, tmp_path):
+    # The committed report travels in the image. If the deployment serves a
+    # different collection, those numbers describe someone else's data and
+    # reporting them as this deployment's quality would be a lie.
+    path = tmp_path / "audit_report.json"
+    path.write_text(_report_measuring("some_other_collection"), encoding="utf-8")
+    monkeypatch.setattr(quality_state, "AUDIT_REPORT_PATH", path)
+
+    body = client.get("/quality").json()
+
+    assert body["status"] == "unknown"
+    assert body["source"] == "none"
+    assert "some_other_collection" in body["reason"]
+
+
+def test_an_in_process_audit_is_labelled_as_such(client, monkeypatch):
+    _mock_audit(monkeypatch)
+
+    assert client.post("/quality/audit").json()["source"] == "in_process"

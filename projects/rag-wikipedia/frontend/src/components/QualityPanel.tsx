@@ -9,11 +9,25 @@ interface DatasetMetrics {
   answerable_refusal_rate?: number
 }
 
+interface Provenance {
+  vector_count?: number
+  profile?: string
+  collection?: string
+  embed_model?: string
+  top_k?: number
+  git_sha?: string
+}
+
 interface QualityState {
   status: string
   updated_at?: string | null
   reason?: string
   metrics?: Record<string, DatasetMetrics>
+  provenance?: Provenance
+  // "in_process"  - this deployment measured it
+  // "committed_report" - measured elsewhere, shipped in the image
+  // "none" - nothing trustworthy to show
+  source?: string
 }
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
@@ -108,6 +122,20 @@ export default function QualityPanel() {
       </div>
 
       {error && <p className="quality-error">Quality check unavailable: {error}</p>}
+
+      {/* Numbers measured somewhere else must never read as this deployment's
+          own. The API refuses outright when the corpus does not match; this
+          covers the case where it matches but was still measured elsewhere. */}
+      {quality?.source === 'committed_report' && (
+        <p className="quality-provenance">
+          Measured before deployment
+          {quality.provenance?.vector_count
+            ? ` against ${quality.provenance.vector_count.toLocaleString()} vectors`
+            : ''}
+          {quality.provenance?.git_sha ? ` at ${quality.provenance.git_sha.slice(0, 7)}` : ''}
+          . Run an audit for this deployment's own figures.
+        </p>
+      )}
 
       {datasets.length > 0 ? (
         <div className="quality-table-wrap">
