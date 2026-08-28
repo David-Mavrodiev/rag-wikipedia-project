@@ -1348,7 +1348,7 @@ python -m http.server 8080 --directory demo                     # serve the cons
 
 ## 9. Testing
 
-`pytest` — **210 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
+`pytest` — **224 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
 
 ---
 
@@ -1497,7 +1497,7 @@ Usually correct: with the `tiny` profile (first 500 articles) that topic isn't i
 
 ## 14. Positioning (for clients / interviews)
 
-This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — and the `Embedder`/`LLM` interfaces make an Azure OpenAI adapter a drop-in, with the registry written and ready to activate, §17), a measured **performance analysis** (embedding ≈ 97% of ingestion; 25k articles ≈ 15 h / ~404k vectors on CPU → GPU/ONNX/batching plan), and honest **"operational vs in-progress"** framing. Next levers: hybrid search (BM25 + dense), cross-encoder reranking, LLM-judge groundedness, CI.
+This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — and the `Embedder`/`LLM` interfaces make an Azure OpenAI adapter a drop-in, with the registry written and ready to activate, §17), a measured **performance analysis** — and, more tellingly, its own correction: the 25k profile was predicted at ~404k vectors from an N=150 sample and actually produced **87,173** (4.6x over), because Wikipedia dumps front-load their long articles; the GPU plan predicted 20-90 min and delivered far less because the card thermally clamps to 210 MHz of 2100, and the bottleneck moved from embedding to per-article overhead until batching removed it, and honest **"operational vs in-progress"** framing. Next levers: hybrid search (BM25 + dense), cross-encoder reranking, LLM-judge groundedness, CI.
 
 ---
 

@@ -23,7 +23,7 @@ def _make_store():
 
 def _make_embedder():
     embedder = MagicMock()
-    embedder.embed_batch.side_effect = lambda texts: [[0.1] * 384 for _ in texts]
+    embedder.embed_batch.side_effect = lambda texts, **kw: [[0.1] * 384 for _ in texts]
     return embedder
 
 
@@ -70,7 +70,8 @@ def _run_flow(store, embedder, monkeypatch, *, force=False, articles=None):
     from pipeline import flow as flow_mod
     from pipeline import tasks as tasks_mod
 
-    for name in ("clean_article", "chunk_article", "embed_chunks", "upsert_to_qdrant"):
+    for name in ("clean_article", "chunk_article", "embed_chunks", "upsert_to_qdrant",
+                 "ingest_segment"):
         task = getattr(tasks_mod, name)
         # idempotent: a test may call this helper twice, and the second
         # time the attribute is already the unwrapped function.
@@ -79,6 +80,9 @@ def _run_flow(store, embedder, monkeypatch, *, force=False, articles=None):
     monkeypatch.setattr(
         "pipeline.sources.iter_articles", lambda profile: iter(articles or FIXTURE_ARTICLES)
     )
+    # the flow batches, so shrink the segment to exercise flushing with the
+    # two-article fixture rather than only the tail flush
+    monkeypatch.setattr("pipeline.flow.SEGMENT_ARTICLES", 1)
     monkeypatch.setattr("app.core.embeddings.BGEEmbedder", lambda model_name: embedder)
     monkeypatch.setattr("app.core.vectorstore.QdrantStore", lambda url, collection: store)
     return flow_mod.ingest_flow.fn("tiny", force=force)
