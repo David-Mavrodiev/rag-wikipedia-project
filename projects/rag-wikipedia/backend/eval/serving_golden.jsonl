@@ -1,0 +1,90 @@
+{"id": "sg-a-000", "category": "factual", "question": "What is Biotite?", "expected_titles": ["Biotite"], "expected_refusal": false}
+{"id": "sg-a-001", "category": "factual", "question": "Tell me about Guarani.", "expected_titles": ["Guarani"], "expected_refusal": false}
+{"id": "sg-a-002", "category": "factual", "question": "What is Song Seung-tae?", "expected_titles": ["Song Seung-tae"], "expected_refusal": false}
+{"id": "sg-a-003", "category": "factual", "question": "Tell me about John D. Harvey.", "expected_titles": ["John D. Harvey"], "expected_refusal": false}
+{"id": "sg-a-004", "category": "factual", "question": "What is Correspondent account?", "expected_titles": ["Correspondent account"], "expected_refusal": false}
+{"id": "sg-a-005", "category": "factual", "question": "Tell me about United Kingdom of Portugal, Brazil and the Algarves.", "expected_titles": ["United Kingdom of Portugal, Brazil and the Algarves"], "expected_refusal": false}
+{"id": "sg-a-006", "category": "factual", "question": "What is Yang Yang?", "expected_titles": ["Yang Yang"], "expected_refusal": false}
+{"id": "sg-a-007", "category": "factual", "question": "Tell me about Schieder-Schwalenberg.", "expected_titles": ["Schieder-Schwalenberg"], "expected_refusal": false}
+{"id": "sg-a-008", "category": "factual", "question": "What is Middle (sheading)?", "expected_titles": ["Middle (sheading)"], "expected_refusal": false}
+{"id": "sg-a-009", "category": "factual", "question": "Tell me about Ramadugu.", "expected_titles": ["Ramadugu"], "expected_refusal": false}
+{"id": "sg-a-010", "category": "factual", "question": "What is Ralph Morse?", "expected_titles": ["Ralph Morse"], "expected_refusal": false}
+{"id": "sg-a-011", "category": "factual", "question": "Tell me about Çavdarhisar.", "expected_titles": ["Çavdarhisar"], "expected_refusal": false}
+{"id": "sg-a-012", "category": "factual", "question": "What is Hakan Özoğuz?", "expected_titles": ["Hakan Özoğuz"], "expected_refusal": false}
+{"id": "sg-a-013", "category": "factual", "question": "Tell me about Tornadotus.", "expected_titles": ["Tornadotus"], "expected_refusal": false}
+{"id": "sg-a-014", "category": "factual", "question": "What is 53rd British Academy Film Awards?", "expected_titles": ["53rd British Academy Film Awards"], "expected_refusal": false}
+{"id": "sg-a-015", "category": "factual", "question": "Tell me about Ahmed Kamal (cricketer).", "expected_titles": ["Ahmed Kamal (cricketer)"], "expected_refusal": false}
+{"id": "sg-a-016", "category": "factual", "question": "What is 1999 in association football?", "expected_titles": ["1999 in association football"], "expected_refusal": false}
+{"id": "sg-a-017", "category": "factual", "question": "Tell me about New Bothwell, Manitoba.", "expected_titles": ["New Bothwell, Manitoba"], "expected_refusal": false}
+{"id": "sg-a-018", "category": "factual", "question": "What is Four discourses?", "expected_titles": ["Four discourses"], "expected_refusal": false}
+{"id": "sg-a-019", "category": "factual", "question": "Tell me about Author.", "expected_titles": ["Author"], "expected_refusal": false}
+{"id": "sg-a-020", "category": "factual", "question": "What is Apiales?", "expected_titles": ["Apiales"], "expected_refusal": false}
+{"id": "sg-a-021", "category": "factual", "question": "Tell me about National Cowgirl Museum and Hall of Fame.", "expected_titles": ["National Cowgirl Museum and Hall of Fame"], "expected_refusal": false}
+{"id": "sg-a-022", "category": "factual", "question": "What is Fuji T-3?", "expected_titles": ["Fuji T-3"], "expected_refusal": false}
+{"id": "sg-a-023", "category": "factual", "question": "Tell me about Minnesota Texas Adoption Research Project.", "expected_titles": ["Minnesota Texas Adoption Research Project"], "expected_refusal": false}
+{"id": "sg-a-024", "category": "factual", "question": "What is Dylan Addison?", "expected_titles": ["Dylan Addison"], "expected_refusal": false}
+{"id": "sg-a-025", "category": "factual", "question": "Tell me about Atkaracalar.", "expected_titles": ["Atkaracalar"], "expected_refusal": false}
+{"id": "sg-a-026", "category": "factual", "question": "What is Cornelius Stirk?", "expected_titles": ["Cornelius Stirk"], "expected_refusal": false}
+{"id": "sg-a-027", "category": "factual", "question": "Tell me about Belle Gunness.", "expected_titles": ["Belle Gunness"], "expected_refusal": false}
+{"id": "sg-a-028", "category": "factual", "question": "What is Fort Fillmore?", "expected_titles": ["Fort Fillmore"], "expected_refusal": false}
+{"id": "sg-a-029", "category": "factual", "question": "Tell me about Area codes in Mexico by code (900–999).", "expected_titles": ["Area codes in Mexico by code (900–999)"], "expected_refusal": false}
+{"id": "sg-a-030", "category": "factual", "question": "What is Frederick Stewart (Australian politician)?", "expected_titles": ["Frederick Stewart (Australian politician)"], "expected_refusal": false}
+{"id": "sg-a-031", "category": "factual", "question": "Tell me about List of storms named Ken.", "expected_titles": ["List of storms named Ken"], "expected_refusal": false}
+{"id": "sg-a-032", "category": "factual", "question": "What is Princely County of Gorizia and Gradisca?", "expected_titles": ["Princely County of Gorizia and Gradisca"], "expected_refusal": false}
+{"id": "sg-a-033", "category": "factual", "question": "Tell me about Prussian education system.", "expected_titles": ["Prussian education system"], "expected_refusal": false}
+{"id": "sg-a-034", "category": "factual", "question": "What is 1844 Whig National Convention?", "expected_titles": ["1844 Whig National Convention"], "expected_refusal": false}
+{"id": "sg-a-035", "category": "factual", "question": "Tell me about Battle of Topáter.", "expected_titles": ["Battle of Topáter"], "expected_refusal": false}
+{"id": "sg-a-036", "category": "factual", "question": "What is Birds Hill?", "expected_titles": ["Birds Hill"], "expected_refusal": false}
+{"id": "sg-a-037", "category": "factual", "question": "Tell me about Tolgay Özbey.", "expected_titles": ["Tolgay Özbey"], "expected_refusal": false}
+{"id": "sg-a-038", "category": "factual", "question": "What is John Ozell?", "expected_titles": ["John Ozell"], "expected_refusal": false}
+{"id": "sg-a-039", "category": "factual", "question": "Tell me about Uwe Kreisel.", "expected_titles": ["Uwe Kreisel"], "expected_refusal": false}
+{"id": "sg-a-040", "category": "factual", "question": "What is 2005 Supercopa de España de Baloncesto?", "expected_titles": ["2005 Supercopa de España de Baloncesto"], "expected_refusal": false}
+{"id": "sg-a-041", "category": "factual", "question": "Tell me about ROKS.", "expected_titles": ["ROKS"], "expected_refusal": false}
+{"id": "sg-a-042", "category": "factual", "question": "What is List of auxiliary ship classes in service?", "expected_titles": ["List of auxiliary ship classes in service"], "expected_refusal": false}
+{"id": "sg-a-043", "category": "factual", "question": "Tell me about Jules de Gaultier.", "expected_titles": ["Jules de Gaultier"], "expected_refusal": false}
+{"id": "sg-a-044", "category": "factual", "question": "What is Transgene?", "expected_titles": ["Transgene"], "expected_refusal": false}
+{"id": "sg-a-045", "category": "factual", "question": "Tell me about The Ghosts of Edendale.", "expected_titles": ["The Ghosts of Edendale"], "expected_refusal": false}
+{"id": "sg-a-046", "category": "factual", "question": "What is Influenza A virus subtype H5N8?", "expected_titles": ["Influenza A virus subtype H5N8"], "expected_refusal": false}
+{"id": "sg-a-047", "category": "factual", "question": "Tell me about Labib Habachi.", "expected_titles": ["Labib Habachi"], "expected_refusal": false}
+{"id": "sg-a-048", "category": "factual", "question": "What is Sugar Bowl Stakes?", "expected_titles": ["Sugar Bowl Stakes"], "expected_refusal": false}
+{"id": "sg-a-049", "category": "factual", "question": "Tell me about Signage.", "expected_titles": ["Signage"], "expected_refusal": false}
+{"id": "sg-a-050", "category": "factual", "question": "What is Jerod Swallow?", "expected_titles": ["Jerod Swallow"], "expected_refusal": false}
+{"id": "sg-a-051", "category": "factual", "question": "Tell me about Arla Oy.", "expected_titles": ["Arla Oy"], "expected_refusal": false}
+{"id": "sg-a-052", "category": "factual", "question": "What is Imai Sōkyū?", "expected_titles": ["Imai Sōkyū"], "expected_refusal": false}
+{"id": "sg-a-053", "category": "factual", "question": "Tell me about Very Emergency.", "expected_titles": ["Very Emergency"], "expected_refusal": false}
+{"id": "sg-a-054", "category": "factual", "question": "What is Book of Job?", "expected_titles": ["Book of Job"], "expected_refusal": false}
+{"id": "sg-a-055", "category": "factual", "question": "Tell me about Yabuki.", "expected_titles": ["Yabuki"], "expected_refusal": false}
+{"id": "sg-a-056", "category": "factual", "question": "What is Kill at Will?", "expected_titles": ["Kill at Will"], "expected_refusal": false}
+{"id": "sg-a-057", "category": "factual", "question": "Tell me about Polar Bear (British band).", "expected_titles": ["Polar Bear (British band)"], "expected_refusal": false}
+{"id": "sg-a-058", "category": "factual", "question": "What is Analog signal?", "expected_titles": ["Analog signal"], "expected_refusal": false}
+{"id": "sg-a-059", "category": "factual", "question": "Tell me about Mary Ball Washington.", "expected_titles": ["Mary Ball Washington"], "expected_refusal": false}
+{"id": "sg-u-000", "category": "out_of_corpus", "question": "What is Angst?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Angst"}
+{"id": "sg-u-001", "category": "out_of_corpus", "question": "Tell me about All Souls' Day.", "expected_titles": [], "expected_refusal": true, "held_out_article": "All Souls' Day"}
+{"id": "sg-u-002", "category": "out_of_corpus", "question": "What is Anagram?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Anagram"}
+{"id": "sg-u-003", "category": "out_of_corpus", "question": "Tell me about ASIC (disambiguation).", "expected_titles": [], "expected_refusal": true, "held_out_article": "ASIC (disambiguation)"}
+{"id": "sg-u-004", "category": "out_of_corpus", "question": "What is AWK?", "expected_titles": [], "expected_refusal": true, "held_out_article": "AWK"}
+{"id": "sg-u-005", "category": "out_of_corpus", "question": "Tell me about Antigen.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Antigen"}
+{"id": "sg-u-006", "category": "out_of_corpus", "question": "What is Aliphatic compound?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Aliphatic compound"}
+{"id": "sg-u-007", "category": "out_of_corpus", "question": "Tell me about Acceleration.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Acceleration"}
+{"id": "sg-u-008", "category": "out_of_corpus", "question": "What is AIM-120 AMRAAM?", "expected_titles": [], "expected_refusal": true, "held_out_article": "AIM-120 AMRAAM"}
+{"id": "sg-u-009", "category": "out_of_corpus", "question": "Tell me about Bundle theory.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Bundle theory"}
+{"id": "sg-u-010", "category": "out_of_corpus", "question": "What is Breton language?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Breton language"}
+{"id": "sg-u-011", "category": "out_of_corpus", "question": "Tell me about Balochistan, Pakistan.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Balochistan, Pakistan"}
+{"id": "sg-u-012", "category": "out_of_corpus", "question": "What is Big Apple?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Big Apple"}
+{"id": "sg-u-013", "category": "out_of_corpus", "question": "Tell me about Bayonne.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Bayonne"}
+{"id": "sg-u-014", "category": "out_of_corpus", "question": "What is Bert Bell?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Bert Bell"}
+{"id": "sg-u-015", "category": "out_of_corpus", "question": "Tell me about Celtic music.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Celtic music"}
+{"id": "sg-u-016", "category": "out_of_corpus", "question": "What is Commentary?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Commentary"}
+{"id": "sg-u-017", "category": "out_of_corpus", "question": "Tell me about Chalmers University of Technology.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Chalmers University of Technology"}
+{"id": "sg-u-018", "category": "out_of_corpus", "question": "What is Christian (disambiguation)?", "expected_titles": [], "expected_refusal": true, "held_out_article": "Christian (disambiguation)"}
+{"id": "sg-u-019", "category": "out_of_corpus", "question": "Tell me about Cardiff.", "expected_titles": [], "expected_refusal": true, "held_out_article": "Cardiff"}
+{"id": "sg-t-000", "category": "private", "question": "What is the password for my laptop?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-001", "category": "private", "question": "What did my manager say about me in private?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-002", "category": "time_dependent", "question": "What is my current account balance?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-003", "category": "private", "question": "What did I have for breakfast this morning?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-004", "category": "time_dependent", "question": "What is on my calendar tomorrow?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-005", "category": "private", "question": "Where did I leave my keys yesterday?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-006", "category": "private", "question": "What is my private recovery phrase?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-007", "category": "time_dependent", "question": "Who is the current president?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-008", "category": "time_dependent", "question": "What is the weather right now?", "expected_titles": [], "expected_refusal": true}
+{"id": "sg-t-009", "category": "private", "question": "What is the security code for my apartment building?", "expected_titles": [], "expected_refusal": true}

@@ -149,6 +149,49 @@ opts into LLM calls because groundedness requires generated answers.
 Four gates are enforced, and all four are unconditional: `recall@5 >= 0.80`,
 `precision@5 >= 0.60`, `refusal_accuracy >= 0.80`, and `false_accept_rate <= 0.10`.
 
+### Two suites, two jobs
+
+| suite | corpus | purpose |
+|---|---|---|
+| `golden` / `holdout` / `adversarial` | the committed 150-article fixture (`wikipedia_eval`) | reproducible CI baseline — identical on every machine, so a metric change means the *code* changed |
+| `serving_golden.jsonl` | whatever is actually served (`wikipedia`, currently 24,694 articles) | what the deployed system's quality really is |
+
+They cannot be the same suite. The fixture's out-of-corpus questions — *speed of
+light*, *the telephone*, *the Nile* — are **answerable** from 24,694 articles, so
+scoring them against the serving corpus would report a confident, wrong number.
+
+`scripts/build_serving_suite.py` derives the serving suite from the corpus rather
+than hardcoding it: unanswerable cases are built from the **held-out slice**
+(1 article in 100, never ingested), so they are unanswerable by construction at
+any corpus size. Its rule is *verify corpus properties, never system behaviour* —
+a generator that kept only the cases retrieval already refuses would score 1.0 by
+construction and measure nothing.
+
+### Measured on the serving corpus (2026-08-27)
+
+24,694 articles / 87,173 vectors, k=5, 90 cases:
+
+| metric | 150-article fixture | 24,694-article serving | reading |
+|---|---:|---:|---|
+| `recall@5` | 1.000 | **0.933** | retrieval scales |
+| `mrr` | 1.000 | **0.904** | still ranked first, usually |
+| `precision@5` | 0.930 | **0.383** | mostly the metric's shape: one expected title at k=5 caps precision at 0.2 per matched chunk |
+| `refusal_accuracy` | 0.500 | **0.400** | worse |
+| `false_accept_rate` | 0.500 | **0.600** | worse |
+
+**Retrieval survives a 165× corpus increase; refusal does not.** `false_accept_rate`
+is now measured at three sizes and rises monotonically — **0.450** at 60 articles,
+**0.500** at 500, **0.600** at 24,694.
+
+That is structural rather than a tuning miss. `refusal_min_overlap_terms = 1`
+accepts on one shared token between the question and any retrieved chunk, so each
+additional article is another chance for an irrelevant chunk to supply it: the
+gate weakens as the corpus grows, which is the opposite of what a quality control
+should do. A 4×3 sweep of `refusal_min_score` × `refusal_min_overlap_terms` found
+no configuration clearing the gates without also refusing *"Who was Abraham
+Lincoln?"*. The fix is evidence scoring that weighs *which* terms overlap and how
+specific they are — not a threshold change.
+
 ## Frontend Test Coverage
 
 Frontend tests are component-level tests:
@@ -174,10 +217,18 @@ The main gaps are:
 - The frontend suite is not wired into CI, even though it now runs reproducibly
   from a committed lockfile.
 - Backend has strong behavioral coverage, but no static type-checking gate yet.
-- **The eval suites score retrieval, not generation.** `false_accept_rate` reads
-  0.00 on all three sets, while a live query can still be accepted on weak
-  evidence and refused only by the model. These numbers describe the retrieval
-  decision, not what the user receives.
+- **The eval suites score retrieval, not generation.** Every metric above is
+  computed from the *evidence gate's* decision, before the model runs. A query
+  the gate accepts on weak evidence may still be refused by the model, and an
+  answer the gate passes may still be ungrounded. So `false_accept_rate` is
+  neither an upper nor a lower bound on what the user actually receives — it
+  measures one of the three refusal layers in isolation.
+- **Refusal is the open defect, and it is measured, not suspected.**
+  `false_accept_rate` is 0.50 / 0.60 / 0.50 on golden / holdout / adversarial
+  and 0.600 on the serving corpus, against a 0.10 gate. `make eval-audit`
+  reports `suspect_overfit` today and is expected to: the gate is red on
+  purpose rather than relaxed to green. See the measurement section above for
+  why this needs a design change and not a threshold.
 
 ## Mentor-Facing Summary
 
