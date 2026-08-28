@@ -55,9 +55,15 @@ jobs:
         working-directory: projects/rag-wikipedia
         run: uv sync --locked --all-extras --python 3.12
 
+      # ../scripts is linted too: docs_check.py, compare_audit.py and
+      # build_serving_suite.py gate CI or generate committed artefacts, so they
+      # are project code, not throwaways. They sat outside the lint path until
+      # 2026-08-27 and had accumulated E501/F841 unnoticed. ruff settings come
+      # from projects/rag-wikipedia/pyproject.toml, which is an ancestor of both
+      # backend/ and scripts/, so both get identical rules.
       - name: Lint
         working-directory: projects/rag-wikipedia/backend
-        run: uv run --locked ruff check app/ pipeline/ eval/ tests/
+        run: uv run --locked ruff check app/ pipeline/ eval/ tests/ ../scripts
 
       # Documented facts must match the repository. The test count alone was
       # once wrong in six different ways across seven files.

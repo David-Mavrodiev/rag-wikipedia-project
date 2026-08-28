@@ -64,9 +64,10 @@ def frontend_tests() -> tuple[int, dict[str, int]]:
 def suite_sizes() -> dict[str, tuple[int, int, int]]:
     sizes = {}
     for name in ("golden", "holdout", "adversarial"):
+        path = BACKEND / "eval" / f"{name}.jsonl"
         rows = [
             json.loads(line)
-            for line in (BACKEND / "eval" / f"{name}.jsonl").read_text(encoding="utf-8").splitlines()
+            for line in path.read_text(encoding="utf-8").splitlines()
             if line.strip()
         ]
         un = sum(1 for r in rows if r.get("expected_refusal"))
@@ -217,7 +218,6 @@ def sync_blocks(write: bool) -> list[str]:
 def assertions() -> list[tuple[str, re.Pattern[str], str]]:
     total, per = collect_tests()
     ftotal, _ = frontend_tests()
-    g = gates()
     checks = [
         ("backend test count",
          re.compile(r"\*\*(\d+)\s+(?:backend\s+)?(?:pytest\s+)?(?:tests|passing)\*\*"), str(total)),
