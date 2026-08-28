@@ -115,21 +115,43 @@ slow again.
 
 ## Demo script (verified)
 
+> **Re-verified 2026-08-28 against the current index** (24,694 articles / 87,173
+> vectors). Every row below was run through `POST /query` on that date. The
+> previous version of this script had gone stale in the worst way for a demo -
+> it told you to show a refusal that this corpus no longer refuses - so the
+> query it named is called out under the table rather than quietly dropped.
+
 | Ask | Expected | Shows |
 |---|---|---|
-| **"Who was Abraham Lincoln?"** | grounded answer, **2–3 sources**, green `✓ ancrée` badge | retrieval + inline citations |
-| **"Who won the 2022 FIFA World Cup?"** | `I don't know based on the provided context.` orange `refus contrôlé` badge | **the refusal path — the money shot** |
+| **"Who was Abraham Lincoln?"** | grounded answer, source **Abraham Lincoln**, green `✓ ancrée` badge | retrieval + inline citations |
+| **"What is AIM-120 AMRAAM?"** | `I don't know based on the provided context.` orange `refus contrôlé` badge | **the refusal path — the money shot.** A held-out article: excluded from the index by construction, so this stays a refusal at any corpus size |
+| **"What is my current account balance?"** | same refusal | the *other* refusal mechanism — the intent filter, before retrieval runs |
 
-Other safe in-corpus topics: *Aristotle, anarchism, Andre Agassi, Alaska, algae, Apollo 8,
-Ayn Rand*.
+Other verified in-corpus topics: *Aristotle, anarchism, Andre Agassi, Alaska, algae,
+Apollo 8, Ayn Rand, Alexander Graham Bell*.
 
-**Caveat to state honestly:** the live index holds only the **45 "A" articles** (984
-vectors) from the bounded verification ingest, so anything else refuses. Frame it as
-deliberate: *"a small slice makes the refusal behaviour easy to demonstrate."*
+**The corpus.** The live index holds **24,694 articles / 87,173 vectors** — the full
+`real` profile, ingested across four machine shutdowns without re-embedding a single
+chunk. 1 article in 100 is deliberately held out and never ingested, which is what
+makes the AMRAAM refusal above reliable rather than lucky.
 
-Avoid *"What was the Apollo 11 mission?"* — the 3B model sometimes echoes a literal `[n]`
-placeholder instead of a real citation number. Harmless (correctly **not** a refusal) but
-it looks scruffy on screen.
+**Do not use "Who won the 2022 FIFA World Cup?"** — it was the refusal demo when the
+index held 45 articles, and it now answers *"Argentina [1]"* from *Timeline of
+association football*. Correct, but it is not a refusal, and it will not do what the
+script says on camera.
+
+**If asked about the weak spot, answer straight.** `false_accept_rate` is 0.600 on
+this corpus and rises with corpus size: `refusal_min_overlap_terms = 1` accepts on a
+single shared token, so a bigger corpus offers more chances for an irrelevant chunk to
+supply one. A live example, if you want to show it rather than describe it: **"What is
+Breton language?"** is a held-out article and *still* answers, because the corpus
+covers Brittonic languages elsewhere. The gates are red on purpose and the fix is
+evidence scoring, not a threshold. Saying this is stronger than being caught by it.
+
+Avoid *"What is the speed of light?"* and *"What was the Apollo 11 mission?"* — the 3B
+model sometimes emits a literal `[n]` placeholder instead of a citation number
+(verified: "speed of light" returns `The speed of light is c [n]` with zero sources).
+Harmless, correctly not a refusal, but it looks scruffy on screen.
 
 **The one-liner:** *"It answers only from the documents it was given, shows its sources,
 and says 'I don't know' rather than inventing — want to see it refuse?"*
@@ -146,7 +168,7 @@ foreach ($p in 8000,5500) {
 }
 Get-Process -Name "ollama*" -ErrorAction SilentlyContinue | Stop-Process -Force
 
-# Vector DB — `stop`, NOT `down`: keeps the volume (984 vectors) intact
+# Vector DB — `stop`, NOT `down`: keeps the volume (87,173 vectors) intact
 docker compose stop qdrant
 ```
 
