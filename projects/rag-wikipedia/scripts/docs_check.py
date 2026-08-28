@@ -217,12 +217,19 @@ def sync_blocks(write: bool) -> list[str]:
 # --------------------------------------------------------------------------
 def assertions() -> list[tuple[str, re.Pattern[str], str]]:
     total, per = collect_tests()
-    ftotal, _ = frontend_tests()
+    ftotal, fper = frontend_tests()
     checks = [
         ("backend test count",
          re.compile(r"\*\*(\d+)\s+(?:backend\s+)?(?:pytest\s+)?(?:tests|passing)\*\*"), str(total)),
         ("frontend test count",
          re.compile(r"\*\*(\d+)\s+frontend\s+\w*\s*(?:tests|component tests)\*\*"), str(ftotal)),
+        # The *file* count drifted where the test count could not: TESTS_ANNOTATED
+        # said "224 backend pytest tests across 18 files" while the suite spanned
+        # 21. The number nobody asserts is the number that rots, so assert it.
+        ("backend test-file count",
+         re.compile(r"backend\s+(?:pytest\s+)?tests\*\*\s+across\s+(\d+)\s+files"), str(len(per))),
+        ("frontend test-file count",
+         re.compile(r"Vitest[^*]*tests\*\*\s+across\s+(\d+)\s+files"), str(len(fper))),
     ]
     return [(label, pat, expected) for label, pat, expected in checks]
 

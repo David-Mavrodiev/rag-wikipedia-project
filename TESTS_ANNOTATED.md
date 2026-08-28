@@ -1,6 +1,6 @@
 # RAG over Wikipedia — Annotated Test Inventory
 
-> Current snapshot: **224 backend pytest tests** across 18 files, plus **11 frontend
+> Current snapshot: **224 backend pytest tests** across 21 files, plus **11 frontend
 > Vitest component tests** across 4 files. The original backend annotations below are
 > kept as teaching notes; the current audit sections call out tests added since this
 > file was first written. Where a file has grown since it was annotated, the
@@ -611,11 +611,18 @@ concurrent audit without disabling it.
   the suite runs reproducibly, so this is a workflow gap rather than a dependency one.
 - No static type-checking gate on the backend (the frontend has `tsc --noEmit`).
 - **The eval suites score the retrieval decision, not what the user receives.**
-  `false_accept_rate` reads 0.00 on golden, holdout and adversarial, yet a live query
-  can still be accepted on weak evidence and refused only by the model. Every
-  `expected_refusal` case in the suites also contains a literal trigger word from the
-  private/time-dependent pattern list, so refusal accuracy on those sets partly grades
-  that list against itself.
+  Every metric is computed from the evidence gate's verdict, before the model runs, so
+  a query the gate accepts on weak evidence may still be refused by the model. The
+  numbers bound what the user receives in neither direction.
+- **Refusal is the open defect, and it is measured rather than suspected.** The suites
+  were rebaselined onto honest expectations, and the gates went red as intended:
+  `false_accept_rate` is **0.50 / 0.60 / 0.50** on golden / holdout / adversarial and
+  **0.600** on the 24,694-article serving corpus, against a 0.10 gate. It rises with
+  corpus size (0.450 at 60 articles, 0.500 at 500, 0.600 at 24,694) because
+  `refusal_min_overlap_terms = 1` accepts on a single shared token, so a larger corpus
+  offers more chances for an irrelevant chunk to supply it. The fix is evidence
+  scoring that weighs *which* terms overlap, not a threshold change; `make eval-audit`
+  reports `suspect_overfit` deliberately until then.
 
 ---
 
