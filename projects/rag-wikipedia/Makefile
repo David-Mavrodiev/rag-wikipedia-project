@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all
 
 up:
 	docker compose up --build -d
@@ -72,3 +72,16 @@ eval-corpus:
 # else - the precise inaccuracy provenance exists to prevent.
 audit-baseline:
 	PROFILE=fixture COLLECTION=$(EVAL_COLLECTION) uv run python backend/eval/audit.py
+
+# `eval` and `eval-audit` above follow settings.collection, which defaults to
+# the working `wikipedia` collection - correct when you want to score whatever
+# you have ingested. But the committed suites describe the FIXTURE corpus, so
+# running them straight after `eval-corpus` scored `wikipedia` while the fixture
+# sat in `wikipedia_eval`, and reported confident numbers for the wrong corpus.
+# These two pin the pair together so that cannot happen.
+eval-fixture:
+	PROFILE=fixture COLLECTION=$(EVAL_COLLECTION) uv run python backend/eval/run_eval.py
+
+# Ingest the fixture and score it in one step - the safe default for anyone who
+# just wants to see the eval run.
+eval-fixture-all: eval-corpus eval-fixture
