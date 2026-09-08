@@ -40,11 +40,12 @@
     "refusal_high_confidence_score": 0.78,
     "refusal_min_margin": 0.02,
     "refusal_min_overlap_terms": 1,
-    "retrieval_candidate_k": 20
+    "retrieval_candidate_k": 20,
+    "refusal_min_evidence_coverage": 0.0
   },
   "provenance": {
-    "generated_at": "2026-08-28T10:29:37.748036+00:00",
-    "git_sha": "3eb0d0f44f661e84ef734a9b4cf051b9b0a6157b",
+    "generated_at": "2026-09-08T12:40:23.721392+00:00",
+    "git_sha": "76bcfece910ea6f3ee7de225429765f35cfab5c8",
     "profile": "fixture",
     "collection": "wikipedia_eval",
     "vector_count": 2422,
