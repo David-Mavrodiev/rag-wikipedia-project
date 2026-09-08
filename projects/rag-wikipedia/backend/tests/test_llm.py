@@ -1,9 +1,16 @@
-"""The Ollama client must declare its own context window.
+"""The Ollama client must declare its own context window and its decoding.
 
 Ollama sizes CUDA compute buffers from the context length. Left to the server
 default, llama3.2's advertised maximum fails to allocate on a 6 GB card, so
 whether generation worked depended on env vars set in whatever terminal
 launched `ollama serve`.
+
+Decoding is the same class of problem: Ollama's default temperature is 0.8, so
+until these options were sent the served path SAMPLED while every adapter in
+providers.py pinned temperature to zero. Activating the registry would then
+have changed answer behaviour as a side effect of choosing a provider - the one
+thing an interchangeable-provider interface exists to prevent. The LLM ABC now
+carries that as a contract; these assert the Ollama implementation honours it.
 """
 
 from unittest.mock import MagicMock, patch
@@ -43,6 +50,31 @@ def test_context_window_can_be_overridden_per_client():
 
     _, kwargs = module.Client.return_value.generate.call_args
     assert kwargs["options"]["num_ctx"] == 4096
+
+
+def test_generate_requests_greedy_decoding():
+    # Ollama defaults to temperature 0.8. A grounded answer is an extraction
+    # task, and sampling makes any comparison that reads the generated text
+    # unable to separate a regression from a resample.
+    module = _fake_ollama()
+    llm = _client_with(module)
+
+    llm.generate("prompt")
+
+    _, kwargs = module.Client.return_value.generate.call_args
+    assert kwargs["options"]["temperature"] == 0.0
+
+
+def test_generate_pins_the_sampling_seed():
+    # Redundant at temperature 0, sent anyway: it states the intent, and it
+    # keeps the request deterministic if the temperature is ever raised.
+    module = _fake_ollama()
+    llm = _client_with(module)
+
+    llm.generate("prompt")
+
+    _, kwargs = module.Client.return_value.generate.call_args
+    assert kwargs["options"]["seed"] == 0
 
 
 def test_context_window_leaves_headroom_over_the_token_budget():
