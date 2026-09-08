@@ -63,6 +63,12 @@ class _TimedEmbedder(Embedder):
         self._inner = inner
         self._timings = timings
 
+    @property
+    def dim(self) -> int:
+        # Delegated, not timed: reading the dimension is metadata, not work
+        # that this request pays for.
+        return self._inner.dim
+
     def embed(self, text: str) -> list[float]:
         with _timed(self._timings, "embed"):
             return self._inner.embed(text)

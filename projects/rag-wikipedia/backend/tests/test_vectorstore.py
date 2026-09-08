@@ -9,6 +9,7 @@ from __future__ import annotations
 import pytest
 from app.core.vectorstore import QdrantStore
 from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams
 
 
 @pytest.fixture
@@ -16,7 +17,7 @@ def store() -> QdrantStore:
     store = QdrantStore.__new__(QdrantStore)
     store._client = QdrantClient(":memory:")
     store._collection = "test"
-    store.ensure_collection()
+    store.ensure_collection(dim=384)
     return store
 
 
@@ -66,6 +67,46 @@ def test_count_reflects_upserts(store: QdrantStore):
     assert store.count() == 1
 
 
-def test_ensure_collection_rejects_wrong_dim(store: QdrantStore):
-    with pytest.raises(ValueError, match="Expected embedding dim"):
+def _memory_store(collection: str) -> QdrantStore:
+    store = QdrantStore.__new__(QdrantStore)
+    store._client = QdrantClient(":memory:")
+    store._collection = collection
+    return store
+
+
+def test_ensure_collection_rejects_a_dim_the_collection_disagrees_with(store: QdrantStore):
+    # The fixture created "test" at 384. A 768-d embedder - Vertex
+    # text-embedding-005, or bge-base - must be refused HERE, naming both
+    # numbers, rather than later as a rejected upsert far from its cause.
+    with pytest.raises(ValueError, match="stores 384-d vectors but the embedder produces 768-d"):
         store.ensure_collection(dim=768)
+
+
+def test_ensure_collection_is_idempotent_at_a_matching_dim(store: QdrantStore):
+    # Re-running an ingest against its own collection is the normal case, and
+    # ingestion is deliberately resumable - this must not raise.
+    store.ensure_collection(dim=384)
+    assert store.count() == 0
+
+
+def test_ensure_collection_creates_at_a_dim_other_than_384():
+    # The point of the change: 768 is a dimension, not an error. Before this,
+    # the store rejected every embedding model except bge-small.
+    store = _memory_store("vertex_sized")
+    store.ensure_collection(dim=768)
+
+    stored = store._client.get_collection("vertex_sized").config.params.vectors
+    assert stored.size == 768
+
+
+def test_ensure_collection_refuses_a_named_vector_collection():
+    # Not a shape this store creates. Picking one of the named sizes and
+    # hoping is how you write 768-d vectors into someone else's 384-d field.
+    store = _memory_store("named")
+    store._client.create_collection(
+        collection_name="named",
+        vectors_config={"text": VectorParams(size=384, distance=Distance.COSINE)},
+    )
+
+    with pytest.raises(ValueError, match="named-vector configuration"):
+        store.ensure_collection(dim=384)

@@ -66,7 +66,9 @@ def ingest_flow(profile: str | None = None, *, force: bool = False):
     profile = profile or settings.profile
     embedder = BGEEmbedder(model_name=settings.embed_model)
     store = QdrantStore(url=settings.qdrant_url, collection=settings.collection)
-    store.ensure_collection(dim=384)
+    # Asked of the embedder, never hardcoded: the collection must be created at
+    # whatever length THIS model produces, or the first upsert is rejected.
+    store.ensure_collection(dim=embedder.dim)
 
     log = _run_logger()
     inserted_total = 0

@@ -44,7 +44,7 @@ def _memory_store(collection: str) -> QdrantStore:
 
 def test_claim_succeeds_on_a_free_name():
     store = _memory_store("bench_free")
-    claim_collection(store, "bench_free")
+    claim_collection(store, "bench_free", dim=384)
     assert store._client.collection_exists("bench_free")
 
 
@@ -52,10 +52,10 @@ def test_claim_refuses_a_name_that_already_exists():
     # THE regression: the benchmark deletes its collection when it finishes, so
     # claiming a name someone else created would destroy their data.
     store = _memory_store("bench_taken")
-    claim_collection(store, "bench_taken")          # first run owns it
+    claim_collection(store, "bench_taken", dim=384)   # first run owns it
 
     with pytest.raises(SystemExit):
-        claim_collection(store, "bench_taken")      # second must refuse
+        claim_collection(store, "bench_taken", dim=384)   # second must refuse
 
 
 def test_claim_reraises_a_genuine_failure():
@@ -73,4 +73,4 @@ def test_claim_reraises_a_genuine_failure():
     store._collection = "bench_x"
 
     with pytest.raises(RuntimeError, match="connection refused"):
-        claim_collection(store, "bench_x")
+        claim_collection(store, "bench_x", dim=384)
