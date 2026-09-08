@@ -13,6 +13,29 @@ A black-box, **eval-first** Retrieval-Augmented Generation service. It answers n
 **In scope (v1):** ingestion → retrieval → grounded generation with citations → evaluation → API → local Docker + Azure deployment.
 **Out of scope (v1):** hybrid search, reranking, LangChain/LlamaIndex, agents, auth/billing, streaming ingestion.
 
+> **SCOPE EXTENSION (2026-09-08) — v2 adds agents and a second cloud, and does
+> not retract the v1 decision.** The two lines above stand as written. The
+> exclusion was correct when it was made, and the reasoning is worth keeping:
+> a framework buys nothing for a single-shot chain — retrieve, build a prompt,
+> generate, check the citations — while costing the property this project
+> exists to demonstrate, which is that every step is explicit, readable and
+> unit-tested.
+>
+> What changed is the shape of the problem, not that judgement. A bounded
+> retrieve → grade → rewrite → verify loop carrying checkpointed state is real
+> orchestration, and that is where a graph runtime earns its place. So the
+> agent runtime becomes a **registry**, on the pattern already established for
+> the LLM and embedder in §17: `direct` — the v1 chain, still the default and
+> still framework-free — and `langgraph` as a peer entry, chosen by one value.
+> The nodes stay framework-free functions in `app/core/`; LangGraph supplies
+> the wiring, the state and the checkpointer, never the logic. The cloud gets
+> the same treatment: GCP joins Azure as a deployment target rather than
+> replacing it.
+>
+> Planned, not yet built: a layering test that walks every module under `app/`
+> and fails if `core/` or `api/` imports a framework or a cloud SDK — so the
+> claim is enforced rather than asserted.
+
 ---
 
 ## 2. Architecture
