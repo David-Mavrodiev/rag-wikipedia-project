@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass, fields
+from dataclasses import MISSING, asdict, dataclass, fields
 from pathlib import Path
 
 from app.core.config import settings
@@ -20,6 +20,7 @@ _BOUNDS: dict[str, tuple[float, float]] = {
     "refusal_high_confidence_score": (0.0, 1.0),
     "refusal_min_margin": (0.0, 1.0),
     "refusal_min_overlap_terms": (0, 50),
+    "refusal_min_evidence_coverage": (0.0, 1.0),
     "retrieval_candidate_k": (1, 1000),
 }
 
@@ -31,6 +32,12 @@ class RetrievalRuntimeConfig:
     refusal_min_margin: float
     refusal_min_overlap_terms: int
     retrieval_candidate_k: int
+    # Defaulted, and LAST for that reason. A runtime_config.json written before
+    # this field existed must still load: it was persisted by an operator's
+    # auto-correction, and refusing to parse it would take the API down at
+    # startup over a field whose absence has an obvious meaning. Absent = the
+    # coverage gate had not been configured = off.
+    refusal_min_evidence_coverage: float = 0.0
 
 
 def validate_runtime_config(config: RetrievalRuntimeConfig) -> RetrievalRuntimeConfig:
@@ -50,6 +57,7 @@ def default_runtime_config() -> RetrievalRuntimeConfig:
         refusal_high_confidence_score=settings.refusal_high_confidence_score,
         refusal_min_margin=settings.refusal_min_margin,
         refusal_min_overlap_terms=settings.refusal_min_overlap_terms,
+        refusal_min_evidence_coverage=settings.refusal_min_evidence_coverage,
         retrieval_candidate_k=settings.retrieval_candidate_k,
     )
 
@@ -87,10 +95,21 @@ def load_runtime_config(path: Path = CONFIG_PATH) -> RetrievalRuntimeConfig:
         raise ValueError(f"{path} must contain a JSON object")
 
     known = {field.name for field in fields(RetrievalRuntimeConfig)}
-    missing = sorted(known - data.keys())
+    # Only fields WITHOUT a default are required. A field added after a config
+    # was written is absent for a knowable reason, and its default is the
+    # correct value for that file; a field that never had a default is a real
+    # omission and still raises.
+    required = {
+        field.name
+        for field in fields(RetrievalRuntimeConfig)
+        if field.default is MISSING and field.default_factory is MISSING
+    }
+    missing = sorted(required - data.keys())
     if missing:
         raise ValueError(f"{path} is missing {missing}")
 
     # Only known keys: an unrecognised entry is ignored rather than raising
     # TypeError from the constructor.
-    return validate_runtime_config(RetrievalRuntimeConfig(**{key: data[key] for key in known}))
+    return validate_runtime_config(
+        RetrievalRuntimeConfig(**{key: data[key] for key in known if key in data})
+    )

@@ -71,13 +71,45 @@ def test_fast_path_skips_the_llm_entirely(monkeypatch):
     assert "groundedness" not in report
 
 
-def test_fast_path_never_calls_the_llm(monkeypatch):
+def test_fast_path_never_builds_a_prompt(monkeypatch):
+    # The previous version of this test constructed a FakeLLM, passed `None` to
+    # evaluate_golden, and asserted `llm.prompts == []`. That assert was VACUOUS:
+    # the fake was never handed to the code under test, so the list was empty no
+    # matter what the fast path did. A test that cannot fail is worse than no
+    # test — it reports coverage it does not have.
+    #
+    # The observable that actually has teeth is `build_prompt`. It is imported
+    # inside `if measure_generation:` and called only on the generation path, so
+    # a fast-path run that completes with the symbol booby-trapped proves no
+    # generation was attempted. Passing an llm to observe it is impossible by
+    # construction — passing one is what turns generation ON.
     _patch_retrieve(monkeypatch)
 
-    llm = FakeLLM()
-    run_eval.evaluate_golden(_complete_golden_set(), object(), object(), None, k=5)
+    def explode(*args, **kwargs):
+        raise AssertionError("fast path built a prompt")
 
-    assert llm.prompts == []
+    monkeypatch.setattr("app.core.prompt.build_prompt", explode)
+
+    report = run_eval.evaluate_golden(_complete_golden_set(), object(), object(), k=5)
+
+    assert "groundedness" not in report
+    assert len(report["cases"]) == 20
+
+
+def test_the_prompt_sentinel_fires_on_the_generation_path(monkeypatch):
+    # Positive control for the test above: the same booby trap MUST blow up when
+    # generation really is enabled. Without this, `test_fast_path_never_builds_a
+    # _prompt` could pass because the sentinel is wired to the wrong symbol —
+    # the exact failure mode that made the old test worthless.
+    _patch_retrieve(monkeypatch)
+
+    def explode(*args, **kwargs):
+        raise AssertionError("fast path built a prompt")
+
+    monkeypatch.setattr("app.core.prompt.build_prompt", explode)
+
+    with pytest.raises(AssertionError, match="fast path built a prompt"):
+        run_eval.evaluate_golden(_complete_golden_set(), object(), object(), FakeLLM(), k=5)
 
 
 def test_flag_defaults_to_off():

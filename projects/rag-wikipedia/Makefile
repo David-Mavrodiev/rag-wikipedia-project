@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all idf idf-fixture sweep-coverage
 
 up:
 	docker compose up --build -d
@@ -60,6 +60,10 @@ audit-freshness:
 # describe a fixed corpus, not whatever a local ingest happens to contain.
 EVAL_COLLECTION ?= wikipedia_eval
 
+# The working collection. Mirrors settings.collection so `make idf` with no
+# argument builds the table for the corpus that is actually served.
+COLLECTION ?= wikipedia
+
 # Ingest the committed fixture. No network, no Hugging Face - deterministic.
 # Resumable, so re-running costs an ID lookup per article rather than re-embedding.
 eval-corpus:
@@ -85,3 +89,25 @@ eval-fixture:
 # Ingest the fixture and score it in one step - the safe default for anyone who
 # just wants to see the eval run.
 eval-fixture-all: eval-corpus eval-fixture
+
+
+# --- IDF evidence tables -----------------------------------------------------
+# The document-frequency table `decide_evidence` weights evidence with. Built
+# from the INDEXED chunks, not from a corpus file, so it always describes the
+# collection actually being served.
+#
+# Rebuild after ANY ingest that changes a collection's contents. A stale table
+# does not error - it silently scores terms with the wrong corpus's
+# frequencies, which is the one failure here that produces plausible numbers.
+idf:
+	cd backend && uv run python ../scripts/build_idf.py --collection $(COLLECTION)
+
+idf-fixture:
+	cd backend && uv run python ../scripts/build_idf.py --collection $(EVAL_COLLECTION)
+
+# Measure refusal_min_evidence_coverage and choose a threshold. Needs `idf`
+# first. The number to beat is false_accept_rate 0.600 on the serving corpus.
+sweep-coverage:
+	cd backend && uv run python ../scripts/sweep_coverage.py --collection $(COLLECTION) --suite $(SUITE)
+
+SUITE ?= serving_golden.jsonl

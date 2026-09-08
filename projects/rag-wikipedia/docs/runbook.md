@@ -22,6 +22,7 @@ to loopback deliberately: this Redis has no password.
 | GET    | `/health`        | liveness; never rate limited |
 | POST   | `/query`         | rate limited; 429 over budget, 503 if Redis is unreachable |
 | GET    | `/quality`       | last audit verdict and metrics; public |
+| GET    | `/metrics`       | serving latency for THIS process: per-stage p50/p95 split by outcome (`ok`/`refused`/`error`). Public, timings only - no question or answer content. Not rate limited (the limiter is an allow-list covering `/query` only) |
 | POST   | `/quality/audit` | re-scores every suite. 409 if one is already running. `?auto_correct=true` rewrites and persists the refusal thresholds and requires `X-Quality-Token`. Refused at the nginx edge in deployed stacks |
 
 ## Common tasks
@@ -107,3 +108,21 @@ services and re-run the same ingest command, which resumes. The full procedure
 is in [PERTINENT.md](../../../PERTINENT.md).
 
 **Empty answers** — Run evaluation to check recall scores. May need re-ingestion.
+
+**"The first query after a restart takes ~30 s"** — Expected, and visible in
+`/metrics` as a `deps` stage with a near-zero p50 and a very large max. The
+embedder, vector-store and LLM clients are built lazily on the first request
+(`@lru_cache`), and constructing the SentenceTransformer loads weights and
+revalidates them against the Hugging Face Hub. Measured on this machine:
+28-41 s. Two consequences worth knowing before a demo or a deploy:
+
+- **Warm it before demoing.** Send one throwaway query after starting the API.
+- **`/health` returns 200 during this window**, so it is a liveness check, not
+  a readiness check. A load balancer using it would route traffic to a process
+  that cannot answer for another half minute.
+
+**Reading `/metrics`** — `generate` is normally 80-95% of `total`; if a query
+is slow, it is almost always Ollama. `embed` (~40 ms) and `search` (~100 ms at
+87k vectors) are not the problem. Percentiles are process-local and reset on
+restart, and `p95` reads `null` until 100 samples exist rather than reporting a
+number that small a sample cannot support.

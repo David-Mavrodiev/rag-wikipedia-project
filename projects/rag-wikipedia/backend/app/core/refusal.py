@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.core.config import settings
+from app.core.idf import load_table
 from app.core.runtime_config import get_runtime_config
 
 # Single source of truth for what "refused" means, shared by the API (which
@@ -112,26 +113,50 @@ class EvidenceDecision:
     top_score: float
     score_margin: float
     overlap_terms: list[str]
+    # Defaulted so the four early-return paths above (private question, no
+    # results, score below minimum) stay three-liners: none of them ever looked
+    # at evidence, and giving them a fabricated coverage of 0.0 would read as
+    # "measured and found nothing" instead of "not measured".
+    coverage: float = 0.0
+    uncovered_terms: list[str] = field(default_factory=list)
 
 
-def _tokenize(text: str) -> set[str]:
+def tokenize_for_evidence(text: str) -> set[str]:
     """Split *text* into the same token shape `query_terms` produces.
 
     Both sides of the overlap test must be tokenized identically. A substring
     test ("art" in "particles", "cat" in "concatenated") reports evidence that
     is not there, inflates the overlap count, and turns a refusal into a false
     accept — the exact failure `decide_evidence` exists to catch.
+
+    Public because `scripts/build_idf.py` MUST tokenize the corpus with this
+    exact function. A document-frequency table built with a different splitter
+    would key on terms the gate never looks up, and every lookup would miss and
+    score 1.0 — turning the IDF gate into an accept-everything gate while still
+    reporting numbers.
     """
     return {token.lower() for token in re.findall(r"[a-zA-Z0-9]+", text)}
 
 
 def query_terms(query: str) -> set[str]:
     terms = set()
-    for token in _tokenize(query):
+    for token in tokenize_for_evidence(query):
         if len(token) < 3 or token in _STOPWORDS:
             continue
         terms.add(token)
     return terms
+
+
+# How many top chunks count as "the evidence". The count gate and the coverage
+# gate MUST read the same window: scoring coverage over five chunks while the
+# overlap list reports three would make a refusal's own diagnostics disagree
+# with the decision that produced it.
+_EVIDENCE_WINDOW = 3
+
+
+def evidence_terms(chunks: list[dict]) -> set[str]:
+    combined = " ".join(chunk.get("text", "") for chunk in chunks[:_EVIDENCE_WINDOW])
+    return tokenize_for_evidence(combined)
 
 
 def evidence_overlap(query: str, chunks: list[dict]) -> list[str]:
@@ -139,8 +164,7 @@ def evidence_overlap(query: str, chunks: list[dict]) -> list[str]:
     if not terms:
         return []
 
-    combined = " ".join(chunk.get("text", "") for chunk in chunks[:3])
-    return sorted(terms & _tokenize(combined))
+    return sorted(terms & evidence_terms(chunks))
 
 
 def is_private_or_time_dependent(query: str) -> bool:
@@ -149,6 +173,20 @@ def is_private_or_time_dependent(query: str) -> bool:
 
 
 def decide_evidence(query: str, results: list[dict]) -> EvidenceDecision:
+    """Decide whether *results* are evidence enough to answer *query*.
+
+    The accept test is IDF-weighted coverage: what fraction of the question's
+    specificity do the top chunks actually supply? The count-based predecessor
+    (`len(overlap) >= refusal_min_overlap_terms`, default 1) accepted on any one
+    shared token, which made the gate weaken as the corpus grew — every extra
+    article is another chance for an unrelated chunk to contribute a common
+    word. Coverage is immune to that: a common word carries almost no weight
+    however many chunks hold it, so growth adds noise the gate already ignores.
+
+    Falls back to the count gate when no IDF table has been built for the
+    collection, so a fresh checkout degrades to the old behaviour instead of
+    refusing everything.
+    """
     runtime = get_runtime_config()
     if is_private_or_time_dependent(query):
         return EvidenceDecision(True, "private_or_time_dependent_question", 0.0, 0.0, [])
@@ -159,23 +197,63 @@ def decide_evidence(query: str, results: list[dict]) -> EvidenceDecision:
     top_score = float(results[0].get("score", 0.0))
     second_score = float(results[1].get("score", 0.0)) if len(results) > 1 else 0.0
     margin = top_score - second_score
-    overlap = evidence_overlap(query, results)
-
-    required_overlap = runtime.refusal_min_overlap_terms
 
     if top_score < max(settings.refusal_threshold, runtime.refusal_min_score):
-        return EvidenceDecision(True, "score_below_minimum", top_score, margin, overlap)
+        return EvidenceDecision(
+            True, "score_below_minimum", top_score, margin, evidence_overlap(query, results)
+        )
 
-    if len(overlap) >= required_overlap:
-        return EvidenceDecision(False, "sufficient_overlap", top_score, margin, overlap)
+    terms = query_terms(query)
+    covered = terms & evidence_terms(results)
+    overlap = sorted(covered)
 
-    if (
+    # The vector-similarity escape hatch, unchanged and deliberately checked
+    # BEFORE the lexical test. A question phrased entirely unlike its source
+    # ("What is the study of humankind?" -> Anthropology) can be a confident
+    # embedding match with near-zero term overlap, and refusing it would trade
+    # this gate's false accepts for false refusals on exactly the paraphrases a
+    # dense retriever exists to handle.
+    high_confidence = (
         top_score >= runtime.refusal_high_confidence_score
         and margin >= runtime.refusal_min_margin
-    ):
-        return EvidenceDecision(False, "high_confidence_vector_match", top_score, margin, overlap)
+    )
 
-    return EvidenceDecision(True, "insufficient_evidence_overlap", top_score, margin, overlap)
+    # 0.0 means DISABLED, not "accept anything". Read as a plain threshold,
+    # `coverage >= 0.0` is always true, so the default would have accepted every
+    # result that cleared the score floor — WEAKER than the count gate it
+    # replaces, shipped as an improvement. The coverage gate stays off until a
+    # threshold has been measured on the corpus it will run against.
+    table = load_table(settings.collection)
+    if table is None or runtime.refusal_min_evidence_coverage <= 0.0:
+        if len(overlap) >= runtime.refusal_min_overlap_terms:
+            return EvidenceDecision(False, "sufficient_overlap", top_score, margin, overlap)
+        if high_confidence:
+            return EvidenceDecision(
+                False, "high_confidence_vector_match", top_score, margin, overlap
+            )
+        return EvidenceDecision(
+            True, "insufficient_evidence_overlap", top_score, margin, overlap
+        )
+
+    coverage = table.coverage(terms, covered)
+    # What the question asked about that the evidence never mentions, rarest
+    # first. This is the operator-facing half of a refusal: "insufficient
+    # coverage 0.31" says a threshold was missed, `['brzezinski']` says why.
+    uncovered = table.rarest_terms(terms - covered)
+
+    if coverage >= runtime.refusal_min_evidence_coverage:
+        return EvidenceDecision(
+            False, "sufficient_evidence_coverage", top_score, margin, overlap, coverage, uncovered
+        )
+
+    if high_confidence:
+        return EvidenceDecision(
+            False, "high_confidence_vector_match", top_score, margin, overlap, coverage, uncovered
+        )
+
+    return EvidenceDecision(
+        True, "insufficient_evidence_coverage", top_score, margin, overlap, coverage, uncovered
+    )
 
 
 def is_refusal(answer: str) -> bool:
