@@ -74,7 +74,7 @@ jobs:
       # backend/ and scripts/, so both get identical rules.
       - name: Lint
         working-directory: projects/rag-wikipedia/backend
-        run: uv run --locked ruff check app/ pipeline/ eval/ tests/ ../scripts
+        run: uv run --locked ruff check app/ pipeline/ eval/ engines/ tests/ ../scripts
 
       # Documented facts must match the repository. The test count alone was
       # once wrong in six different ways across seven files.

@@ -1,6 +1,6 @@
 # RAG over Wikipedia — Annotated Test Inventory
 
-> Current snapshot: **296 backend pytest tests** across 26 files, plus **11 frontend
+> Current snapshot: **313 backend pytest tests** across 28 files, plus **11 frontend
 > Vitest component tests** across 4 files. The original backend annotations below are
 > kept as teaching notes; the current audit sections call out tests added since this
 > file was first written. Where a file has grown since it was annotated, the
@@ -492,7 +492,7 @@ def test_query_qdrant_down(client):               # a retrieval exception → 50
 ## Current coverage audit
 
 <!-- docs-check:begin test-inventory -->
-Backend: **296 tests** across 26 files.
+Backend: **313 tests** across 28 files.
 
 ```text
 test_refusal.py          56
@@ -504,21 +504,23 @@ test_runtime_config.py   18
 test_metrics.py          15
 test_config.py           14
 test_metrics_endpoint.py 11
+test_engines.py          10
 test_holdout.py          9
 test_llm.py              9
 test_compare_audit.py    8
 test_vectorstore.py      8
 test_api.py              6
 test_bench_ingest.py     6
+test_engine_conformance.py 6
 test_generation.py       6
 test_retrieval.py        6
 test_audit.py            5
 test_chunking.py         5
+test_layering.py         5
 test_pipeline.py         5
 test_startup_config.py   5
 test_stream_resilience.py 5
 test_embeddings.py       4
-test_layering.py         4
 test_rate_limit.py       4
 test_health.py           1
 ```

@@ -24,6 +24,7 @@ import sys
 from pathlib import Path
 
 APP = Path(__file__).resolve().parents[1] / "app"
+DIRECT_ENGINE = Path(__file__).resolve().parents[1] / "engines" / "direct.py"
 
 # The packages `app/` is allowed to reach for. Every one of these is a BASE
 # dependency, so the serving path never needs an optional extra installed.
@@ -137,6 +138,31 @@ def test_the_allowlist_is_not_quietly_widened():
     assert not smuggled, (
         f"ALLOWED contains {smuggled}, which the architecture forbids in app/. "
         "A failing layering test is not fixed by widening the allowlist."
+    )
+
+
+def _third_party_in(path: Path) -> set[str]:
+    """Third-party top-level modules imported by a single file."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module.split(".")[0])
+    return {n for n in names if n not in sys.stdlib_module_names and n not in LOCAL}
+
+
+def test_the_direct_engine_stays_framework_free():
+    # `engines/` is the one place a framework IS allowed - that is what the
+    # package is for. `direct` is the exception inside the exception: it is the
+    # baseline every other engine is measured against, and a baseline that
+    # quietly acquired a graph runtime would make every comparison meaningless
+    # while still passing its own conformance test.
+    reached_for = sorted(_third_party_in(DIRECT_ENGINE) - ALLOWED)
+    assert not reached_for, (
+        f"engines/direct.py imports {reached_for}. It is the framework-free baseline; "
+        "an engine that needs a library belongs beside it, not inside it."
     )
 
 

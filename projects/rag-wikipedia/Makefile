@@ -40,7 +40,7 @@ test:
 	cd backend && uv run pytest tests/ -v
 
 lint:
-	cd backend && uv run ruff check app/ pipeline/ eval/ tests/ ../scripts
+	cd backend && uv run ruff check app/ pipeline/ eval/ engines/ tests/ ../scripts
 
 # Verify the documentation's factual claims against the repository. Generated
 # blocks are rewritten from source; inline claims are asserted.
