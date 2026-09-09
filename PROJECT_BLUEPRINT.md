@@ -32,9 +32,21 @@ A black-box, **eval-first** Retrieval-Augmented Generation service. It answers n
 > the same treatment: GCP joins Azure as a deployment target rather than
 > replacing it.
 >
-> Planned, not yet built: a layering test that walks every module under `app/`
-> and fails if `core/` or `api/` imports a framework or a cloud SDK — so the
-> claim is enforced rather than asserted.
+> Enforced rather than asserted: `backend/tests/test_layering.py` parses every
+> module under `app/` and fails if it imports anything outside an allowlist of
+> base packages. An allowlist rather than a denylist on purpose — a denylist
+> only catches what someone thought to forbid, while an allowlist fails on
+> anything new and forces the addition into a reviewed diff. A further test
+> refuses to let the allowlist itself be widened with a framework or a cloud
+> SDK, because the cheapest way to silence the first test would otherwise be to
+> add the offender to it. A last one states the dependency direction — `app/`
+> never imports `engines/` — before `engines/` exists, which is the moment to
+> state it.
+>
+> Verified the only way such a test is worth anything, by watching it fail: a
+> `from google.cloud import bigquery` placed inside a function body, so the
+> module still imported cleanly and every other test still passed. It was
+> caught, and named the file.
 
 ---
 
@@ -1371,7 +1383,7 @@ python -m http.server 8080 --directory demo                     # serve the cons
 
 ## 9. Testing
 
-`pytest` — **292 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
+`pytest` — **296 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
 
 ---
 
