@@ -22,6 +22,23 @@ dependencies = [
     "redis>=5.0",
 ]
 
+# Extras policy.
+#
+# An extra is added in the SAME commit as the first code that imports it, never
+# in advance. A speculative extra locks a dependency graph nobody uses, and
+# `uv sync --locked` then makes every CI job pay to install it.
+#
+# Who installs what, and why (the workflows carry the same note):
+#   dev    - pytest, ruff. backend-ci only, via `--extra dev`.
+#   agent  - the graph runtime for the langgraph engine. To be added alongside
+#            backend/engines/; backend-ci gains `--extra agent` at that point,
+#            because an agent whose tests do not run is worse than a slow job.
+#   gcp    - Vertex / BigQuery SDKs. NOT installed in CI: adapters import their
+#            SDK lazily inside __init__, so their tests patch sys.modules the
+#            way tests/test_llm.py already does for ollama.
+#
+# eval-quality installs NO extras: it measures retrieval and runs neither
+# pytest nor ruff.
 [project.optional-dependencies]
 dev = [
     "pytest>=8",

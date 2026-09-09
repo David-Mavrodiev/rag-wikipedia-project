@@ -51,9 +51,20 @@ jobs:
       # so the shared environment is resolved from this directory.
       # --locked: fail if uv.lock is stale rather than silently resolving a
       # different dependency graph than the one committed.
+      #
+      # Extras are NAMED rather than --all-extras, so what CI installs is a
+      # decision instead of a side effect of whichever extras happen to exist.
+      # Today `dev` is the only one and this resolves identically.
+      #
+      # When the agent extra lands, add `--extra agent` here: the agent tests
+      # must actually run, and untested agent code is worse than a slower
+      # pipeline. The gcp extra deliberately stays OUT - adapters import their
+      # SDK lazily inside __init__ (the providers.py pattern), so their tests
+      # patch sys.modules exactly as tests/test_llm.py already does for ollama,
+      # and CI never needs the cloud SDKs to exercise them.
       - name: Install dependencies
         working-directory: projects/rag-wikipedia
-        run: uv sync --locked --all-extras --python 3.12
+        run: uv sync --locked --extra dev --python 3.12
 
       # ../scripts is linted too: docs_check.py, compare_audit.py and
       # build_serving_suite.py gate CI or generate committed artefacts, so they
