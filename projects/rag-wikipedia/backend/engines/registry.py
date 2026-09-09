@@ -32,8 +32,23 @@ EngineFactory = Callable[[Embedder, QdrantStore, LLM], Engine]
 
 DEFAULT_ENGINE = "direct"
 
+def _langgraph(embedder: Embedder, store: QdrantStore, llm: LLM) -> Engine:
+    """Build the graph engine, importing its runtime only when it is chosen.
+
+    LAZY on purpose. A module-level import here would make langgraph a hard
+    dependency of `engines`, so `import engines` would fail wherever the agent
+    extra is not installed - which includes the eval-quality CI job, and any
+    deployment that serves the default `direct` engine and has no reason to ship
+    a graph runtime. The same reasoning as the lazy SDK imports in providers.py.
+    """
+    from engines.langgraph_engine import LangGraphEngine
+
+    return LangGraphEngine(embedder, store, llm)
+
+
 ENGINE_REGISTRY: dict[str, EngineFactory] = {
     "direct": lambda embedder, store, llm: DirectEngine(embedder, store, llm),
+    "langgraph": _langgraph,
     # <- ADD A NEW ENGINE AS ONE LINE HERE
 }
 

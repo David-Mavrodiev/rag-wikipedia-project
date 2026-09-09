@@ -55,7 +55,7 @@ what it produces. Never rehearse an unrun demo.
 | **3:45–4:30**<br>A. INSPECT | "I never start by asking for code. First I make it prove it understands the repo." | Paste prompt **A**. Read its answer aloud, briefly. |
 | **4:30–5:30**<br>B. PLAN | "Still no code. I want the file list and what could break — that's my review checklist before a single line changes." | Paste prompt **B**. Point at the files it names. |
 | **5:30–7:00**<br>C. IMPLEMENT | Narrate while it works: "Notice I scoped it — keep 384 as the default, don't touch retrieval or the API. Scope is how you keep an agent reviewable." | Paste prompt **C**. If it runs long, talk through the plan it produced. |
-| **7:00–8:30**<br>VERIFY *(never cut)* | "This is the part people skip. I read the diff myself, then I run the tests." | `git diff` → read one hunk aloud.<br>`.\.venv\Scripts\python.exe -m pytest -q` → **313 passing**. |
+| **7:00–8:30**<br>VERIFY *(never cut)* | "This is the part people skip. I read the diff myself, then I run the tests." | `git diff` → read one hunk aloud.<br>`.\.venv\Scripts\python.exe -m pytest -q` → **322 passing**. |
 | **8:30–9:15**<br>Judgment | "Last week the same agent added a metric that was correct — but it made the eval need the LLM, turning seconds into minutes. I kept the feature and put it behind a flag. **The agent accelerates; it doesn't absolve.**" | Optional: show `--with-groundedness` in `eval/run_eval.py`. |
 | **9:15–10:00**<br>Close | "Four things: scope it, make it plan first, verify with tests, own the diff. And the dimension detail matters — bge is 384, OpenAI's small is 1536. Vectors of different sizes aren't interchangeable, so changing embedder means re-indexing. That's why migrations aren't free." | Stop talking. Don't trail off. |
 

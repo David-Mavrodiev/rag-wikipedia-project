@@ -64,7 +64,7 @@ jobs:
       # and CI never needs the cloud SDKs to exercise them.
       - name: Install dependencies
         working-directory: projects/rag-wikipedia
-        run: uv sync --locked --extra dev --python 3.12
+        run: uv sync --locked --extra dev --extra agent --python 3.12
 
       # ../scripts is linted too: docs_check.py, compare_audit.py and
       # build_serving_suite.py gate CI or generate committed artefacts, so they

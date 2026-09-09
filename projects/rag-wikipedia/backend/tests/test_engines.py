@@ -56,9 +56,15 @@ def test_an_explicit_choice_overrides_the_environment(monkeypatch):
 
 def test_an_unknown_engine_fails_loudly_and_lists_the_options(monkeypatch):
     monkeypatch.setenv("ENGINE_CHOICE", "langraph")  # a typo, not a framework
-    expected = r"Unknown engine 'langraph'; options: \['direct'\]"
-    with pytest.raises(ValueError, match=expected):
+    with pytest.raises(ValueError) as caught:
         make_engine(MagicMock(), MagicMock(), MagicMock())
+
+    # The message names the typo AND every real option, so the fix is visible
+    # without opening the registry.
+    message = str(caught.value)
+    assert "langraph" in message
+    for name in ENGINE_REGISTRY:
+        assert name in message
 
 
 def test_direct_is_registered():

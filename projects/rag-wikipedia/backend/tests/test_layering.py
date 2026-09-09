@@ -25,6 +25,7 @@ from pathlib import Path
 
 APP = Path(__file__).resolve().parents[1] / "app"
 DIRECT_ENGINE = Path(__file__).resolve().parents[1] / "engines" / "direct.py"
+ENGINE_REGISTRY_FILE = Path(__file__).resolve().parents[1] / "engines" / "registry.py"
 
 # The packages `app/` is allowed to reach for. Every one of these is a BASE
 # dependency, so the serving path never needs an optional extra installed.
@@ -163,6 +164,40 @@ def test_the_direct_engine_stays_framework_free():
     assert not reached_for, (
         f"engines/direct.py imports {reached_for}. It is the framework-free baseline; "
         "an engine that needs a library belongs beside it, not inside it."
+    )
+
+
+def _module_level_third_party(path: Path) -> set[str]:
+    """Third-party modules a file imports AT IMPORT TIME.
+
+    Only `tree.body`, never a full walk: an import nested inside a function is
+    lazy and costs nothing until that function runs, which is the entire point
+    of the distinction being tested below.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module.split(".")[0])
+    return {n for n in names if n not in sys.stdlib_module_names and n not in LOCAL}
+
+
+def test_the_registry_does_not_hard_depend_on_a_framework():
+    # `import engines` has to work wherever the agent extra is NOT installed:
+    # the eval-quality CI job installs base dependencies only, and a deployment
+    # serving the default `direct` engine has no reason to ship a graph runtime.
+    # A module-level import in the registry would break both, and would break
+    # them at import time rather than when the engine is chosen.
+    hard = sorted(
+        name
+        for name in _module_level_third_party(ENGINE_REGISTRY_FILE)
+        if name.startswith(FORBIDDEN_PREFIXES)
+    )
+    assert not hard, (
+        f"engines/registry.py imports {hard} at module level. Import it inside the "
+        "factory instead, so choosing `direct` does not require the agent extra."
     )
 
 

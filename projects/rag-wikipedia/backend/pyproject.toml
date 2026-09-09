@@ -40,6 +40,17 @@ dependencies = [
 # eval-quality installs NO extras: it measures retrieval and runs neither
 # pytest nor ruff.
 [project.optional-dependencies]
+# The graph runtime for the `langgraph` engine. Kept out of the base
+# dependencies: the serving path defaults to `direct`, which needs none of this,
+# so a deployment that does not run the agent does not install it.
+agent = [
+    # Pinned to the majors this was built and measured against. langgraph
+    # reached 1.x, so a major bump is a breaking-change signal worth catching
+    # in a diff rather than in a silently different graph.
+    "langgraph>=1.2,<2",
+    "langchain-core>=1.6,<2",
+]
+
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
