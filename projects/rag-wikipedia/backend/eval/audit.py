@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.fileio import atomic_write_text
-from app.core.quality import update_quality_state
+from app.core.quality import build_provenance, update_quality_state
 from app.core.runtime_config import (
     RetrievalRuntimeConfig,
     apply_runtime_config,
@@ -19,12 +20,30 @@ from app.core.runtime_config import (
 )
 from eval.run_eval import evaluate_golden, gate_failures, write_markdown_report
 
+logger = logging.getLogger(__name__)
+
 MAX_GOLDEN_HOLDOUT_GAP = 0.10
 DATASET_NAMES = ("golden", "holdout", "adversarial")
 
 
+def audit_status(failures: list[str]) -> str:
+    """The one place that decides the audit verdict.
+
+    This expression previously existed in three copies - twice here and once in
+    app/api/quality.py - which is three chances for the dashboard, the CLI and
+    the written report to disagree.
+    """
+    return "healthy" if not failures else "suspect_overfit"
+
+
 def load_jsonl(path: Path) -> list[dict]:
-    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line]
+    # strip() before the truthiness test: a whitespace-only line is falsy only
+    # after stripping, and json.loads(" ") raises.
+    return [
+        json.loads(stripped)
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if (stripped := line.strip())
+    ]
 
 
 def evaluate_datasets(base_dir: Path, embedder, store, *, k: int, llm=None) -> dict[str, dict]:
@@ -104,21 +123,58 @@ def summarize_reports(reports: dict[str, dict], *, k: int) -> dict:
     }
 
 
+HISTORY_PATH_NAME = "audit_history.jsonl"
+
+
+def append_history(base_dir: Path, audit_report: dict) -> None:
+    """Append one line per audit run, so quality has a shape over time.
+
+    audit_report.json only ever holds the latest run, which answers "how are we
+    now" and not "when did this change, and what changed with it". One line per
+    run, keyed by the commit it measured, answers both and costs a few hundred
+    bytes.
+
+    Append-only and best-effort: a history write must never fail an audit, and a
+    duplicated run for the same commit is preferable to losing one.
+    """
+    entry = {
+        "generated_at": (audit_report.get("provenance") or {}).get("generated_at"),
+        "git_sha": (audit_report.get("provenance") or {}).get("git_sha"),
+        "vector_count": (audit_report.get("provenance") or {}).get("vector_count"),
+        "profile": (audit_report.get("provenance") or {}).get("profile"),
+        "status": audit_report.get("status"),
+        "n_failures": len(audit_report.get("failures") or []),
+        "datasets": audit_report.get("datasets"),
+    }
+    path = base_dir / HISTORY_PATH_NAME
+    try:
+        with path.open("a", encoding="utf-8") as handle:
+            handle.write(json.dumps(entry) + "\n")
+    except OSError as exc:
+        logger.warning("Could not append audit history to %s: %s", path, exc)
+
+
 def write_audit_reports(
     base_dir: Path,
     reports: dict[str, dict],
     failures: list[str],
     *,
     k: int,
+    provenance: dict | None = None,
 ) -> None:
     audit_report = {
-        "status": "healthy" if not failures else "suspect_overfit",
+        "status": audit_status(failures),
         "failures": failures,
         "datasets": summarize_reports(reports, k=k),
         "active_config": asdict(get_runtime_config()),
+        # WHAT this was measured against. Metrics without it cannot be compared
+        # between runs or trusted by anyone who did not produce them.
+        "provenance": provenance or {},
     }
     # Atomic: the API reads this file to serve /quality, from another process.
     atomic_write_text(base_dir / "audit_report.json", json.dumps(audit_report, indent=2))
+
+    append_history(base_dir, audit_report)
 
     lines = ["# Evaluation Audit Report", "", f"- status: {audit_report['status']}"]
     lines.extend(f"- {failure}" for failure in failures)
@@ -160,13 +216,15 @@ def main(argv: list[str] | None = None) -> None:
             reports = corrected_reports
             failures = []
 
-    status = "healthy" if not failures else "suspect_overfit"
-    write_audit_reports(base_dir, reports, failures, k=k)
+    status = audit_status(failures)
+    provenance = build_provenance(store=store, top_k=k)
+    write_audit_reports(base_dir, reports, failures, k=k, provenance=provenance)
     update_quality_state(
         status=status,
         metrics=summarize_reports(reports, k=k),
         active_config=asdict(get_runtime_config()),
         reason="Audit passed." if not failures else "; ".join(failures),
+        provenance=provenance,
     )
 
     print(json.dumps({"status": status, "failures": failures}, indent=2))

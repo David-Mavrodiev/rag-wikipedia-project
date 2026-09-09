@@ -1,8 +1,12 @@
 services:
   redis:
     image: redis:7-alpine
+    # Loopback only. Redis here has no password, so publishing on 0.0.0.0 put an
+    # unauthenticated data store on every interface of the host. The api service
+    # reaches it over the compose network and does not need the published port;
+    # this mapping exists only so `make eval`/the CLI audit can run from the host.
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -37,7 +41,9 @@ services:
       retries: 5
 
   ollama:
-    image: ollama/ollama:latest
+    # Pinned by digest: `latest` silently changed the served model runtime
+    # between runs, which is the opposite of what a reproducible demo needs.
+    image: ollama/ollama:latest@sha256:f1a705f2bd113fb8d15f85f7c217f0dc5f6bebda6b0cc42b82c3ad165ffcb9dc
     ports:
       - "11434:11434"
     volumes:

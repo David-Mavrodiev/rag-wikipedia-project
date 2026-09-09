@@ -55,7 +55,7 @@ def resolve_collection() -> str:
     return configured
 
 
-def claim_collection(store: QdrantStore, collection: str, dim: int = 384) -> None:
+def claim_collection(store: QdrantStore, collection: str, dim: int) -> None:
     """Create *collection*, establishing that THIS run owns it.
 
     Ownership is established by CREATING the collection, never by checking first.
@@ -63,6 +63,11 @@ def claim_collection(store: QdrantStore, collection: str, dim: int = 384) -> Non
     between, and this benchmark drops its collection when it finishes - so a lost
     race would destroy data it does not own. `create_collection()` fails when the
     name is taken, which makes a successful create the proof of ownership.
+
+    *dim* has no default. A benchmark carrying a stale 384 is exactly how the
+    assumption that every embedder is bge-small grows back: callers pass
+    `embedder.dim`, so the collection is created at the length the model in
+    this run actually produces.
 
     Raises SystemExit if the name is already taken; re-raises anything else.
     """
@@ -194,7 +199,7 @@ def main() -> None:
 
     store = QdrantStore(url=qdrant_url, collection=collection)
 
-    claim_collection(store, collection)
+    claim_collection(store, collection, dim=embedder.dim)
 
     # claim_collection() returning proves this run created the collection, so the
     # cleanup in `finally` can only ever delete what this run made.

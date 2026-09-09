@@ -1,6 +1,6 @@
 # RAG over Wikipedia — Annotated Test Inventory
 
-> Current snapshot: **179 backend pytest tests** across 18 files, plus **11 frontend
+> Current snapshot: **296 backend pytest tests** across 26 files, plus **11 frontend
 > Vitest component tests** across 4 files. The original backend annotations below are
 > kept as teaching notes; the current audit sections call out tests added since this
 > file was first written. Where a file has grown since it was annotated, the
@@ -491,38 +491,47 @@ def test_query_qdrant_down(client):               # a retrieval exception → 50
 
 ## Current coverage audit
 
-Backend pytest currently collects **179 tests** across 18 files
-(`uv run pytest --collect-only -q`):
+<!-- docs-check:begin test-inventory -->
+Backend: **296 tests** across 26 files.
 
 ```text
-test_refusal.py         50
-test_run_eval.py        16
-test_runtime_config.py  16
-test_metrics.py         15
-test_config.py          14
-test_quality.py         12
-test_llm.py              7
+test_refusal.py          56
+test_idf.py              26
+test_run_eval.py         22
+test_metrics_latency.py  19
+test_quality.py          19
+test_runtime_config.py   18
+test_metrics.py          15
+test_config.py           14
+test_metrics_endpoint.py 11
+test_holdout.py          9
+test_llm.py              9
+test_compare_audit.py    8
+test_vectorstore.py      8
 test_api.py              6
 test_bench_ingest.py     6
 test_generation.py       6
 test_retrieval.py        6
+test_audit.py            5
 test_chunking.py         5
+test_pipeline.py         5
 test_startup_config.py   5
-test_vectorstore.py      5
-test_audit.py            4
+test_stream_resilience.py 5
+test_embeddings.py       4
+test_layering.py         4
 test_rate_limit.py       4
 test_health.py           1
-test_pipeline.py         1
 ```
 
-Frontend Vitest currently has **11 component tests** across 4 files:
+Frontend: **11 tests** across 4 files.
 
 ```text
-AnswerView.test.tsx     1
-CitationList.test.tsx   3
-QualityPanel.test.tsx   4
-QueryBox.test.tsx       3
+AnswerView.test.tsx      1
+CitationList.test.tsx    3
+QualityPanel.test.tsx    4
+QueryBox.test.tsx        3
 ```
+<!-- docs-check:end -->
 
 This project does **not** currently configure numeric line or branch coverage. Treat
 the counts above as test inventory and behavioral coverage, not as a percentage claim.
@@ -607,11 +616,18 @@ concurrent audit without disabling it.
   the suite runs reproducibly, so this is a workflow gap rather than a dependency one.
 - No static type-checking gate on the backend (the frontend has `tsc --noEmit`).
 - **The eval suites score the retrieval decision, not what the user receives.**
-  `false_accept_rate` reads 0.00 on golden, holdout and adversarial, yet a live query
-  can still be accepted on weak evidence and refused only by the model. Every
-  `expected_refusal` case in the suites also contains a literal trigger word from the
-  private/time-dependent pattern list, so refusal accuracy on those sets partly grades
-  that list against itself.
+  Every metric is computed from the evidence gate's verdict, before the model runs, so
+  a query the gate accepts on weak evidence may still be refused by the model. The
+  numbers bound what the user receives in neither direction.
+- **Refusal is the open defect, and it is measured rather than suspected.** The suites
+  were rebaselined onto honest expectations, and the gates went red as intended:
+  `false_accept_rate` is **0.50 / 0.60 / 0.50** on golden / holdout / adversarial and
+  **0.600** on the 24,694-article serving corpus, against a 0.10 gate. It rises with
+  corpus size (0.450 at 60 articles, 0.500 at 500, 0.600 at 24,694) because
+  `refusal_min_overlap_terms = 1` accepts on a single shared token, so a larger corpus
+  offers more chances for an irrelevant chunk to supply it. The fix is evidence
+  scoring that weighs *which* terms overlap, not a threshold change; `make eval-audit`
+  reports `suspect_overfit` deliberately until then.
 
 ---
 

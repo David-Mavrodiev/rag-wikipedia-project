@@ -1,0 +1,9 @@
+# Append-only quality log: one line per audit run. Union merge keeps both sides
+# of a concurrent append instead of raising a conflict, which is the right
+# resolution for a log where every line is independent and ordering is not
+# significant (each line carries its own timestamp and commit).
+projects/rag-wikipedia/backend/eval/audit_history.jsonl merge=union
+
+# The corpus fixture is gzipped: treat it as binary so git does not attempt to
+# diff or normalise line endings inside it.
+projects/rag-wikipedia/backend/eval/fixtures/*.gz binary

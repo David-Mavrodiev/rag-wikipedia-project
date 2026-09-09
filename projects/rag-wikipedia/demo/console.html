@@ -81,6 +81,7 @@
   .mrow .l{font-size:.85rem;color:var(--muted);}
   .mrow .v{font-family:var(--mono);font-size:.92rem;font-weight:650;font-variant-numeric:tabular-nums;}
   .mrow .v.big{font-size:1.05rem;color:var(--accent);}
+  .mrow .v.bad{font-size:1.05rem;color:var(--warn);}
   .note{font-size:.76rem;color:var(--muted);margin:.6rem 0 0;line-height:1.5;}
   .note code{font-family:var(--mono);}
 </style>
@@ -94,7 +95,7 @@
 
   <main>
     <section class="chat">
-      <div class="msgs" id="msgs">
+      <div class="msgs" id="msgs" role="log" aria-live="polite" aria-atomic="false">
         <div class="empty" id="empty">
           <b>Posez une question sur le corpus Wikipédia (EN).</b><br>
           Le système renvoie une réponse <b>ancrée avec citations</b>, ou <b>refuse</b> si le contexte ne la soutient pas. Essayez un exemple ci-dessous.
@@ -102,9 +103,13 @@
       </div>
       <div class="composer">
         <div class="chips" id="chips">
-          <button class="chip" data-q="What is machine learning?">What is machine learning?</button>
-          <button class="chip" data-q="What is DNA?">What is DNA?</button>
-          <button class="chip" data-q="What is gravity?">What is gravity?</button>
+          <!-- These must be answerable FROM THE INGESTED CORPUS. The previous
+               chips (machine learning, DNA, gravity) have no article in the
+               tiny profile: retrieval accepted them on a single shared word and
+               the model then refused, which looks like a broken demo. -->
+          <button class="chip" data-q="Who was Abraham Lincoln?">Who was Abraham Lincoln?</button>
+          <button class="chip" data-q="What is agriculture?">What is agriculture?</button>
+          <button class="chip" data-q="What was Apollo 11?">What was Apollo 11?</button>
           <button class="chip ref" data-q="What is my neighbour's cat name?">↩ question hors-corpus (refus attendu)</button>
         </div>
         <form class="inrow" id="form">
@@ -120,8 +125,9 @@
         <div class="mrow"><span class="l">recall@5</span><span class="v big" id="m-recall">—</span></div>
         <div class="mrow"><span class="l">MRR</span><span class="v" id="m-mrr">—</span></div>
         <div class="mrow"><span class="l">Refusal accuracy</span><span class="v" id="m-ref">—</span></div>
+        <div class="mrow"><span class="l">False-accept rate (seuil ≤ 0,10)</span><span class="v bad" id="m-fa">—</span></div>
         <div class="mrow"><span class="l">Questions (rép. / sans rép.)</span><span class="v" id="m-n">—</span></div>
-        <p class="note" id="eval-note">Seuil d'acceptation : recall@5 ≥ 0,8 et refusal accuracy ≥ 0,8.</p>
+        <p class="note" id="eval-note">Portes : recall@5 ≥ 0,8 · precision@5 ≥ 0,6 · refusal accuracy ≥ 0,8 · false-accept ≤ 0,10. Mesuré sur le corpus servi (87 173 vecteurs), pas sur la fixture.</p>
       </div>
 
       <div class="card">
@@ -129,7 +135,7 @@
         <div class="mrow"><span class="l">Embedder</span><span class="v">bge-small · 384-d</span></div>
         <div class="mrow"><span class="l">LLM</span><span class="v">llama3.2:3b</span></div>
         <div class="mrow"><span class="l">Vector DB</span><span class="v" id="s-vec">Qdrant · cosine</span></div>
-        <div class="mrow"><span class="l">top-k · seuil</span><span class="v">5 · 0,30</span></div>
+        <div class="mrow"><span class="l">candidats · seuil refus</span><span class="v" id="s-topk">— · —</span></div>
         <div class="mrow"><span class="l">Budget contexte</span><span class="v">3 000 tokens</span></div>
         <p class="note">Réponse ancrée avec marqueurs <code>[n]</code> ; refus si aucun contexte ou score &lt; seuil. LLM &amp; embedder interchangeables par configuration.</p>
       </div>
@@ -243,7 +249,13 @@
       $('m-mrr').textContent = fmt(m.mrr);
       $('m-ref').textContent = fmt(m.refusal_accuracy);
       $('m-n').textContent = (m.n_answerable??'—') + ' / ' + (m.n_unanswerable??'—');
-      const pass = (m[k]>=0.8) && (m.refusal_accuracy>=0.8);
+      $('m-fa').textContent = fmt(m.false_accept_rate);
+      // Mirrors gate_failures() in backend/eval/run_eval.py. Checking only two of
+      // the four gates once let a report with false_accept_rate 0.600 render as
+      // GATE PASSED — the card has to fail on everything the eval fails on.
+      const pk = Object.keys(m).find(x=>x.startsWith('precision@')) || 'precision@5';
+      const pass = (m[k]>=0.8) && (m[pk]>=0.6) &&
+                   (m.refusal_accuracy>=0.8) && (m.false_accept_rate<=0.1);
       const g = $('gate'); g.textContent = pass?'GATE PASSED':'GATE FAILED';
       g.className = 'gate ' + (pass?'pass':'fail');
     }catch{
@@ -252,6 +264,24 @@
   })();
 
   // vector count (best effort)
+  // The refusal threshold and candidate-k are rewritten at runtime by the
+  // auto-correcting audit, so printing them as constants could show a value the
+  // API is no longer using. Read the live ones.
+  (async function runtimeConfig(){
+    try{
+      const r = await fetch(API_BASE + '/quality');
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      const cfg = (await r.json()).active_config || {};
+      const score = cfg.refusal_min_score;
+      const k = cfg.retrieval_candidate_k;
+      $('s-topk').textContent =
+        (k === undefined ? '—' : 'k=' + k) + ' · ' +
+        (score === undefined ? '—' : String(score).replace('.', ','));
+    }catch(e){
+      $('s-topk').textContent = 'indisponible';
+    }
+  })();
+
   (async function vec(){
     try{
       const r = await fetch('http://localhost:6333/collections/wikipedia');

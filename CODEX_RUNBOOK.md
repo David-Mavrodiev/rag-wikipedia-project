@@ -80,11 +80,16 @@ Verify:
 codex doctor
 ```
 
-Expected result after the fix: `17 ok`, `0 warn`, `0 fail`, and no
-`codex_apps` startup warning.
+Success conditions — stated as conditions rather than a count, because the number
+of checks `codex doctor` runs varies by version and by which checks are enabled.
+Observed on **v0.147.0** it was `17 ok, 0 warn, 0 fail`; record the version you
+saw alongside the count rather than treating 17 as the target:
 
-If the warning comes back with `apps` enabled, the stale `node_repl` entry was not the
-only cause. At that point the remaining cause is likely the size or startup cost of
+- no failed checks, and
+- no `codex_apps` startup warning.
+
+If the `codex_apps` warning comes back with `apps` enabled, the stale `node_repl`
+entry was not the only cause. At that point the remaining cause is likely the size or startup cost of
 the remote apps connector layer. Keep `apps` enabled if those capabilities matter, and
 use `codex doctor`, cache clearing, Codex updates, and plugin/app access checks before
 falling back to disabling apps.
@@ -143,8 +148,17 @@ Measured with (Docker/Codex idle, nothing else running):
 ```powershell
 # tool count and namespace breakdown
 python -c "import json,glob; d=json.load(open(glob.glob('$env:USERPROFILE/.codex/cache/codex_apps_tools/*.json')[0],encoding='utf-8')); print(len(d['tools']))"
-# cached payload sizes
-du -sh ~/.codex/cache/codex_apps_tools ~/.codex/cache/codex_app_directory ~/.codex/cache/remote_plugin_catalog
+# cached payload sizes - PowerShell-native; `du` is not a PowerShell command and
+# this block fails on a clean Windows machine before it measures anything.
+foreach ($dir in 'codex_apps_tools','codex_app_directory','remote_plugin_catalog') {
+  $path = Join-Path $env:USERPROFILE ".codex\cache\$dir"
+  if (Test-Path $path) {
+    $mb = (Get-ChildItem -Recurse -File $path | Measure-Object -Property Length -Sum).Sum / 1MB
+    '{0,-24} {1,8:N1} MB' -f $dir, $mb
+  } else {
+    '{0,-24} {1,8}' -f $dir, 'absent'
+  }
+}
 ```
 
 Plus cached payloads under `~/.codex/cache/`:

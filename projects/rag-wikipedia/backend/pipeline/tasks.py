@@ -60,3 +60,73 @@ def upsert_to_qdrant(
         )
     vectorstore.upsert_batch(points)
     return len(points)
+
+
+# --- batched path -----------------------------------------------------------
+#
+# The per-article path costs four Prefect task runs, one Qdrant existence check
+# and one upsert round-trip PER ARTICLE. That is tolerable while articles are
+# long, but chunk density falls sharply with stream depth - measured 11.1
+# chunks/article over the first 2,000, and 2.4 by article 12,000. At ~2 chunks
+# an article the fixed cost dominates completely and throughput collapsed from
+# 24 to 1 chunk/s.
+#
+# Batching amortises all three over a whole segment: one existence check, one
+# embed call with a real batch, and upserts in blocks.
+
+def prepare_article(article: dict) -> tuple[dict, list[Chunk]] | None:
+    """Clean and chunk one article. None when it yields nothing worth storing."""
+    cleaned = {**article, "text": clean_text(article["text"])}
+    if len(cleaned["text"]) < 100:
+        return None
+    chunks = chunk_text(cleaned["text"], source_id=cleaned["id"])
+    return (cleaned, chunks) if chunks else None
+
+
+@task(name="ingest-segment", cache_policy=NO_CACHE)
+def ingest_segment(
+    segment: list[tuple[dict, list[Chunk]]],
+    vectorstore: Any,
+    embedder: Any,
+    *,
+    force: bool = False,
+    embed_batch_size: int = 64,
+    upsert_batch_size: int = 256,
+) -> tuple[int, int]:
+    """Ingest a whole segment. Returns (chunks upserted, chunks already present)."""
+    pairs = [(article, chunk) for article, chunks in segment for chunk in chunks]
+    if not pairs:
+        return 0, 0
+
+    already = 0
+    if not force:
+        # ONE existence check for the segment instead of one per article.
+        present = vectorstore.existing_ids([chunk.point_id for _, chunk in pairs])
+        if present:
+            already = len(present)
+            pairs = [(a, c) for a, c in pairs if c.point_id not in present]
+    if not pairs:
+        return 0, already
+
+    vectors = embedder.embed_batch(
+        [chunk.text for _, chunk in pairs], batch_size=embed_batch_size
+    )
+
+    points = [
+        {
+            "id": chunk.point_id,
+            "vector": vector,
+            "payload": {
+                "text": chunk.text,
+                "source_id": chunk.source_id,
+                "chunk_index": chunk.chunk_index,
+                "title": article["title"],
+            },
+        }
+        for (article, chunk), vector in zip(pairs, vectors)
+    ]
+    # Upsert in blocks: one request with several thousand points is a large
+    # payload and a long-held connection.
+    for offset in range(0, len(points), upsert_batch_size):
+        vectorstore.upsert_batch(points[offset : offset + upsert_batch_size])
+    return len(points), already

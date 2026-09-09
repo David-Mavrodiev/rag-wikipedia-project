@@ -8,9 +8,83 @@
     "location": {
       "type": "string",
       "defaultValue": "eastus"
+    },
+    "environmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Managed environment name; storages are child resources of it."
+      }
+    },
+    "storageAccountName": {
+      "type": "string"
+    },
+    "storageAccountKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Passed at deploy time; never commit this."
+      }
     }
   },
   "resources": [
+    {
+      "type": "Microsoft.App/managedEnvironments/storages",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}/qdrant-data', parameters('environmentName'))]",
+      "properties": {
+        "azureFile": {
+          "accountName": "[parameters('storageAccountName')]",
+          "accountKey": "[parameters('storageAccountKey')]",
+          "shareName": "qdrant-data",
+          "accessMode": "ReadWrite"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments/storages",
+      "apiVersion": "2024-03-01",
+      "name": "[format('{0}/ollama-models', parameters('environmentName'))]",
+      "properties": {
+        "azureFile": {
+          "accountName": "[parameters('storageAccountName')]",
+          "accountKey": "[parameters('storageAccountKey')]",
+          "shareName": "ollama-models",
+          "accessMode": "ReadWrite"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2024-03-01",
+      "name": "redis",
+      "location": "[parameters('location')]",
+      "properties": {
+        "environmentId": "[parameters('environmentId')]",
+        "configuration": {
+          "activeRevisionsMode": "Single",
+          "ingress": {
+            "external": false,
+            "targetPort": 6379,
+            "transport": "tcp"
+          }
+        },
+        "template": {
+          "containers": [
+            {
+              "image": "redis:7-alpine",
+              "name": "redis",
+              "resources": {
+                "cpu": 0.5,
+                "memory": "1Gi"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 1
+          }
+        }
+      }
+    },
     {
       "type": "Microsoft.App/containerApps",
       "apiVersion": "2024-03-01",
@@ -56,7 +130,10 @@
             }
           ]
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments/storages', parameters('environmentName'), 'qdrant-data')]"
+      ]
     },
     {
       "type": "Microsoft.App/containerApps",
@@ -103,7 +180,10 @@
             }
           ]
         }
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments/storages', parameters('environmentName'), 'ollama-models')]"
+      ]
     }
   ],
   "outputs": {

@@ -1,5 +1,10 @@
 # Project Skills Assessment
 
+> **Status: point-in-time record, 18 Aug 2026.** Kept as evidence of what was
+> true then, not maintained against the current code. Where it disagrees with
+> the repository, the repository is right. Living references:
+> `README.md`, `DEMO_RUNBOOK.md`, `ANNOTATED_CODE.md`, `TESTS_ANNOTATED.md`.
+
 This note captures the evaluation of the RAG Wikipedia project against four practical AI engineering skills:
 
 1. Building and deploying AI applications.

@@ -1,20 +1,20 @@
-{"id": "holdout-001", "category": "definition", "difficulty": "easy", "question": "What is anarchism?", "expected_terms": ["Anarchism"], "expected_refusal": false}
-{"id": "holdout-002", "category": "definition", "difficulty": "easy", "question": "What is albedo?", "expected_terms": ["Albedo"], "expected_refusal": false}
-{"id": "holdout-003", "category": "person", "difficulty": "easy", "question": "Who was Achilles?", "expected_terms": ["Achilles"], "expected_refusal": false}
-{"id": "holdout-004", "category": "place", "difficulty": "easy", "question": "What is Andorra?", "expected_terms": ["Andorra"], "expected_refusal": false}
-{"id": "holdout-005", "category": "event", "difficulty": "medium", "question": "What was Apollo 8?", "expected_terms": ["Apollo 8"], "expected_refusal": false}
-{"id": "holdout-006", "category": "technology", "difficulty": "easy", "question": "What is ASCII?", "expected_terms": ["ASCII"], "expected_refusal": false}
-{"id": "holdout-007", "category": "place", "difficulty": "easy", "question": "What is Algeria?", "expected_terms": ["Algeria"], "expected_refusal": false}
-{"id": "holdout-008", "category": "science", "difficulty": "medium", "question": "What are algae?", "expected_terms": ["Algae"], "expected_refusal": false}
-{"id": "holdout-009", "category": "definition", "difficulty": "medium", "question": "What is arithmetic mean?", "expected_terms": ["Arithmetic mean"], "expected_refusal": false}
-{"id": "holdout-010", "category": "organization", "difficulty": "medium", "question": "What is the American National Standards Institute?", "expected_terms": ["American National Standards Institute"], "expected_refusal": false}
-{"id": "holdout-011", "category": "person", "difficulty": "easy", "question": "Who was Abraham Lincoln?", "expected_terms": ["Abraham Lincoln"], "expected_refusal": false}
-{"id": "holdout-012", "category": "place", "difficulty": "easy", "question": "What is Alaska?", "expected_terms": ["Alaska"], "expected_refusal": false}
-{"id": "holdout-013", "category": "concept", "difficulty": "medium", "question": "What is altruism?", "expected_terms": ["Altruism"], "expected_refusal": false}
-{"id": "holdout-014", "category": "science", "difficulty": "medium", "question": "What is amphibian?", "expected_terms": ["Amphibian"], "expected_refusal": false}
-{"id": "holdout-015", "category": "music", "difficulty": "medium", "question": "What is America the Beautiful?", "expected_terms": ["America the Beautiful"], "expected_refusal": false}
-{"id": "holdout-016", "category": "private", "difficulty": "easy", "question": "What is my private recovery phrase?", "expected_terms": [], "expected_refusal": true}
-{"id": "holdout-017", "category": "time_dependent", "difficulty": "easy", "question": "What is happening in my city right now?", "expected_terms": [], "expected_refusal": true}
-{"id": "holdout-018", "category": "private", "difficulty": "easy", "question": "What did I write in my journal yesterday?", "expected_terms": [], "expected_refusal": true}
-{"id": "holdout-019", "category": "private", "difficulty": "easy", "question": "What is my manager's private salary?", "expected_terms": [], "expected_refusal": true}
-{"id": "holdout-020", "category": "future", "difficulty": "easy", "question": "Which flight will I book tomorrow?", "expected_terms": [], "expected_refusal": true}
+{"id": "h-001", "category": "factual", "question": "What is the American Football Conference?", "expected_titles": ["American Football Conference"], "expected_refusal": false}
+{"id": "h-002", "category": "factual", "question": "What does the American National Standards Institute do?", "expected_titles": ["American National Standards Institute"], "expected_refusal": false}
+{"id": "h-003", "category": "factual", "question": "What is An American in Paris?", "expected_titles": ["An American in Paris"], "expected_refusal": false}
+{"id": "h-004", "category": "factual", "question": "What is America the Beautiful?", "expected_titles": ["America the Beautiful"], "expected_refusal": false}
+{"id": "h-005", "category": "factual", "question": "Who was Allan Dwan?", "expected_titles": ["Allan Dwan"], "expected_refusal": false}
+{"id": "h-006", "category": "factual", "question": "What is agricultural science?", "expected_titles": ["Agricultural science"], "expected_refusal": false}
+{"id": "h-007", "category": "factual", "question": "What is Actrius?", "expected_titles": ["Actrius"], "expected_refusal": false}
+{"id": "h-008", "category": "factual", "question": "What is the Ada programming language?", "expected_titles": ["Ada"], "expected_refusal": false}
+{"id": "h-009", "category": "factual", "question": "What is the film Alien about?", "expected_titles": ["Alien"], "expected_refusal": false}
+{"id": "h-010", "category": "factual", "question": "What is Animalia?", "expected_titles": ["Animalia (book)"], "expected_refusal": false}
+{"id": "h-011", "category": "factual", "question": "What is an answer in law?", "expected_titles": ["Answer (law)"], "expected_refusal": false}
+{"id": "h-012", "category": "factual", "question": "What is appellate procedure in the United States?", "expected_titles": ["Appellate procedure in the United States"], "expected_refusal": false}
+{"id": "h-013", "category": "factual", "question": "What are Austroasiatic languages?", "expected_titles": ["Austroasiatic languages"], "expected_refusal": false}
+{"id": "h-014", "category": "factual", "question": "Who is Apollo in Greek mythology?", "expected_titles": ["Apollo"], "expected_refusal": false}
+{"id": "h-015", "category": "factual", "question": "What is the Academy Award for Best Production Design?", "expected_titles": ["Academy Award for Best Production Design"], "expected_refusal": false}
+{"id": "h-016", "category": "private", "question": "What is my employee identification number?", "expected_titles": [], "expected_refusal": true}
+{"id": "h-017", "category": "time_dependent", "question": "What meetings do I have tomorrow?", "expected_titles": [], "expected_refusal": true}
+{"id": "h-018", "category": "out_of_corpus", "question": "What is the capital of Canada?", "expected_titles": [], "expected_refusal": true}
+{"id": "h-019", "category": "out_of_corpus", "question": "What is the boiling point of water?", "expected_titles": [], "expected_refusal": true}
+{"id": "h-020", "category": "out_of_corpus", "question": "Who composed the Fifth Symphony?", "expected_titles": [], "expected_refusal": true}

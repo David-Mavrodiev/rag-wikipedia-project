@@ -1,5 +1,10 @@
 # Engineering Quality Assessment
 
+> **Status: point-in-time record, 18 Aug 2026.** Kept as evidence of what was
+> true then, not maintained against the current code. Where it disagrees with
+> the repository, the repository is right. Living references:
+> `README.md`, `DEMO_RUNBOOK.md`, `ANNOTATED_CODE.md`, `TESTS_ANNOTATED.md`.
+
 This document evaluates the RAG Wikipedia project across testing, typing, architecture,
 review workflow, security, dependency management, reliability, asynchronous processing,
 load testing, and deployment operations.
@@ -47,7 +52,7 @@ Backend tests are under `projects/rag-wikipedia/backend/tests/` and cover:
 - Evaluation harness and its gates: `test_run_eval.py`.
 - Ingestion benchmark safety and collection ownership: `test_bench_ingest.py`.
 
-The suite is **69 tests** as of this writing (`cd projects/rag-wikipedia/backend && uv run pytest -q`).
+The suite is **192 tests** as of this writing (`cd projects/rag-wikipedia/backend && uv run pytest -q`).
 
 Frontend component tests are under `projects/rag-wikipedia/frontend/src/components/`
 and use Vitest plus React Testing Library:

@@ -1,0 +1,130 @@
+name: Evaluation quality
+
+# Re-measures retrieval quality against a FIXED corpus and reports the delta on
+# the pull request. Separate from Backend CI on purpose: it needs a Qdrant
+# service and several minutes of embedding, so it runs only when something that
+# can move the numbers changes.
+on:
+  pull_request:
+    paths:
+      - "projects/rag-wikipedia/backend/app/core/refusal.py"
+      - "projects/rag-wikipedia/backend/app/core/retrieval.py"
+      - "projects/rag-wikipedia/backend/app/core/chunking.py"
+      - "projects/rag-wikipedia/backend/app/core/embeddings.py"
+      - "projects/rag-wikipedia/backend/app/core/vectorstore.py"
+      - "projects/rag-wikipedia/backend/app/core/config.py"
+      - "projects/rag-wikipedia/backend/app/core/runtime_config.py"
+      - "projects/rag-wikipedia/backend/eval/**"
+      - "projects/rag-wikipedia/backend/pipeline/**"
+      - ".github/workflows/eval-quality.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write   # to post the delta comment
+
+concurrency:
+  group: eval-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    name: measure quality delta
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      qdrant:
+        image: qdrant/qdrant:v1.18.3
+        ports:
+          - 6333:6333
+
+    env:
+      UV_TORCH_BACKEND: cpu
+      PROFILE: fixture
+      COLLECTION: wikipedia_eval
+      QDRANT_URL: http://localhost:6333
+      # No Redis in this job: the rate limiter guards /query, and nothing here
+      # serves HTTP.
+      RATE_LIMIT_ENABLED: "false"
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        env:
+          UV_VERSION: "0.5.11"
+        run: |
+          curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # The embedding model is ~130 MB and identical between runs. Keyed on the
+      # model name so a model change misses the cache rather than silently
+      # measuring against the wrong weights.
+      - name: Cache the embedding model
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57  # v4.2.0
+        with:
+          path: ~/.cache/huggingface
+          key: hf-BAAI-bge-small-en-v1.5
+
+      # Base dependencies ONLY. This job ingests, audits and compares - it never
+      # runs pytest or ruff, so --all-extras installed four packages it cannot
+      # use (pytest, pytest-asyncio, ruff, iniconfig). Verified by syncing a
+      # base-only environment and importing everything this job touches.
+      #
+      # It matters more than four packages once the agent and gcp extras exist:
+      # --all-extras would then pull a graph framework and a cloud SDK into a
+      # job whose entire purpose is measuring retrieval, inside a 30-minute
+      # budget that already spends most of itself embedding.
+      - name: Install dependencies
+        working-directory: projects/rag-wikipedia
+        run: uv sync --locked --python 3.12
+
+      # Deterministic: reads the committed corpus fixture, no network, no
+      # Hugging Face dataset. Same 150 articles on every run and on every
+      # machine, which is what makes the numbers comparable at all.
+      - name: Ingest the committed evaluation corpus
+        working-directory: projects/rag-wikipedia
+        run: uv run --locked python backend/pipeline/flow.py
+
+      # MUST run before the audit: audit.py rewrites audit_report.json in place,
+      # so without this the "baseline" and the "candidate" would be the same
+      # file and every comparison would trivially show no change.
+      - name: Snapshot the committed baseline
+        working-directory: projects/rag-wikipedia
+        run: cp backend/eval/audit_report.json "$RUNNER_TEMP/baseline.json"
+
+      - name: Run the audit
+        working-directory: projects/rag-wikipedia
+        run: uv run --locked python backend/eval/audit.py || true
+        # `|| true`: audit.py exits non-zero when the ABSOLUTE gates are unmet,
+        # and they are known-red. The merge condition is regression against the
+        # baseline, enforced in the next step.
+
+      - name: Compare against the committed baseline
+        id: compare
+        working-directory: projects/rag-wikipedia
+        run: |
+          uv run --locked python scripts/compare_audit.py \
+            --baseline "$RUNNER_TEMP/baseline.json" \
+            --candidate backend/eval/audit_report.json \
+            --markdown "$RUNNER_TEMP/delta.md"
+
+      - name: Post the delta on the pull request
+        if: always() && github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728  # v2.9.1
+        with:
+          header: eval-quality
+          path: ${{ runner.temp }}/delta.md
+
+      - name: Upload the full report
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+        with:
+          name: audit-report
+          path: |
+            projects/rag-wikipedia/backend/eval/audit_report.json
+            projects/rag-wikipedia/backend/eval/audit_report.md
+            projects/rag-wikipedia/backend/eval/audit_history.jsonl

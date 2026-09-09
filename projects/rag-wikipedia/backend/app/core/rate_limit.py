@@ -18,9 +18,16 @@ RATE_LIMIT_SCRIPT = """
 local key = KEYS[1]
 local rate = tonumber(ARGV[1])
 local capacity = tonumber(ARGV[2])
-local now = tonumber(ARGV[3])
-local cost = tonumber(ARGV[4])
-local ttl = tonumber(ARGV[5])
+local cost = tonumber(ARGV[3])
+local ttl = tonumber(ARGV[4])
+
+-- Clock read INSIDE the script. Passing it in from the caller cost an extra
+-- round-trip and left a gap between reading the time and using it, so two
+-- callers could refill the same bucket from different clock readings. Redis
+-- replicates script effects rather than the script itself, so a
+-- non-deterministic call here is safe.
+local t = redis.call("TIME")
+local now = (tonumber(t[1]) * 1000) + math.floor(tonumber(t[2]) / 1000)
 
 local bucket = redis.call("HMGET", key, "tokens", "updated_at")
 local tokens = tonumber(bucket[1])
@@ -137,13 +144,16 @@ async def _send_json(
 async def get_redis_client() -> Redis:
     global _redis_client
     if _redis_client is None:
-        _redis_client = Redis.from_url(settings.rate_limit_redis_url, decode_responses=False)
+        # Explicit deadlines: redis-py's defaults are None, so a stalled
+        # connection would hang the request instead of failing closed to the
+        # 503 this middleware is designed to return.
+        _redis_client = Redis.from_url(
+            settings.rate_limit_redis_url,
+            decode_responses=False,
+            socket_connect_timeout=settings.rate_limit_redis_timeout_seconds,
+            socket_timeout=settings.rate_limit_redis_timeout_seconds,
+        )
     return _redis_client
-
-
-async def _redis_time_ms(redis: Redis) -> int:
-    seconds, microseconds = await redis.time()
-    return (int(seconds) * 1000) + (int(microseconds) // 1000)
 
 
 async def _eval_rate_limit(redis: Redis, key: str, args: list[float | int]) -> list[int]:
@@ -167,11 +177,10 @@ async def check_rate_limit(client_key: str) -> RateLimitDecision:
 
     try:
         redis = await get_redis_client()
-        now_ms = await _redis_time_ms(redis)
         allowed, remaining, retry_after_ms, reset_after_ms = await _eval_rate_limit(
             redis,
             key,
-            [rate_per_ms, capacity, now_ms, 1, ttl_ms],
+            [rate_per_ms, capacity, 1, ttl_ms],
         )
     except RedisError as exc:
         raise RateLimitBackendUnavailable from exc

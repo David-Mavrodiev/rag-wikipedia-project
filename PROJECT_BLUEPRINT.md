@@ -13,15 +13,54 @@ A black-box, **eval-first** Retrieval-Augmented Generation service. It answers n
 **In scope (v1):** ingestion → retrieval → grounded generation with citations → evaluation → API → local Docker + Azure deployment.
 **Out of scope (v1):** hybrid search, reranking, LangChain/LlamaIndex, agents, auth/billing, streaming ingestion.
 
+> **SCOPE EXTENSION (2026-09-08) — v2 adds agents and a second cloud, and does
+> not retract the v1 decision.** The two lines above stand as written. The
+> exclusion was correct when it was made, and the reasoning is worth keeping:
+> a framework buys nothing for a single-shot chain — retrieve, build a prompt,
+> generate, check the citations — while costing the property this project
+> exists to demonstrate, which is that every step is explicit, readable and
+> unit-tested.
+>
+> What changed is the shape of the problem, not that judgement. A bounded
+> retrieve → grade → rewrite → verify loop carrying checkpointed state is real
+> orchestration, and that is where a graph runtime earns its place. So the
+> agent runtime becomes a **registry**, on the pattern already established for
+> the LLM and embedder in §17: `direct` — the v1 chain, still the default and
+> still framework-free — and `langgraph` as a peer entry, chosen by one value.
+> The nodes stay framework-free functions in `app/core/`; LangGraph supplies
+> the wiring, the state and the checkpointer, never the logic. The cloud gets
+> the same treatment: GCP joins Azure as a deployment target rather than
+> replacing it.
+>
+> Enforced rather than asserted: `backend/tests/test_layering.py` parses every
+> module under `app/` and fails if it imports anything outside an allowlist of
+> base packages. An allowlist rather than a denylist on purpose — a denylist
+> only catches what someone thought to forbid, while an allowlist fails on
+> anything new and forces the addition into a reviewed diff. A further test
+> refuses to let the allowlist itself be widened with a framework or a cloud
+> SDK, because the cheapest way to silence the first test would otherwise be to
+> add the offender to it. A last one states the dependency direction — `app/`
+> never imports `engines/` — before `engines/` exists, which is the moment to
+> state it.
+>
+> Verified the only way such a test is worth anything, by watching it fail: a
+> `from google.cloud import bigquery` placed inside a function body, so the
+> module still imported cleanly and every other test still passed. It was
+> caught, and named the file.
+
 ---
 
 ## 2. Architecture
 
 ```
                        Browser (React + Vite)
-                                │  POST /query
-                                ▼
-                        FastAPI  (/query, /health)
+                                │  POST /query          GET /quality
+                                ▼                            │
+                      RateLimitMiddleware ──► Redis          │
+                        (token bucket, ASGI)                 │
+                                │  429 / 503                 │
+                                ▼                            ▼
+              FastAPI  (/query, /health, /quality, /quality/audit)
                                 │
         ┌───────────────┬───────┴────────┬──────────────────┐
         ▼               ▼                ▼                  ▼
@@ -37,7 +76,33 @@ Ingestion (Prefect, offline):
   (deterministic point IDs = idempotent / resumable)
 ```
 
-**Query path:** embed question → Qdrant top-k (cosine) → if empty **or** top-1 score < `refusal_threshold` → **refuse**; else assemble context within a token budget → prompt the LLM with inline `[n]` citation markers → extract the indices the model actually cited → return `{answer, citations[]}`.
+<!-- docs-check:begin services -->
+Compose runs **5 services**: `redis`, `qdrant`, `ollama`, `api`, `frontend`.
+<!-- docs-check:end -->
+
+**Query path:** rate-limit check (Redis token bucket; **503 if Redis is
+unreachable**, so Redis is a hard dependency of `/query` unless
+`RATE_LIMIT_ENABLED=false`) → **intent filter**: a personal or time-bound
+question is refused before retrieval runs → embed question → Qdrant top-k
+(cosine) → **evidence gate** `decide_evidence`: refuse on no results, on a
+top score below the minimum, or on insufficient term overlap with the retrieved
+text; accept on sufficient overlap or a high-confidence vector match → assemble
+context within a token budget → prompt the LLM with inline `[n]` citation
+markers → extract the indices the model actually cited → return
+`{answer, citations[], refused}`.
+
+The refusal decision therefore has **three independent layers**: the intent
+filter (before retrieval), the evidence gate (after retrieval), and the model
+itself (which can decline evidence retrieval accepted). `refused` in the API
+response is the retrieval decision *or* a model refusal; the eval harness
+reports them separately, because they disagree — see §8.
+
+**Quality path:** `GET /quality` serves the last audit verdict from an
+in-process singleton, falling back to `eval/audit_report.json`.
+`POST /quality/audit` re-scores every suite on a worker thread under a lock
+(409 if one is running); `?auto_correct=true` rewrites and persists the five
+retrieval thresholds and requires `X-Quality-Token`. nginx refuses that path at
+the edge in deployed stacks.
 
 ---
 
@@ -895,6 +960,20 @@ if __name__ == "__main__":
 
 ```yaml
 services:
+  redis:
+    # Backs the /query rate limiter. NOT OPTIONAL: rate limiting is on by
+    # default and the middleware answers 503 when it cannot reach Redis, so a
+    # stack started without this service has a dead /query. Set
+    # RATE_LIMIT_ENABLED=false for a single-machine run instead.
+    image: redis:7-alpine
+    # Loopback only - this Redis has no password.
+    ports: ["127.0.0.1:6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   qdrant:
     # Query API (/points/query) requires server >=1.10. Upgrading over storage
     # written by 1.9.2 panics at boot ("unknown variant `on_disk`", exit 101):
@@ -910,7 +989,8 @@ services:
       retries: 5
 
   ollama:
-    image: ollama/ollama:latest
+    # Pinned by digest - `latest` changed the runtime between runs.
+    image: ollama/ollama:latest@sha256:f1a705f2…
     ports: ["11434:11434"]
     volumes: [ollama_data:/root/.ollama]
     healthcheck:
@@ -929,6 +1009,7 @@ services:
       - PROFILE=${PROFILE:-tiny}
     volumes: [hf_cache:/root/.cache/huggingface]
     depends_on:
+      redis:  { condition: service_healthy }
       qdrant: { condition: service_healthy }
       ollama: { condition: service_healthy }
     healthcheck:
@@ -968,24 +1049,44 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ### 6.22 Infra — `Makefile`
 
 ```makefile
-.PHONY: up down pull-model ingest eval test lint
-up:           ; docker compose up --build -d
-pull-model:   ; docker compose exec ollama ollama pull llama3.2:3b
-down:         ; docker compose down
-ingest:       ; PROFILE=$(PROFILE) uv run python backend/pipeline/flow.py
-eval:         ; uv run python backend/eval/run_eval.py
-test:         ; cd backend && uv run pytest tests/ -v
-lint:         ; cd backend && uv run ruff check app/ pipeline/ eval/ tests/
+.PHONY: up down pull-model ingest eval eval-groundedness eval-audit test lint docs-check
+up:                ; docker compose up --build -d
+pull-model:        ; docker compose exec ollama ollama pull llama3.2:3b
+down:              ; docker compose down
+ingest:            ; PROFILE=$(PROFILE) uv run python backend/pipeline/flow.py
+eval:              ; uv run python backend/eval/run_eval.py
+eval-groundedness: ; uv run python backend/eval/run_eval.py --with-groundedness
+eval-audit:        ; uv run python backend/eval/audit.py
+test:              ; cd backend && uv run pytest tests/ -v
+lint:              ; cd backend && uv run ruff check app/ pipeline/ eval/ tests/
+docs-check:        ; uv run python scripts/docs_check.py
 ```
+
+`eval` is retrieval-only and takes seconds. `eval-groundedness` adds one LLM
+call per answerable case, so it needs Ollama and takes minutes — that is why it
+is a separate target rather than a default. `eval-audit` scores golden, holdout
+and adversarial together and writes `audit_report.json`, which `GET /quality`
+serves. `docs-check` verifies this document's own factual claims.
 *(Real Makefile uses tab-indented recipe lines, not `;`.)*
 
 ### 6.23 Frontend (React + Vite + TS) — spec
 
-- `src/App.tsx`: state `{result, loading, error}`; `handleQuery(q)` → `POST ${API_BASE}/query`, where `const API_BASE = import.meta.env.VITE_API_BASE_URL || ''` (empty = same-origin nginx proxy locally; Azure bakes the URL at build). Renders `<QueryBox>`, `<AnswerView>`, `<CitationList>`. `Citation = {index, title, source_id, excerpt}`. *(A hardened variant on `hadi-dev` normalizes the base with `.replace(/\/+$/, '')` so a trailing slash can't produce `//query`.)*
+- `src/App.tsx`: state `{result, loading, error}`; `handleQuery(q)` → `POST ${API_BASE}/query`, where `const API_BASE = import.meta.env.VITE_API_BASE_URL || ''` (empty = same-origin nginx proxy locally; Azure bakes the URL at build). Renders `<QueryBox>`, `<AnswerView>`, `<CitationList>`. `Citation = {index, title, source_id, excerpt}`. The response also carries
+**`refused: bool`** — the client must not infer a refusal from an empty
+`citations[]`, because a correct grounded answer can omit its `[n]` markers. *(A hardened variant on `hadi-dev` normalizes the base with `.replace(/\/+$/, '')` so a trailing slash can't produce `//query`.)*
 - `QueryBox`: form (`data-testid="query-form"`) with input (`query-input`) + submit (`query-submit`); calls `onSubmit(trimmed)`; both disabled while `loading`.
 - `AnswerView`: renders the `answer` string.
 - `CitationList`: renders each citation as an expandable item (`[index] title` → `excerpt`).
-- `nginx.conf` (prod): serve `dist/`; `location /query` and `/health` `proxy_pass http://api:8000`.
+- `QualityPanel`: fetches `GET /quality` on mount and renders the per-suite metrics
+  table; the **Run audit** button POSTs `/quality/audit`. It reads `metrics` (POST
+  and GET return the same shape), slugifies the server-supplied `status` before
+  using it as a class name, and derives the deployment's policy from the response
+  — 403/404/405 disables the button and points at `make eval-audit`, 409 reports a
+  concurrent audit.
+- `nginx.conf.template` (prod): serve `dist/`; `location /query` and `/health`
+  `proxy_pass ${API_UPSTREAM}`; `location = /quality` GET-only and public; and
+  `location /quality/` returns **403** — running an audit is CPU-heavy and
+  overwrites the reported quality state, so it is not a public operation.
 - `frontend/Dockerfile`: node:20-alpine build (`ARG VITE_API_BASE_URL=""`) → nginx:alpine serving `dist/`.
 
 ### 6.24 `demo/console.html` — single-file live demo UI
@@ -1282,7 +1383,7 @@ python -m http.server 8080 --directory demo                     # serve the cons
 
 ## 9. Testing
 
-`pytest` — **44 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
+`pytest` — **296 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
 
 ---
 
@@ -1431,7 +1532,7 @@ Usually correct: with the `tiny` profile (first 500 articles) that topic isn't i
 
 ## 14. Positioning (for clients / interviews)
 
-This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — and the `Embedder`/`LLM` interfaces make an Azure OpenAI adapter a drop-in, with the registry written and ready to activate, §17), a measured **performance analysis** (embedding ≈ 97% of ingestion; 25k articles ≈ 15 h / ~404k vectors on CPU → GPU/ONNX/batching plan), and honest **"operational vs in-progress"** framing. Next levers: hybrid search (BM25 + dense), cross-encoder reranking, LLM-judge groundedness, CI.
+This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — and the `Embedder`/`LLM` interfaces make an Azure OpenAI adapter a drop-in, with the registry written and ready to activate, §17), a measured **performance analysis** — and, more tellingly, its own correction: the 25k profile was predicted at ~404k vectors from an N=150 sample and actually produced **87,173** (4.6x over), because Wikipedia dumps front-load their long articles; the GPU plan predicted 20-90 min and delivered far less because the card thermally clamps to 210 MHz of 2100, and the bottleneck moved from embedding to per-article overhead until batching removed it, and honest **"operational vs in-progress"** framing. Next levers: hybrid search (BM25 + dense), cross-encoder reranking, LLM-judge groundedness, CI.
 
 ---
 

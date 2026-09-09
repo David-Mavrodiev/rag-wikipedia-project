@@ -2,12 +2,28 @@
 
 ## Services
 
-| Service  | Port  | Health endpoint |
-|----------|-------|----------------|
-| api      | 8000  | GET /health    |
-| frontend | 5173  | HTTP 200       |
-| qdrant   | 6333  | GET /healthz   |
-| ollama   | 11434 | GET /          |
+| Service  | Port                | Health endpoint |
+|----------|---------------------|----------------|
+| api      | 8000                | GET /health    |
+| frontend | 5173                | HTTP 200       |
+| qdrant   | 6333                | GET /healthz   |
+| ollama   | 11434               | GET /          |
+| redis    | 127.0.0.1:6379      | `redis-cli ping` |
+
+**Redis is not optional.** Rate limiting is enabled by default and
+`POST /query` answers **503** when the limiter cannot reach it. Set
+`RATE_LIMIT_ENABLED=false` for a single-machine run without Redis. It is bound
+to loopback deliberately: this Redis has no password.
+
+## API surface
+
+| Method | Path             | Notes |
+|--------|------------------|-------|
+| GET    | `/health`        | liveness; never rate limited |
+| POST   | `/query`         | rate limited; 429 over budget, 503 if Redis is unreachable |
+| GET    | `/quality`       | last audit verdict and metrics; public |
+| GET    | `/metrics`       | serving latency for THIS process: per-stage p50/p95 split by outcome (`ok`/`refused`/`error`). Public, timings only - no question or answer content. Not rate limited (the limiter is an allow-list covering `/query` only) |
+| POST   | `/quality/audit` | re-scores every suite. 409 if one is already running. `?auto_correct=true` rewrites and persists the refusal thresholds and requires `X-Quality-Token`. Refused at the nginx edge in deployed stacks |
 
 ## Common tasks
 
@@ -17,11 +33,49 @@ docker compose ps
 docker compose logs api --tail=50
 ```
 
+### Resume an interrupted ingest
+
+This is almost always what you want. Just run it again:
+
+```bash
+PROFILE=real make ingest
+```
+
+Ingestion is resumable: point IDs are `sha256(source_id::chunk_index)`, and each
+segment asks Qdrant which IDs it already holds and embeds only what is missing.
+A re-run costs one lookup per segment, not the whole embedding bill. The 25,000
+article run survived four machine shutdowns this way without re-embedding a
+single chunk.
+
 ### Re-ingest from scratch
+
+**Destructive, and rarely necessary.** This deletes every vector in every
+collection; re-embedding 25k articles is hours of GPU time. Resuming (above)
+handles interruptions, and `--force` handles changed embeddings, so reach for
+this only when the storage itself is corrupt.
+
 ```bash
 docker compose exec qdrant sh -c "rm -rf /qdrant/storage/*"
 docker compose restart qdrant
-PROFILE=tiny make ingest
+make eval-corpus            # the 150-article fixture the eval suites target
+PROFILE=tiny make ingest    # or: a 500-article dev index
+```
+
+### Re-embed without wiping
+
+When the embedding model or the chunking parameters change, the point IDs stay
+the same while the vectors they should hold do not. Overwrite in place instead
+of deleting:
+
+```bash
+cd backend && uv run python -m pipeline.flow --profile real --force
+```
+
+### Re-measure quality after a change
+
+```bash
+make audit-baseline     # ingested fixture in, audit_report.json out
+make audit-freshness    # fails if the report predates a change that can move it
 ```
 
 ### Switch to a different LLM
@@ -42,6 +96,33 @@ EMBED_MODEL=BAAI/bge-base-en-v1.5 docker compose up api -d
 
 **`503 LLM unavailable`** — Check Ollama: `curl http://localhost:11434/` and `docker compose exec ollama ollama list`. If `ollama list` shows no models, the weights were never pulled (the healthcheck only proves the server is up) — run `make pull-model`.
 
-**Slow ingestion** — Normal for real profile; use `PROFILE=tiny` for development.
+**Slow ingestion** — Normal for the real profile. On a thermally constrained
+machine it is often *thermal*, not algorithmic: check the GPU clock
+(`nvidia-smi --query-gpu=clocks.sm,temperature.gpu --format=csv`) before changing
+any code. A card clamped to 210 MHz of 2,100 is a cooling problem that no code
+change recovers. Use `PROFILE=tiny` for development.
+
+**The machine shut down mid-ingest** — Thermal protection, not a fault, and not
+Docker crashing (Windows logs Event ID 41). Nothing is lost: restart the
+services and re-run the same ingest command, which resumes. The full procedure
+is in [PERTINENT.md](../../../PERTINENT.md).
 
 **Empty answers** — Run evaluation to check recall scores. May need re-ingestion.
+
+**"The first query after a restart takes ~30 s"** — Expected, and visible in
+`/metrics` as a `deps` stage with a near-zero p50 and a very large max. The
+embedder, vector-store and LLM clients are built lazily on the first request
+(`@lru_cache`), and constructing the SentenceTransformer loads weights and
+revalidates them against the Hugging Face Hub. Measured on this machine:
+28-41 s. Two consequences worth knowing before a demo or a deploy:
+
+- **Warm it before demoing.** Send one throwaway query after starting the API.
+- **`/health` returns 200 during this window**, so it is a liveness check, not
+  a readiness check. A load balancer using it would route traffic to a process
+  that cannot answer for another half minute.
+
+**Reading `/metrics`** — `generate` is normally 80-95% of `total`; if a query
+is slow, it is almost always Ollama. `embed` (~40 ms) and `search` (~100 ms at
+87k vectors) are not the problem. Percentiles are process-local and reset on
+restart, and `p95` reads `null` until 100 samples exist rather than reporting a
+number that small a sample cannot support.

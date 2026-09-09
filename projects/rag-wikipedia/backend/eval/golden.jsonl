@@ -1,60 +1,60 @@
-{"question": "Who created Python?", "expected_sources": ["Python"]}
-{"question": "What is agriculture?", "expected_sources": ["Agriculture"]}
-{"question": "What is anthropology?", "expected_sources": ["Anthropology"]}
-{"question": "What is the speed of light?", "expected_sources": ["light"]}
-{"question": "Who was Aristotle?", "expected_sources": ["Aristotle"]}
-{"question": "What is DNA?", "expected_sources": ["DNA"]}
-{"question": "What country is Paris in?", "expected_sources": ["Paris"]}
-{"question": "What is the capital of Japan?", "expected_sources": ["Japan"]}
-{"question": "What is photosynthesis?", "expected_sources": ["photosynthesis"]}
-{"question": "Who invented the telephone?", "expected_sources": ["telephone"]}
-{"question": "Who is Alain Connes?", "expected_sources": ["Alain Connes"]}
-{"question": "What is the largest planet?", "expected_sources": ["planet"]}
-{"question": "What is gravity?", "expected_sources": ["gravity"]}
-{"question": "What are the Academy Awards?", "expected_sources": ["Academy Awards"]}
-{"question": "What is the human genome?", "expected_sources": ["genome"]}
-{"question": "What is alchemy?", "expected_sources": ["Alchemy"]}
-{"question": "What is the capital of France?", "expected_sources": ["France"]}
-{"question": "What is the boiling point of water?", "expected_sources": ["water"]}
-{"question": "What is an alkali metal?", "expected_sources": ["Alkali metal"]}
-{"question": "What is the tallest mountain in the world?", "expected_sources": ["mountain"]}
-{"question": "What is the chemical symbol for gold?", "expected_sources": ["gold"]}
-{"question": "Who was the first president of the United States?", "expected_sources": ["president"]}
-{"question": "What is the Great Wall of China?", "expected_sources": ["China"]}
-{"question": "What is the process of evolution?", "expected_sources": ["evolution"]}
-{"question": "Who wrote Pride and Prejudice?", "expected_sources": ["Pride and Prejudice"]}
-{"question": "What is an abacus?", "expected_sources": ["Abacus"]}
-{"question": "What is the capital of Canada?", "expected_sources": ["Canada"]}
-{"question": "What is International Atomic Time?", "expected_sources": ["International Atomic Time"]}
-{"question": "Who composed the Fifth Symphony?", "expected_sources": ["symphony"]}
-{"question": "What is the Sahara?", "expected_sources": ["Sahara"]}
-{"question": "What is an astronomer?", "expected_sources": ["Astronomer"]}
-{"question": "Who was Marie Curie?", "expected_sources": ["Marie Curie"]}
-{"question": "What is the Internet?", "expected_sources": ["Internet"]}
-{"question": "What is the Nile?", "expected_sources": ["Nile"]}
-{"question": "Who wrote The Odyssey?", "expected_sources": ["Odyssey"]}
-{"question": "What is democracy?", "expected_sources": ["democracy"]}
-{"question": "What is the periodic table?", "expected_sources": ["periodic table"]}
-{"question": "What was Apollo 11?", "expected_sources": ["Apollo 11"]}
-{"question": "What is climate change?", "expected_sources": ["climate change"]}
-{"question": "What is the Pacific Ocean?", "expected_sources": ["Pacific Ocean"]}
-{"question": "What did I have for breakfast this morning?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is the name of my neighbor's cat?", "expected_sources": [], "expected_refusal": true}
-{"question": "How many unread emails are in my inbox right now?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is the Wi-Fi password at my local coffee shop?", "expected_sources": [], "expected_refusal": true}
-{"question": "Where did I leave my car keys yesterday?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is my current bank balance?", "expected_sources": [], "expected_refusal": true}
-{"question": "Who will win my local election next year?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is the private phone number of my doctor?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is the password for my laptop?", "expected_sources": [], "expected_refusal": true}
-{"question": "Which restaurant will I visit tomorrow?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is the license plate of the car outside my house?", "expected_sources": [], "expected_refusal": true}
-{"question": "What did my manager say about me in private?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is inside my refrigerator right now?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is my favorite song today?", "expected_sources": [], "expected_refusal": true}
-{"question": "Where is my passport currently located?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is the security code for my apartment building?", "expected_sources": [], "expected_refusal": true}
-{"question": "How many steps have I walked today?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is my mother's maiden name?", "expected_sources": [], "expected_refusal": true}
-{"question": "What is the exact weather outside my window right now?", "expected_sources": [], "expected_refusal": true}
-{"question": "What message did I receive most recently?", "expected_sources": [], "expected_refusal": true}
+{"id": "g-001", "category": "factual", "question": "What is agriculture?", "expected_titles": ["Agriculture"], "expected_refusal": false}
+{"id": "g-002", "category": "factual", "question": "What is anthropology?", "expected_titles": ["Anthropology"], "expected_refusal": false}
+{"id": "g-003", "category": "factual", "question": "Who was Aristotle?", "expected_titles": ["Aristotle"], "expected_refusal": false}
+{"id": "g-004", "category": "factual", "question": "Who is Alain Connes?", "expected_titles": ["Alain Connes"], "expected_refusal": false}
+{"id": "g-005", "category": "factual", "question": "What are the Academy Awards?", "expected_titles": ["Academy Awards"], "expected_refusal": false}
+{"id": "g-006", "category": "factual", "question": "What is alchemy?", "expected_titles": ["Alchemy"], "expected_refusal": false}
+{"id": "g-007", "category": "factual", "question": "What is an alkali metal?", "expected_titles": ["Alkali metal"], "expected_refusal": false}
+{"id": "g-008", "category": "factual", "question": "What is an abacus?", "expected_titles": ["Abacus"], "expected_refusal": false}
+{"id": "g-009", "category": "factual", "question": "What is International Atomic Time?", "expected_titles": ["International Atomic Time"], "expected_refusal": false}
+{"id": "g-010", "category": "factual", "question": "What does an astronomer do?", "expected_titles": ["Astronomer"], "expected_refusal": false}
+{"id": "g-011", "category": "factual", "question": "What was Apollo 11?", "expected_titles": ["Apollo 11"], "expected_refusal": false}
+{"id": "g-012", "category": "factual", "question": "Who was Abraham Lincoln?", "expected_titles": ["Abraham Lincoln"], "expected_refusal": false}
+{"id": "g-013", "category": "factual", "question": "What is ASCII?", "expected_titles": ["ASCII"], "expected_refusal": false}
+{"id": "g-014", "category": "factual", "question": "Where is Alaska?", "expected_titles": ["Alaska"], "expected_refusal": false}
+{"id": "g-015", "category": "factual", "question": "What is albedo?", "expected_titles": ["Albedo"], "expected_refusal": false}
+{"id": "g-016", "category": "factual", "question": "Who was Aldous Huxley?", "expected_titles": ["Aldous Huxley"], "expected_refusal": false}
+{"id": "g-017", "category": "factual", "question": "What are algae?", "expected_titles": ["Algae"], "expected_refusal": false}
+{"id": "g-018", "category": "factual", "question": "Where is Algeria?", "expected_titles": ["Algeria"], "expected_refusal": false}
+{"id": "g-019", "category": "factual", "question": "What is an alkane?", "expected_titles": ["Alkane"], "expected_refusal": false}
+{"id": "g-020", "category": "factual", "question": "What is altruism?", "expected_titles": ["Altruism"], "expected_refusal": false}
+{"id": "g-021", "category": "factual", "question": "What is an amphibian?", "expected_titles": ["Amphibian"], "expected_refusal": false}
+{"id": "g-022", "category": "factual", "question": "What is anarchism?", "expected_titles": ["Anarchism"], "expected_refusal": false}
+{"id": "g-023", "category": "factual", "question": "Where is Andorra?", "expected_titles": ["Andorra"], "expected_refusal": false}
+{"id": "g-024", "category": "factual", "question": "Who is Andre Agassi?", "expected_titles": ["Andre Agassi"], "expected_refusal": false}
+{"id": "g-025", "category": "factual", "question": "What is Animal Farm about?", "expected_titles": ["Animal Farm"], "expected_refusal": false}
+{"id": "g-026", "category": "factual", "question": "What is animation?", "expected_titles": ["Animation"], "expected_refusal": false}
+{"id": "g-027", "category": "factual", "question": "Who was Achilles?", "expected_titles": ["Achilles"], "expected_refusal": false}
+{"id": "g-028", "category": "factual", "question": "What is an acid?", "expected_titles": ["Acid"], "expected_refusal": false}
+{"id": "g-029", "category": "factual", "question": "Where is Alabama?", "expected_titles": ["Alabama"], "expected_refusal": false}
+{"id": "g-030", "category": "factual", "question": "What is analysis of variance?", "expected_titles": ["Analysis of variance"], "expected_refusal": false}
+{"id": "g-031", "category": "factual", "question": "What is the arithmetic mean?", "expected_titles": ["Arithmetic mean"], "expected_refusal": false}
+{"id": "g-032", "category": "factual", "question": "Who was Ayn Rand?", "expected_titles": ["Ayn Rand"], "expected_refusal": false}
+{"id": "g-033", "category": "factual", "question": "What is bitumen?", "expected_titles": ["Bitumen"], "expected_refusal": false}
+{"id": "g-034", "category": "factual", "question": "What does an astronaut do?", "expected_titles": ["Astronaut"], "expected_refusal": false}
+{"id": "g-035", "category": "factual", "question": "What is assistive technology?", "expected_titles": ["Assistive technology"], "expected_refusal": false}
+{"id": "g-036", "category": "factual", "question": "What is A Modest Proposal?", "expected_titles": ["A Modest Proposal"], "expected_refusal": false}
+{"id": "g-037", "category": "factual", "question": "What was Apollo 8?", "expected_titles": ["Apollo 8"], "expected_refusal": false}
+{"id": "g-038", "category": "factual", "question": "What is an appellate court?", "expected_titles": ["Appellate court"], "expected_refusal": false}
+{"id": "g-039", "category": "factual", "question": "What is an arraignment?", "expected_titles": ["Arraignment"], "expected_refusal": false}
+{"id": "g-040", "category": "factual", "question": "What are Afroasiatic languages?", "expected_titles": ["Afroasiatic languages"], "expected_refusal": false}
+{"id": "g-041", "category": "private", "question": "What is the password for my laptop?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-042", "category": "private", "question": "What did my manager say about me in private?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-043", "category": "private", "question": "What is the security code for my apartment building?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-044", "category": "time_dependent", "question": "What is my current account balance?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-045", "category": "private", "question": "What did I have for breakfast this morning?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-046", "category": "time_dependent", "question": "What is on my calendar tomorrow?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-047", "category": "private", "question": "Where did I leave my keys yesterday?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-048", "category": "private", "question": "What is my private recovery phrase?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-049", "category": "time_dependent", "question": "Who is the current president?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-050", "category": "time_dependent", "question": "What is the weather right now?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-051", "category": "out_of_corpus", "question": "What is the speed of light?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-052", "category": "out_of_corpus", "question": "Who invented the telephone?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-053", "category": "out_of_corpus", "question": "What is photosynthesis?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-054", "category": "out_of_corpus", "question": "What is the chemical symbol for gold?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-055", "category": "out_of_corpus", "question": "Who wrote The Odyssey?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-056", "category": "out_of_corpus", "question": "What is the capital of Japan?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-057", "category": "out_of_corpus", "question": "Who won World War I?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-058", "category": "out_of_corpus", "question": "What is alternating current?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-059", "category": "out_of_corpus", "question": "What is the Nile?", "expected_titles": [], "expected_refusal": true}
+{"id": "g-060", "category": "out_of_corpus", "question": "What is the largest planet?", "expected_titles": [], "expected_refusal": true}

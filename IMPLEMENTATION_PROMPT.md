@@ -1,5 +1,10 @@
 # Prompt: Build a RAG System over Wikipedia
 
+> **Status: point-in-time record, 3 Jul 2026.** Kept as evidence of what was
+> true then, not maintained against the current code. Where it disagrees with
+> the repository, the repository is right. Living references:
+> `README.md`, `DEMO_RUNBOOK.md`, `ANNOTATED_CODE.md`, `TESTS_ANNOTATED.md`.
+
 Build an end-to-end Retrieval-Augmented Generation system that answers natural-language questions over a Wikipedia subset with **grounded, cited answers**, served by a self-hosted open-source LLM. Deliver in **8 strictly sequential phases**, each independently demoable with passing tests.
 
 ## Architecture

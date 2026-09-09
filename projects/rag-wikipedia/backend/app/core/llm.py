@@ -4,6 +4,33 @@ from abc import ABC, abstractmethod
 
 
 class LLM(ABC):
+    """The one call the chain makes of a generator.
+
+    CONTRACT - an implementation MUST default to deterministic decoding: the
+    provider's temperature set to zero, and its sampling seed pinned wherever
+    one is exposed.
+
+    This is a property of the interface, not a preference of any one adapter,
+    because the whole point of having the interface is that adapters are
+    interchangeable. A grounded answer here is an extraction task - say what
+    the retrieved context supports, cite it, otherwise decline - and sampling
+    buys nothing for that while costing two things that matter:
+
+    * Comparability. Retrieval is scored against fixed suites, but any
+      comparison that reads the generated TEXT - one engine against another,
+      one provider against another, groundedness before and after a prompt
+      change - cannot separate a real regression from resampling if the
+      baseline moves on its own. Measured here: the same question returned one
+      citation, then two, with nothing changed between the runs.
+    * Reproducibility. A user reporting a bad answer should be able to hand
+      over the question and get the same bad answer back.
+
+    Honest limit: greedy decoding removes SAMPLING variance, not every source
+    of variance. Different hardware, a different server build, or a different
+    batching decision inside the runtime can still diverge. This makes runs
+    comparable; it does not make them bit-identical.
+    """
+
     @abstractmethod
     def generate(self, prompt: str) -> str:
         raise NotImplementedError
@@ -38,6 +65,16 @@ class OllamaLLM(LLM):
         response = self._client.generate(
             model=self._model,
             prompt=prompt,
-            options={"num_ctx": self._num_ctx},
+            options={
+                "num_ctx": self._num_ctx,
+                # The LLM contract above. Ollama's own default is 0.8, so
+                # leaving these out was the only reason the served path
+                # sampled while every adapter in providers.py did not.
+                # seed is redundant at temperature 0 (greedy decoding does not
+                # draw) and is sent anyway: it states the intent, and it keeps
+                # the request deterministic if anyone raises the temperature.
+                "temperature": 0.0,
+                "seed": 0,
+            },
         )
         return response["response"]

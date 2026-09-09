@@ -26,27 +26,71 @@ jobs:
       UV_TORCH_BACKEND: cpu
 
     steps:
-      - uses: actions/checkout@v4
+      # Pinned to an immutable SHA, not a moving tag: a tag can be repointed at
+      # new code, and this step runs before anything in the repo is reviewed.
+      # persist-credentials: false stops the job leaving a usable token in
+      # .git/config for every later step.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.2.2
+        with:
+          persist-credentials: false
+          # Full history: audit-freshness resolves commit ancestry, and a
+          # shallow clone would make it skip rather than check.
+          fetch-depth: 0
 
       # Installed via Astral's official script rather than a third-party action,
-      # so there is no action version to keep chasing.
+      # so there is no action version to keep chasing. The version is pinned:
+      # an unpinned `curl | sh` installs whatever is current at run time.
       - name: Install uv
+        env:
+          UV_VERSION: "0.5.11"
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
+          curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       # pyproject.toml here declares the uv workspace whose member is backend/,
       # so the shared environment is resolved from this directory.
+      # --locked: fail if uv.lock is stale rather than silently resolving a
+      # different dependency graph than the one committed.
+      #
+      # Extras are NAMED rather than --all-extras, so what CI installs is a
+      # decision instead of a side effect of whichever extras happen to exist.
+      # Today `dev` is the only one and this resolves identically.
+      #
+      # When the agent extra lands, add `--extra agent` here: the agent tests
+      # must actually run, and untested agent code is worse than a slower
+      # pipeline. The gcp extra deliberately stays OUT - adapters import their
+      # SDK lazily inside __init__ (the providers.py pattern), so their tests
+      # patch sys.modules exactly as tests/test_llm.py already does for ollama,
+      # and CI never needs the cloud SDKs to exercise them.
       - name: Install dependencies
         working-directory: projects/rag-wikipedia
-        run: uv sync --all-extras --python 3.12
+        run: uv sync --locked --extra dev --python 3.12
 
+      # ../scripts is linted too: docs_check.py, compare_audit.py and
+      # build_serving_suite.py gate CI or generate committed artefacts, so they
+      # are project code, not throwaways. They sat outside the lint path until
+      # 2026-08-27 and had accumulated E501/F841 unnoticed. ruff settings come
+      # from projects/rag-wikipedia/pyproject.toml, which is an ancestor of both
+      # backend/ and scripts/, so both get identical rules.
       - name: Lint
         working-directory: projects/rag-wikipedia/backend
-        run: uv run ruff check app/ pipeline/ eval/ tests/
+        run: uv run --locked ruff check app/ pipeline/ eval/ tests/ ../scripts
+
+      # Documented facts must match the repository. The test count alone was
+      # once wrong in six different ways across seven files.
+      - name: Docs check
+        working-directory: projects/rag-wikipedia
+        run: uv run --locked python scripts/docs_check.py
+
+      # A committed measurement rots silently. This does not re-run the audit
+      # (that needs a live corpus); it fails if the report predates a change
+      # that could move its numbers.
+      - name: Audit freshness
+        working-directory: projects/rag-wikipedia
+        run: uv run --locked python scripts/audit_freshness.py
 
       # No Qdrant or Ollama service is needed: the suite uses an in-memory Qdrant
       # for the contract tests and mocks the embedder and LLM everywhere else.
       - name: Tests
         working-directory: projects/rag-wikipedia/backend
-        run: uv run pytest -q
+        run: uv run --locked pytest -q

@@ -19,6 +19,17 @@ MIN_CASES = 20
 MIN_UNANSWERABLE = 5
 
 
+class InvalidGoldenSet(ValueError):
+    """An eval suite is too small or missing a required subset.
+
+    A ValueError, not SystemExit. This is raised from a library function that
+    the /quality/audit handler reaches, and SystemExit is a BaseException:
+    it slips past Starlette's exception middleware and tears down the request
+    instead of producing a response. main() converts it back to SystemExit for
+    the CLI, and the API maps it to 422.
+    """
+
+
 def validate_golden_set(golden: list[dict]) -> tuple[list[dict], list[dict]]:
     answerable = [item for item in golden if not item.get("expected_refusal")]
     unanswerable = [item for item in golden if item.get("expected_refusal")]
@@ -26,7 +37,7 @@ def validate_golden_set(golden: list[dict]) -> tuple[list[dict], list[dict]]:
     # Reject an incomplete golden set up front, otherwise a missing subset would
     # silently skip its gate and the eval would "pass" without measuring it.
     if len(golden) < MIN_CASES or len(unanswerable) < MIN_UNANSWERABLE or not answerable:
-        raise SystemExit(
+        raise InvalidGoldenSet(
             f"golden.jsonl must contain >= {MIN_CASES} cases, "
             f">= {MIN_UNANSWERABLE} unanswerable, and >= 1 answerable "
             f"(got {len(golden)} total, {len(unanswerable)} unanswerable, "
@@ -324,13 +335,17 @@ def write_markdown_report(report: dict, path: Path, *, k: int) -> None:
 
     lines.extend(["", "## Cases", ""])
     for case in report["cases"]:
-        status = "PASS"
         if case.get("expected_refusal"):
             status = "PASS" if case["refused"] else "FAIL"
-        elif case.get("missing_sources"):
+        elif case.get("refused"):
+            # An answerable case that was refused is a failure even when no
+            # expected term is missing - with chunks retrieved but rejected,
+            # missing_sources can be empty and this used to read PASS.
             status = "FAIL"
-        elif case.get("missing_titles"):
+        elif case.get("missing_sources") or case.get("missing_titles"):
             status = "FAIL"
+        else:
+            status = "PASS"
         lines.extend(
             [
                 f"### {status}: {case['question']}",
@@ -414,7 +429,10 @@ def main(argv: list[str] | None = None) -> None:
         logger.info("Groundedness enabled: generating one answer per answerable case.")
 
     k = settings.top_k
-    report = evaluate_golden(golden, embedder, store, llm, k=k)
+    try:
+        report = evaluate_golden(golden, embedder, store, llm, k=k)
+    except InvalidGoldenSet as exc:
+        raise SystemExit(str(exc)) from exc
 
     print("\n=== Evaluation Report ===")
     for key, value in report.items():

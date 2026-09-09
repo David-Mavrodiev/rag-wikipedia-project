@@ -30,16 +30,23 @@
 #          LLM_CHOICE   = ollama-3b | ollama-1b | azure | openai   (default: ollama-3b)
 #          EMBED_CHOICE = bge | azure | openai                     (default: bge)
 #      ...plus the credentials for whichever preset you chose (see ENV VARS).
-#   5) If you change the EMBEDDER (not just the LLM), set EMBED_DIM and
-#      RE-INGEST into a NEW collection. Do NOT assume 1536: bge-small is 384,
-#      text-embedding-3-small is 1536, text-embedding-3-large is 3072, an Azure
-#      deployment can serve any model, and some APIs accept a requested output
-#      dimension. Vectors of different dimensions are not interchangeable, so a
-#      wrong value builds a collection that rejects the vectors you produce.
-#      Verify against a REAL embedding before creating the collection:
-#          probe = embedder.embed("dimension probe")
-#          assert len(probe) == int(os.environ["EMBED_DIM"]), len(probe)
-#      (see the vectorstore note at the bottom of this file)
+#   5) CORRECTION (2026-09-08) - there is no EMBED_DIM any more, and there
+#      should not be. This step used to tell you to set one and assert a probe
+#      against it. `Embedder` now carries an abstract `dim` that every
+#      implementation PROBES from its own model, and `ensure_collection(dim)`
+#      takes that number from the caller. A dimension you DECLARE is one you
+#      can declare wrongly; a dimension the model REPORTS cannot disagree with
+#      the vectors it then produces. There is nothing left to set.
+#
+#      What still holds: if you change the EMBEDDER (not just the LLM),
+#      RE-INGEST into a NEW collection. Dimensions are not uniform - bge-small
+#      384, Vertex text-embedding-005 768, text-embedding-3-small 1536,
+#      -3-large 3072, and an Azure deployment serves whatever model it was
+#      created with - and vectors of different dimensions are not
+#      interchangeable. ensure_collection() now compares the embedder's
+#      dimension against the size the existing collection was CREATED at and
+#      raises naming both, so a mismatch stops at startup rather than
+#      mid-ingest. (see the vectorstore note at the bottom of this file)
 #
 # -----------------------------------------------------------------------------
 # ENV VARS
@@ -117,23 +124,54 @@
 #     def __init__(self, deployment: str, endpoint: str, api_key: str, api_version: str = "2024-06-01"):
 #         from openai import AzureOpenAI
 #         self._deployment = deployment
+#         self._dim: int | None = None                      # probed on first use, then cached
 #         self._client = AzureOpenAI(azure_endpoint=endpoint, api_key=api_key, api_version=api_version)
+#     @property
+#     def dim(self) -> int:                                 # the Embedder contract: PROBE, never declare
+#         if self._dim is None:                             # one billed call, once per process
+#             self._dim = len(self.embed("dimension probe"))
+#         return self._dim
 #     def embed(self, text: str) -> list[float]:            # one string -> one vector
 #         return self._client.embeddings.create(model=self._deployment, input=text).data[0].embedding
-#     def embed_batch(self, texts: list[str]) -> list[list[float]]:   # many strings -> many vectors, one call
-#         r = self._client.embeddings.create(model=self._deployment, input=texts)
-#         return _ordered_embeddings(r, texts)              # map by index, not by arrival order
+#     def embed_batch(self, texts: list[str], *, batch_size: int | None = None) -> list[list[float]]:
+#         # batch_size is HONOURED, not ignored. pipeline/tasks.py calls
+#         # embed_batch(..., batch_size=64), so an adapter that omits the
+#         # keyword raises TypeError on the first real ingest. Hosted endpoints
+#         # also cap array length and tokens per request, so a large segment has
+#         # to be split. None = one request, matching the local path.
+#         if not texts:
+#             return []
+#         size = batch_size or len(texts)
+#         out: list[list[float]] = []
+#         for start in range(0, len(texts), size):
+#             window = texts[start:start + size]
+#             r = self._client.embeddings.create(model=self._deployment, input=window)
+#             out.extend(_ordered_embeddings(r, window))    # map by index, not by arrival order
+#         return out
 #
 # class OpenAIEmbedder(Embedder):                           # embeddings via OpenAI OR an OpenAI-compatible server
 #     def __init__(self, model: str, api_key: str, base_url: str | None = None):
 #         from openai import OpenAI
 #         self._model = model
+#         self._dim: int | None = None                      # probed on first use, then cached
 #         self._client = OpenAI(api_key=api_key, base_url=base_url)
+#     @property
+#     def dim(self) -> int:                                 # the Embedder contract: PROBE, never declare
+#         if self._dim is None:
+#             self._dim = len(self.embed("dimension probe"))
+#         return self._dim
 #     def embed(self, text: str) -> list[float]:
 #         return self._client.embeddings.create(model=self._model, input=text).data[0].embedding
-#     def embed_batch(self, texts: list[str]) -> list[list[float]]:
-#         r = self._client.embeddings.create(model=self._model, input=texts)
-#         return _ordered_embeddings(r, texts)              # map by index, not by arrival order
+#     def embed_batch(self, texts: list[str], *, batch_size: int | None = None) -> list[list[float]]:
+#         if not texts:                                     # see the Azure note above
+#             return []
+#         size = batch_size or len(texts)
+#         out: list[list[float]] = []
+#         for start in range(0, len(texts), size):
+#             window = texts[start:start + size]
+#             r = self._client.embeddings.create(model=self._model, input=window)
+#             out.extend(_ordered_embeddings(r, window))    # map by index, not by arrival order
+#         return out
 #
 #
 # # ---------------------------------------------------------------------------
@@ -187,12 +225,16 @@
 #
 #
 # # ---------------------------------------------------------------------------
-# # vectorstore.py note (only relevant if you switch the EMBEDDER's dimension):
-# # ensure_collection() hardcodes EXPECTED_DIM = 384 and raises if it differs.
-# # To use a hosted embedder, make the dimension configurable:
-# #     EXPECTED_DIM = int(os.getenv("EMBED_DIM", "384"))
-# # then set EMBED_DIM to the dimension you PROBED (step 5) — not an assumed
-# # 1536 — and re-ingest into a fresh collection. Keeping the assert in
-# # ensure_collection() is what turns a wrong EMBED_DIM into a loud failure at
-# # startup instead of a confusing rejection mid-ingest.
+# # vectorstore.py note
+# #
+# # CORRECTION (2026-09-08) - SUPERSEDED, and there is nothing left to do here.
+# # This said ensure_collection() hardcodes EXPECTED_DIM = 384, and told you to
+# # replace that constant with an EMBED_DIM env var. Both are gone.
+# # ensure_collection(dim) takes the dimension from its caller - embedder.dim,
+# # probed from the model - and when the collection already exists it compares
+# # that against the size the collection was CREATED at, raising with both
+# # numbers when they disagree. That is WIDER than the assert it replaces, which
+# # compared against a constant and never looked at the existing collection at
+# # all: re-ingesting a 768-d embedder into a 384-d collection was not caught
+# # here, and surfaced later as a rejected upsert far from its cause.
 # # =============================================================================

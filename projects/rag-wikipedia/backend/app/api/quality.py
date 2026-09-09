@@ -5,11 +5,12 @@ import secrets
 from dataclasses import asdict
 from pathlib import Path
 
+from eval.run_eval import InvalidGoldenSet
 from fastapi import APIRouter, Header, HTTPException
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
-from app.core.quality import get_quality_state, update_quality_state
+from app.core.quality import build_provenance, get_quality_state, update_quality_state
 from app.core.runtime_config import get_runtime_config
 
 router = APIRouter()
@@ -42,7 +43,13 @@ def _run_audit(auto_correct: bool) -> dict:
     """Score every suite. BLOCKING - loads the embedder, hits Qdrant, runs every
     case. Must only ever be called on a worker thread.
     """
-    from eval.audit import audit_failures, evaluate_datasets, summarize_reports, try_auto_correct
+    from eval.audit import (
+        audit_failures,
+        audit_status,
+        evaluate_datasets,
+        summarize_reports,
+        try_auto_correct,
+    )
 
     from app.core.embeddings import BGEEmbedder
     from app.core.vectorstore import QdrantStore
@@ -61,12 +68,13 @@ def _run_audit(auto_correct: bool) -> dict:
             reports = corrected_reports
             failures = []
 
-    status = "healthy" if not failures else "suspect_overfit"
+    status = audit_status(failures)
     update_quality_state(
         status=status,
         metrics=summarize_reports(reports, k=k),
         active_config=asdict(get_runtime_config()),
         reason="Audit passed." if not failures else "; ".join(failures),
+        provenance=build_provenance(store=store, top_k=k),
     )
     # Same shape GET /quality returns, plus the two audit-only fields. The two
     # used to disagree - POST returned `datasets` where GET returned `metrics`,
@@ -89,4 +97,10 @@ async def run_quality_audit(
         raise HTTPException(status_code=409, detail="An audit is already running.")
 
     async with _audit_lock:
-        return await run_in_threadpool(_run_audit, auto_correct)
+        try:
+            return await run_in_threadpool(_run_audit, auto_correct)
+        except InvalidGoldenSet as exc:
+            # A malformed suite is bad input, not a server fault. It used to be
+            # SystemExit, which is a BaseException and tore down the request
+            # rather than producing a response.
+            raise HTTPException(status_code=422, detail=str(exc)) from exc

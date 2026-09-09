@@ -29,6 +29,15 @@ class Settings(BaseSettings):
     refusal_high_confidence_score: float = Field(default=0.78, ge=0.0, le=1.0)
     refusal_min_margin: float = Field(default=0.02, ge=0.0, le=1.0)
     refusal_min_overlap_terms: int = Field(default=1, ge=0, le=50)
+    # Fraction of the question's IDF weight the evidence must cover. Supersedes
+    # refusal_min_overlap_terms wherever an IDF table exists; the count setting
+    # is kept because it is still the gate on a collection with no table built.
+    # 0.0 = DISABLED (fall back to the count gate), NOT "accept anything": as a
+    # literal threshold, zero would accept every result clearing the score floor
+    # and ship a WEAKER gate than the one it replaces. Left at 0.0 until the
+    # threshold is measured against the serving corpus — the redesign is only an
+    # improvement at a value that has been shown to beat false_accept_rate 0.600.
+    refusal_min_evidence_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
     retrieval_candidate_k: int = Field(default=20, ge=1, le=1000)
 
     allowed_origins: str = "*"
@@ -37,6 +46,10 @@ class Settings(BaseSettings):
     rate_limit_query_per_minute: int = Field(default=10, ge=1)
     rate_limit_query_burst: int = Field(default=20, ge=1)
     rate_limit_client_header: str = ""
+    # Deadline for every Redis call the limiter makes. redis-py defaults both
+    # socket timeouts to None, so without this a stalled Redis hangs the request
+    # instead of failing closed to 503.
+    rate_limit_redis_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
 
     # Required only for the auto-correcting audit, which PERSISTS new retrieval
     # thresholds. Empty means that path is disabled rather than open.
