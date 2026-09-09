@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all idf idf-fixture sweep-coverage
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all idf idf-fixture sweep-coverage compare-engines
 
 up:
 	docker compose up --build -d
@@ -104,6 +104,17 @@ idf:
 
 idf-fixture:
 	cd backend && uv run python ../scripts/build_idf.py --collection $(EVAL_COLLECTION)
+
+# Score every registered engine on the SAME suites and report the delta.
+# PROFILE and COLLECTION are pinned for exactly the reason eval-fixture pins
+# them: the committed suites describe the fixture corpus, and scoring an engine
+# against a different one would compare it to a baseline it never ran on.
+#
+# Needs Ollama. Generation dominates - measured at ~61 s per answered case on
+# this machine - so the full three suites are hours, not minutes. Pass ARGS to
+# narrow it, e.g. ARGS="--suite holdout --suite adversarial".
+compare-engines:
+	cd backend && PROFILE=fixture COLLECTION=$(EVAL_COLLECTION) uv run python eval/compare_engines.py $(ARGS)
 
 # Measure refusal_min_evidence_coverage and choose a threshold. Needs `idf`
 # first. The number to beat is false_accept_rate 0.600 on the serving corpus.
