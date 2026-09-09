@@ -58,36 +58,72 @@ def load_suite(name: str) -> list[dict]:
     return [json.loads(line) for line in lines if line.strip()]
 
 
-def score_case(engine, case: dict) -> dict:
-    """Run one case and record what happened, including what it cost."""
-    started = time.perf_counter()
-    result = engine.answer(case["question"])
-    elapsed_ms = (time.perf_counter() - started) * 1000
+# A local model runner is not reliable infrastructure. Measured on this
+# machine: a run died 25 minutes in with "model runner has unexpectedly
+# stopped, this may be due to resource limitations", and the server was healthy
+# again seconds later. The same reasoning as MAX_STREAM_RESTARTS in
+# pipeline/sources.py - a transient failure must not destroy an hour of work.
+MAX_ATTEMPTS = 2
+RETRY_PAUSE_S = 5.0
 
+
+def score_case(engine, case: dict) -> dict:
+    """Run one case and record what happened, including what it cost.
+
+    A case that fails after its retries is recorded as an ERROR and excluded
+    from the metrics rather than counted as a refusal. An infrastructure
+    failure is not a decision the engine made, and scoring it as one would
+    quietly credit an engine for a crash.
+    """
     expected_refusal = bool(case.get("expected_refusal"))
-    return {
+    base = {
         "id": case.get("id"),
         "question": case["question"],
         "expected_refusal": expected_refusal,
-        "refused": result.refused,
-        # The interesting cases: refused when it should have answered, or
-        # answered when it should have refused.
-        "correct": result.refused == expected_refusal,
-        "refusal_reason": result.refusal_reason,
-        "llm_calls": result.stats.get("llm_calls", 0),
-        "rewrites": result.stats.get("rewrites", 0),
-        "latency_ms": round(elapsed_ms, 1),
     }
+
+    for attempt in range(1, MAX_ATTEMPTS + 1):
+        started = time.perf_counter()
+        try:
+            result = engine.answer(case["question"])
+        except Exception as exc:  # noqa: BLE001 - recorded, not swallowed
+            if attempt == MAX_ATTEMPTS:
+                logger.warning("  case %s failed after %s attempts: %s",
+                               case.get("id"), MAX_ATTEMPTS, exc)
+                return {**base, "error": f"{type(exc).__name__}: {exc}"[:300]}
+            logger.warning("  case %s attempt %s failed (%s); retrying",
+                           case.get("id"), attempt, type(exc).__name__)
+            time.sleep(RETRY_PAUSE_S)
+            continue
+
+        return {
+            **base,
+            "refused": result.refused,
+            # The interesting cases: refused when it should have answered, or
+            # answered when it should have refused.
+            "correct": result.refused == expected_refusal,
+            "refusal_reason": result.refusal_reason,
+            "llm_calls": result.stats.get("llm_calls", 0),
+            "rewrites": result.stats.get("rewrites", 0),
+            "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+        }
+    raise AssertionError("unreachable")
 
 
 def score_suite(engine, cases: list[dict]) -> dict:
     scored = [score_case(engine, case) for case in cases]
-    unanswerable = [case for case in scored if case["expected_refusal"]]
-    answerable = [case for case in scored if not case["expected_refusal"]]
+    # Errored cases are excluded from every metric and counted separately. A
+    # suite with errors is NOT a clean measurement, and says so in the report
+    # rather than quietly reporting a rate over a smaller denominator.
+    usable = [case for case in scored if not case.get("error")]
+    unanswerable = [case for case in usable if case["expected_refusal"]]
+    answerable = [case for case in usable if not case["expected_refusal"]]
 
     return {
         "n_answerable": len(answerable),
         "n_unanswerable": len(unanswerable),
+        "n_errors": len(scored) - len(usable),
+        "complete": len(usable) == len(scored),
         "refusal_accuracy": refusal_accuracy([case["refused"] for case in unanswerable]),
         "false_accept_rate": (
             sum(1 for case in unanswerable if not case["refused"]) / len(unanswerable)
@@ -100,10 +136,10 @@ def score_suite(engine, cases: list[dict]) -> dict:
             else 0.0
         ),
         "mean_llm_calls": (
-            sum(case["llm_calls"] for case in scored) / len(scored) if scored else 0.0
+            sum(case["llm_calls"] for case in usable) / len(usable) if usable else 0.0
         ),
         "mean_latency_ms": (
-            sum(case["latency_ms"] for case in scored) / len(scored) if scored else 0.0
+            sum(case["latency_ms"] for case in usable) / len(usable) if usable else 0.0
         ),
         "cases": scored,
     }
@@ -145,6 +181,22 @@ def build_markdown(report: dict) -> str:
         "any engine can drive the first to zero by refusing everything._",
         "",
     ]
+    # Incompleteness is stated at the TOP of the report, never buried in the
+    # JSON. A rate computed over the cases that happened to survive is not the
+    # rate, and a reader who skims the table must not be able to miss that.
+    incomplete = [
+        f"`{name}`/`{suite}`: {report['engines'][name][suite]['n_errors']} case(s) errored"
+        for name in engines
+        for suite in report["suites"]
+        if not report["engines"][name][suite]["complete"]
+    ]
+    if incomplete:
+        lines.insert(
+            1,
+            "\n> **INCOMPLETE - not a measurement.** Cases failed and were excluded: "
+            + "; ".join(incomplete)
+            + ". Re-run before reading these numbers as a result.\n",
+        )
     return "\n".join(lines)
 
 
@@ -198,6 +250,16 @@ def main(argv: list[str] | None = None) -> int:
             logger.info("[%s] %s: %s cases", name, suite, len(cases))
             report["engines"][name][suite] = score_suite(engine, cases)
             scored = report["engines"][name][suite]
+            # Saved after every pair. A model runner that dies an hour in must
+            # not take the measurement with it.
+            Path(args.out).with_suffix(".json").write_text(
+                json.dumps(report, indent=2), encoding="utf-8"
+            )
+            if scored["n_errors"]:
+                logger.warning(
+                    "[%s] %s: %s case(s) errored and are excluded",
+                    name, suite, scored["n_errors"],
+                )
             logger.info(
                 "[%s] %s: false_accept=%.3f refusal_acc=%.3f llm_calls=%.2f",
                 name, suite, scored["false_accept_rate"],
