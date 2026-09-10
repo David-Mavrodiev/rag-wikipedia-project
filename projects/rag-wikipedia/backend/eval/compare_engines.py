@@ -216,6 +216,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
              "harness quickly - a truncated suite is NOT a measurement.",
     )
     parser.add_argument("--out", default=str(EVAL_DIR / "engine_comparison"))
+    parser.add_argument(
+        "--resume", action="store_true",
+        help="keep engine/suite pairs already present in the output report and "
+             "score only what is missing. The whole point of saving after every "
+             "pair is being able to finish a run that died - without this, "
+             "re-running one suite would overwrite the ones that survived.",
+    )
     return parser.parse_args(argv)
 
 
@@ -230,6 +237,14 @@ def main(argv: list[str] | None = None) -> int:
     embedder = BGEEmbedder(model_name=settings.embed_model)
     store = QdrantStore(url=settings.qdrant_url, collection=settings.collection)
     llm = OllamaLLM(model=settings.llm_model, base_url=settings.ollama_url)
+
+    previous: dict = {}
+    if args.resume:
+        existing = Path(args.out).with_suffix(".json")
+        if existing.exists():
+            previous = json.loads(existing.read_text(encoding="utf-8")).get("engines", {})
+            done = [f"{e}/{s}" for e, suites in previous.items() for s in suites]
+            logger.info("resuming; keeping %s already-scored pair(s): %s", len(done), done)
 
     report: dict = {
         "collection": settings.collection,
@@ -247,6 +262,12 @@ def main(argv: list[str] | None = None) -> int:
             cases = load_suite(suite)
             if args.limit:
                 cases = cases[: args.limit]
+            kept = previous.get(name, {}).get(suite)
+            if kept is not None:
+                logger.info("[%s] %s: kept from the previous run", name, suite)
+                report["engines"][name][suite] = kept
+                continue
+
             logger.info("[%s] %s: %s cases", name, suite, len(cases))
             report["engines"][name][suite] = score_suite(engine, cases)
             scored = report["engines"][name][suite]

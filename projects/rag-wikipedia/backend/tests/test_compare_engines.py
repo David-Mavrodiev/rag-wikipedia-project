@@ -91,3 +91,58 @@ def test_an_incomplete_report_says_so_at_the_top():
 
     assert "INCOMPLETE - not a measurement" in markdown
     assert markdown.index("INCOMPLETE") < markdown.index("false_accept_rate")
+
+
+KEPT_PAIR = {
+    "kept": True,
+    "n_errors": 0,
+    "complete": True,
+    "n_answerable": 1,
+    "n_unanswerable": 1,
+    "false_accept_rate": 0.5,
+    "refusal_accuracy": 0.5,
+    "answerable_refusal_rate": 0.0,
+    "mean_llm_calls": 1.0,
+    "mean_latency_ms": 10.0,
+    "cases": [],
+}
+
+
+def test_resume_keeps_pairs_already_scored(tmp_path, monkeypatch):
+    """The point of saving after every pair: finishing a run that died.
+
+    Without --resume, re-running the one suite that was missing would overwrite
+    the three that survived - which is the exact loss the incremental save was
+    added to prevent.
+    """
+    out = tmp_path / "cmp"
+    out.with_suffix(".json").write_text(
+        compare_engines.json.dumps(
+            {
+                "collection": "wikipedia_eval",
+                "suites": ["holdout"],
+                "engines": {"direct": {"holdout": KEPT_PAIR}},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    built = []
+
+    def _never_scored(engine, cases):
+        built.append(cases)
+        raise AssertionError("a kept pair must not be re-scored")
+
+    monkeypatch.setattr(compare_engines, "BGEEmbedder", lambda **kw: object())
+    monkeypatch.setattr(compare_engines, "QdrantStore", lambda **kw: object())
+    monkeypatch.setattr(compare_engines, "OllamaLLM", lambda **kw: object())
+    monkeypatch.setattr(compare_engines, "make_engine", lambda *a, **kw: object())
+    monkeypatch.setattr(compare_engines, "score_suite", _never_scored)
+
+    compare_engines.main(
+        ["--suite", "holdout", "--engines", "direct", "--out", str(out), "--resume"]
+    )
+
+    saved = compare_engines.json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
+    assert saved["engines"]["direct"]["holdout"]["kept"] is True
+    assert built == []
