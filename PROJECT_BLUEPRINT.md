@@ -480,7 +480,8 @@ system can drive the first to zero by refusing everything.
 - **Retrieval-only vs end-to-end.** The audit scores retrieval: `refused` comes from
   `retrieve()`, with no model involved. `make compare-engines` scores whole engines
   end-to-end, so the model's own refusals count too. They measure different things and
-  must never be quoted as one number.
+  must never be quoted as one number. Measured, with the per-case reconstruction:
+  [docs/retrieval-only-vs-end-to-end.md](projects/rag-wikipedia/docs/retrieval-only-vs-end-to-end.md).
 - **Engine head-to-head** (`backend/eval/engine_comparison.md`, 2026-09-10, holdout +
   adversarial, 40 cases, zero errors). `langgraph` matched `direct` exactly on
   `false_accept_rate` (0.000 and 0.100) and on cost (0.90 and 0.75 LLM calls per
