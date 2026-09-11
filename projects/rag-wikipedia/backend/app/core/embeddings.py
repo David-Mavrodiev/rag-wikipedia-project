@@ -41,7 +41,24 @@ class BGEEmbedder(Embedder):
         # Asked of the LOADED model, not parsed from EMBED_MODEL's name: the
         # name is a string someone can mistype, the model is the thing that
         # will actually produce the vectors.
-        return int(self._model.get_sentence_embedding_dimension())
+        #
+        # get_embedding_dimension, not get_sentence_embedding_dimension. The
+        # latter was renamed in sentence-transformers 5.4.0 and survives only as
+        # a FutureWarning-decorated alias - scheduled for removal, and when it
+        # goes, ingestion goes with it, because flow.py sizes the collection
+        # from this property. Verified against the released wheels, which is
+        # also why pyproject.toml floors the dependency at 5.4.
+        dim = self._model.get_embedding_dimension()
+        if dim is None:
+            # The library returns None when a model has no fixed output size.
+            # A collection is created at one exact length, so there is no safe
+            # default here - and int(None) would fail with a TypeError that says
+            # nothing about the cause.
+            raise ValueError(
+                "The loaded embedding model reports no fixed embedding dimension, "
+                "so a vector collection cannot be sized for it."
+            )
+        return int(dim)
 
     def embed(self, text: str) -> list[float]:
         return self._model.encode(text, normalize_embeddings=True).tolist()

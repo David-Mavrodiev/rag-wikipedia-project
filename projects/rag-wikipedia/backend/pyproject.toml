@@ -13,7 +13,15 @@ dependencies = [
     # is the true floor; >=1.12 is a deliberately conservative pin — it is the
     # range this project has actually been run and tested against.
     "qdrant-client>=1.12,<2",
-    "sentence-transformers>=3.0",
+    # BGEEmbedder.dim reads get_embedding_dimension, which exists on
+    # SentenceTransformer from 5.4.0. Verified against the released wheels, not
+    # the changelog: 3.0 through 5.3 have only get_sentence_embedding_dimension,
+    # and 5.4 renamed it and left the old name as a FutureWarning alias. So the
+    # previous >=3.0 floor admitted versions the code can no longer run on.
+    # <6 because 5.x is the range this project has actually been run and tested
+    # against. 6.0 already exists, and a major bump deserves a deliberate diff
+    # rather than arriving silently the next time someone re-locks.
+    "sentence-transformers>=5.4,<6",
     "prefect>=3,<4",
     "datasets>=2.19",
     "tiktoken>=0.7",

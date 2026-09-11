@@ -1383,7 +1383,7 @@ python -m http.server 8080 --directory demo                     # serve the cons
 
 ## 9. Testing
 
-`pytest` — **328 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
+`pytest` — **331 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency, retrieval (empty + below-threshold refusal), API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Run before declaring any milestone done.
 
 ---
 
