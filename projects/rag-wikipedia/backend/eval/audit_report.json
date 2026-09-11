@@ -44,8 +44,8 @@
     "refusal_min_evidence_coverage": 0.0
   },
   "provenance": {
-    "generated_at": "2026-09-08T13:55:25.734102+00:00",
-    "git_sha": "dae90a450c49da4c133923845eca618a742a1aa0",
+    "generated_at": "2026-09-11T12:18:18.734694+00:00",
+    "git_sha": "0301d3a5810c8709e8d2bac82642d03f3c879541",
     "profile": "fixture",
     "collection": "wikipedia_eval",
     "vector_count": 2422,

@@ -24,6 +24,8 @@ import sys
 from pathlib import Path
 
 APP = Path(__file__).resolve().parents[1] / "app"
+DIRECT_ENGINE = Path(__file__).resolve().parents[1] / "engines" / "direct.py"
+ENGINE_REGISTRY_FILE = Path(__file__).resolve().parents[1] / "engines" / "registry.py"
 
 # The packages `app/` is allowed to reach for. Every one of these is a BASE
 # dependency, so the serving path never needs an optional extra installed.
@@ -137,6 +139,65 @@ def test_the_allowlist_is_not_quietly_widened():
     assert not smuggled, (
         f"ALLOWED contains {smuggled}, which the architecture forbids in app/. "
         "A failing layering test is not fixed by widening the allowlist."
+    )
+
+
+def _third_party_in(path: Path) -> set[str]:
+    """Third-party top-level modules imported by a single file."""
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module.split(".")[0])
+    return {n for n in names if n not in sys.stdlib_module_names and n not in LOCAL}
+
+
+def test_the_direct_engine_stays_framework_free():
+    # `engines/` is the one place a framework IS allowed - that is what the
+    # package is for. `direct` is the exception inside the exception: it is the
+    # baseline every other engine is measured against, and a baseline that
+    # quietly acquired a graph runtime would make every comparison meaningless
+    # while still passing its own conformance test.
+    reached_for = sorted(_third_party_in(DIRECT_ENGINE) - ALLOWED)
+    assert not reached_for, (
+        f"engines/direct.py imports {reached_for}. It is the framework-free baseline; "
+        "an engine that needs a library belongs beside it, not inside it."
+    )
+
+
+def _module_level_third_party(path: Path) -> set[str]:
+    """Third-party modules a file imports AT IMPORT TIME.
+
+    Only `tree.body`, never a full walk: an import nested inside a function is
+    lazy and costs nothing until that function runs, which is the entire point
+    of the distinction being tested below.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.level == 0 and node.module:
+            names.add(node.module.split(".")[0])
+    return {n for n in names if n not in sys.stdlib_module_names and n not in LOCAL}
+
+
+def test_the_registry_does_not_hard_depend_on_a_framework():
+    # `import engines` has to work wherever the agent extra is NOT installed:
+    # the eval-quality CI job installs base dependencies only, and a deployment
+    # serving the default `direct` engine has no reason to ship a graph runtime.
+    # A module-level import in the registry would break both, and would break
+    # them at import time rather than when the engine is chosen.
+    hard = sorted(
+        name
+        for name in _module_level_third_party(ENGINE_REGISTRY_FILE)
+        if name.startswith(FORBIDDEN_PREFIXES)
+    )
+    assert not hard, (
+        f"engines/registry.py imports {hard} at module level. Import it inside the "
+        "factory instead, so choosing `direct` does not require the agent extra."
     )
 
 

@@ -13,7 +13,15 @@ dependencies = [
     # is the true floor; >=1.12 is a deliberately conservative pin — it is the
     # range this project has actually been run and tested against.
     "qdrant-client>=1.12,<2",
-    "sentence-transformers>=3.0",
+    # BGEEmbedder.dim reads get_embedding_dimension, which exists on
+    # SentenceTransformer from 5.4.0. Verified against the released wheels, not
+    # the changelog: 3.0 through 5.3 have only get_sentence_embedding_dimension,
+    # and 5.4 renamed it and left the old name as a FutureWarning alias. So the
+    # previous >=3.0 floor admitted versions the code can no longer run on.
+    # <6 because 5.x is the range this project has actually been run and tested
+    # against. 6.0 already exists, and a major bump deserves a deliberate diff
+    # rather than arriving silently the next time someone re-locks.
+    "sentence-transformers>=5.4,<6",
     "prefect>=3,<4",
     "datasets>=2.19",
     "tiktoken>=0.7",
@@ -40,6 +48,17 @@ dependencies = [
 # eval-quality installs NO extras: it measures retrieval and runs neither
 # pytest nor ruff.
 [project.optional-dependencies]
+# The graph runtime for the `langgraph` engine. Kept out of the base
+# dependencies: the serving path defaults to `direct`, which needs none of this,
+# so a deployment that does not run the agent does not install it.
+agent = [
+    # Pinned to the majors this was built and measured against. langgraph
+    # reached 1.x, so a major bump is a breaking-change signal worth catching
+    # in a diff rather than in a silently different graph.
+    "langgraph>=1.2,<2",
+    "langchain-core>=1.6,<2",
+]
+
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
@@ -52,10 +71,10 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app", "pipeline", "eval"]
+packages = ["app", "pipeline", "eval", "engines"]
 
 [tool.hatch.build.targets.sdist]
-include = ["app", "pipeline", "eval", "tests"]
+include = ["app", "pipeline", "eval", "engines", "tests"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

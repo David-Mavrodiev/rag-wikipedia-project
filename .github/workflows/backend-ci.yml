@@ -64,7 +64,7 @@ jobs:
       # and CI never needs the cloud SDKs to exercise them.
       - name: Install dependencies
         working-directory: projects/rag-wikipedia
-        run: uv sync --locked --extra dev --python 3.12
+        run: uv sync --locked --extra dev --extra agent --python 3.12
 
       # ../scripts is linted too: docs_check.py, compare_audit.py and
       # build_serving_suite.py gate CI or generate committed artefacts, so they
@@ -74,7 +74,7 @@ jobs:
       # backend/ and scripts/, so both get identical rules.
       - name: Lint
         working-directory: projects/rag-wikipedia/backend
-        run: uv run --locked ruff check app/ pipeline/ eval/ tests/ ../scripts
+        run: uv run --locked ruff check app/ pipeline/ eval/ engines/ tests/ ../scripts
 
       # Documented facts must match the repository. The test count alone was
       # once wrong in six different ways across seven files.
