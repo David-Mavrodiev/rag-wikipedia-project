@@ -1,21 +1,21 @@
 {
   "status": "suspect_overfit",
   "failures": [
-    "golden: refusal_accuracy=0.50 < 0.8",
-    "golden: false_accept_rate=0.50 > 0.1",
+    "golden: refusal_accuracy=0.60 < 0.8",
+    "golden: false_accept_rate=0.40 > 0.1",
     "holdout: precision@5=0.57 < 0.6",
     "holdout: refusal_accuracy=0.40 < 0.8",
     "holdout: false_accept_rate=0.60 > 0.1",
-    "adversarial: refusal_accuracy=0.50 < 0.8",
-    "adversarial: false_accept_rate=0.50 > 0.1"
+    "adversarial: refusal_accuracy=0.60 < 0.8",
+    "adversarial: false_accept_rate=0.40 > 0.1"
   ],
   "datasets": {
     "golden": {
       "recall@5": 1.0,
       "precision@5": 0.93,
       "mrr": 1.0,
-      "refusal_accuracy": 0.5,
-      "false_accept_rate": 0.5,
+      "refusal_accuracy": 0.6,
+      "false_accept_rate": 0.4,
       "answerable_refusal_rate": 0.0
     },
     "holdout": {
@@ -30,8 +30,8 @@
       "recall@5": 1.0,
       "precision@5": 0.6599999999999999,
       "mrr": 0.95,
-      "refusal_accuracy": 0.5,
-      "false_accept_rate": 0.5,
+      "refusal_accuracy": 0.6,
+      "false_accept_rate": 0.4,
       "answerable_refusal_rate": 0.0
     }
   },
@@ -41,11 +41,11 @@
     "refusal_min_margin": 0.02,
     "refusal_min_overlap_terms": 1,
     "retrieval_candidate_k": 20,
-    "refusal_min_evidence_coverage": 0.0
+    "refusal_min_evidence_coverage": 0.45
   },
   "provenance": {
-    "generated_at": "2026-09-11T12:18:18.734694+00:00",
-    "git_sha": "0301d3a5810c8709e8d2bac82642d03f3c879541",
+    "generated_at": "2026-09-12T14:49:45.373389+00:00",
+    "git_sha": "befe0d69e2c2ee706752e5ba46246dc347005c9d",
     "profile": "fixture",
     "collection": "wikipedia_eval",
     "vector_count": 2422,
