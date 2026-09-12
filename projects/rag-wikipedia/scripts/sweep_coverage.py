@@ -1,11 +1,12 @@
 """Measure refusal_min_evidence_coverage against a corpus, and pick a threshold.
 
-`refusal_min_evidence_coverage` ships DISABLED (0.0). This is the script that is
-supposed to un-disable it, and the reason the setting does not simply have a
-default is in `app.core.idf.IdfTable.weight`: the weighting tightens as a corpus
-grows, so a threshold fitted on the 2,422-chunk fixture is stricter on the
-87,173-chunk serving collection. A default would be a number fitted to whichever
-corpus the author happened to have.
+`refusal_min_evidence_coverage` shipped DISABLED (0.0) until this script chose a
+value for it: 0.45, measured on the serving corpus on 2026-09-12. The reason it
+carries no portable default is in `app.core.idf.IdfTable.weight`: the weighting
+tightens as a corpus grows, so a threshold fitted on the 2,422-chunk fixture is
+stricter on the 87,173-chunk serving collection. The value in config.py is fitted
+to the corpus it was measured on, not to this codebase - re-run this after any
+ingest that changes what is served.
 
     python scripts/sweep_coverage.py --collection wikipedia --suite serving_golden.jsonl
 

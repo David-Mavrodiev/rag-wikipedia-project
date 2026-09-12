@@ -34,10 +34,22 @@ class Settings(BaseSettings):
     # is kept because it is still the gate on a collection with no table built.
     # 0.0 = DISABLED (fall back to the count gate), NOT "accept anything": as a
     # literal threshold, zero would accept every result clearing the score floor
-    # and ship a WEAKER gate than the one it replaces. Left at 0.0 until the
-    # threshold is measured against the serving corpus — the redesign is only an
-    # improvement at a value that has been shown to beat false_accept_rate 0.600.
-    refusal_min_evidence_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    # and ship a WEAKER gate than the one it replaces.
+    #
+    # MEASURED 2026-09-12 on the SERVING corpus (87,173 chunks, serving_golden,
+    # 90 cases) with scripts/sweep_coverage.py, which is the only corpus this
+    # value may be fitted on: the IDF weighting tightens as a corpus grows, so a
+    # threshold fitted on the 2,422-chunk fixture is harsher on the served one.
+    # At 0.45, false_accept_rate goes 0.600 -> 0.500 and answerable_refusal_rate
+    # 0.000 -> 0.033. At 0.70 false_accept reaches 0.333 but 18.3% of answerable
+    # questions are refused, which buys the number rather than earning it, so it
+    # was rejected.
+    #
+    # This IMPROVES the gate, it does not fix it: 0.500 is still far from the
+    # 0.10 target and the audit still reports suspect_overfit. Re-measure after
+    # any ingest that changes the served corpus - `make idf`, then
+    # `python scripts/sweep_coverage.py --collection <name> --check <value>`.
+    refusal_min_evidence_coverage: float = Field(default=0.45, ge=0.0, le=1.0)
     retrieval_candidate_k: int = Field(default=20, ge=1, le=1000)
 
     allowed_origins: str = "*"

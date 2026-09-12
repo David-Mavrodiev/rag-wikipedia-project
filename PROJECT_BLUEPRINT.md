@@ -148,7 +148,7 @@ exactly what `/query` returns. Today the registry is used by the eval harness (�
 | Tokenizer | **tiktoken `cl100k_base`** | one tokenizer for chunking AND the context budget so all token math agrees |
 | Chunking | ~**512** tokens / ~**64** overlap | token-based |
 | Retrieval | dense top-**20** candidates → lexical-overlap rerank → top-**k=5**, context budget **3000 tokens** | hybrid (BM25) and cross-encoder rerank still out of scope |
-| Refusal | intent filter → evidence gate (score floor **0.45**, term overlap, high-confidence escape) → the model itself | an IDF-weighted coverage gate is built but shipped **disabled** (`0.0`) until a threshold is measured on the serving corpus |
+| Refusal | intent filter → evidence gate (score floor **0.45**, IDF-weighted coverage **≥ 0.45**, high-confidence escape) → the model itself | the coverage threshold was measured on the serving corpus and enabled 2026-09-12: `false_accept_rate` 0.600 → 0.500, for `answerable_refusal_rate` 0.000 → 0.033. It improves the gate; the absolute gates stay red |
 | Rate limiting | Redis token bucket (ASGI middleware) | `/query` answers 503 if Redis is unreachable |
 | Frontend | React + Vite + TypeScript | ask / answer / sources / quality |
 | Tests | pytest (backend), Vitest (frontend) | |
@@ -495,7 +495,7 @@ system can drive the first to zero by refusing everything.
 
 ## 9. Testing
 
-`pytest` — **331 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
+`pytest` — **332 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
 
 - **layering** — `app/` imports nothing outside an allowlist of base packages; the `direct` engine stays framework-free; the engine registry never imports a framework at module level.
 - **engine conformance** — a *differential* test running `POST /query` and `DirectEngine` over identical mocks and asserting identical answers, citations and refusals on every branch of the handler.

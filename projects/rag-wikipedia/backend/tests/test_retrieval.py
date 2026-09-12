@@ -76,7 +76,14 @@ def test_refusal_on_high_score_without_evidence_overlap(monkeypatch):
     query = "What is photosynthesis?"
     decision = decide_evidence(query, results)
     assert decision.refused is True
-    assert decision.reason == "insufficient_evidence_overlap"
+    # The DECISION is unchanged by enabling the coverage gate on 2026-09-12:
+    # this is still a refusal, on the same evidence, for the same reason in
+    # substance. What moved is the ATTRIBUTION. With an IDF table committed for
+    # the served collection and the gate enabled, the coverage test decides
+    # instead of the term-count test. On a collection with no table built the
+    # gate falls back to counting and this reads insufficient_evidence_overlap
+    # again - which is a real environmental dependency of this test.
+    assert decision.reason == "insufficient_evidence_coverage"
     assert decision.overlap_terms == []
 
     embedder = MagicMock()

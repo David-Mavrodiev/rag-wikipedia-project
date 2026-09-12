@@ -219,10 +219,12 @@ def decide_evidence(query: str, results: list[dict]) -> EvidenceDecision:
     )
 
     # 0.0 means DISABLED, not "accept anything". Read as a plain threshold,
-    # `coverage >= 0.0` is always true, so the default would have accepted every
-    # result that cleared the score floor — WEAKER than the count gate it
-    # replaces, shipped as an improvement. The coverage gate stays off until a
-    # threshold has been measured on the corpus it will run against.
+    # `coverage >= 0.0` is always true, so zero would accept every result that
+    # cleared the score floor — WEAKER than the count gate it replaces, shipped
+    # as an improvement. The threshold was measured on the serving corpus and
+    # enabled on 2026-09-12 (the reasoning is in app.core.config). Zero is still
+    # how the gate is turned off, and still what a collection with no IDF table
+    # falls back to.
     table = load_table(settings.collection)
     if table is None or runtime.refusal_min_evidence_coverage <= 0.0:
         if len(overlap) >= runtime.refusal_min_overlap_terms:

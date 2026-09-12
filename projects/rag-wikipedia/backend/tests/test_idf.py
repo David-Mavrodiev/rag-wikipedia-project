@@ -83,7 +83,9 @@ class TestWeighting:
         # Direct corollary of the two tests above, pinned because it is the
         # operational rule: a coverage threshold fitted on the fixture is
         # STRICTER on the serving corpus, so it must be re-measured rather than
-        # copied. This is why refusal_min_evidence_coverage ships disabled.
+        # copied. This is why refusal_min_evidence_coverage is fitted per corpus:
+        # the shipped 0.45 was measured on the serving corpus, and the same value
+        # read off the fixture would have been the wrong number.
         question = {"one_percent", "rare"}
         evidence = {"one_percent"}
         small = _table(n_documents=2_422, one_percent=24, rare=2)
