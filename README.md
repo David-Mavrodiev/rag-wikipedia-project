@@ -38,8 +38,10 @@ and the gates went red. They are still red. `false_accept_rate` is 0.600 against
 0.10 gate, and the report says `suspect_overfit` rather than being relaxed to pass.
 That 0.600 is a **retrieval-only** number — it scores the decision `retrieve()`
 makes, with no model involved. Measured end-to-end on the same corpus the model
-refuses almost everything retrieval lets through, and the evidence gate turns out
-to refuse nothing at all: [what 0.600 actually measures](projects/rag-wikipedia/docs/retrieval-only-vs-end-to-end.md).
+refuses almost everything retrieval lets through, and the evidence gate was, at the
+time, refusing nothing at all: [what 0.600 actually measures](projects/rag-wikipedia/docs/retrieval-only-vs-end-to-end.md).
+That gate has since been measured on the serving corpus and enabled at 0.45, taking
+`false_accept_rate` there to 0.500.
 
 **The gate gets weaker as the corpus grows.** `false_accept_rate` measured at three
 corpus sizes rises monotonically — 0.450 at 60 articles, 0.500 at 500, 0.600 at
