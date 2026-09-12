@@ -204,6 +204,12 @@ clears the gates without also refusing *"Who was Abraham Lincoln?"*, so the fix 
 evidence scoring that weighs which terms overlap - not a threshold. **The quality
 gates are red on purpose and have not been relaxed to hide it.**
 
+**What that number measures.** `false_accept_rate` is retrieval-only: it scores the
+decision `retrieve()` makes, before any model runs. Reconstructed case by case, the
+evidence gate refused *nothing* on the fixture suites - every retrieval-level refusal
+came from the intent filter, and the model made every genuine out-of-corpus call.
+That makes the current safety behaviour a property of one model: [docs/retrieval-only-vs-end-to-end.md](docs/retrieval-only-vs-end-to-end.md).
+
 ## Profiles
 
 | Profile | Articles | Source | Notes |
