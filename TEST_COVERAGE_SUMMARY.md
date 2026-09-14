@@ -6,10 +6,21 @@ integration-style coverage, and what coverage gaps remain.
 
 ## Current Snapshot
 
-Numeric line/branch coverage is **not configured**; the counts below are a test
-inventory, not a percentage claim.
+Numeric line/branch coverage is **configured and gated**: the backend measures
+**84.41%** (branch mode) and the frontend **76.53%** of lines, and CI fails when
+either drops below its floor. The inventory below counts *tests*, which is a
+different question — a high count and a low percentage can coexist, and both
+numbers are reported here for that reason.
 
 Reproduce with:
+
+```bash
+cd projects/rag-wikipedia
+make coverage            # backend: terminal + htmlcov/ + coverage.xml, gated
+make coverage-frontend   # frontend: terminal + coverage/, gated
+```
+
+Or the underlying commands:
 
 ```bash
 cd projects/rag-wikipedia/backend
@@ -21,8 +32,15 @@ npm ci && npm run test -- --run
 npx tsc --noEmit
 ```
 
-Backend lint and tests run in CI on every push and pull request, on Python 3.12;
-the frontend suite is not wired into CI yet.
+Backend lint, tests and coverage run in CI on every push and pull request, on
+Python 3.12; the frontend suite and its coverage gate run in CI too, in a
+separate `Frontend CI` workflow on Node 20.
+
+The floors are held, not aspirational: `fail_under = 84` in
+`backend/pyproject.toml` and `test.coverage.thresholds` in
+`frontend/vite.config.ts` were each set to the measured number rounded down.
+Ratchet them up as coverage improves; lowering one to make a red build green is
+the same move as relaxing an eval gate.
 
 The inventory below is **generated** by `scripts/docs_check.py` from
 `pytest --collect-only`, not maintained by hand — this document previously
@@ -220,14 +238,17 @@ These tests cover component behavior, not browser-level end-to-end behavior.
 
 The main gaps are:
 
-- No numeric line or branch coverage report is configured for backend or frontend.
 - No full live integration test starts FastAPI, Qdrant, Redis, Ollama, and the
   frontend proxy together.
 - No deployment smoke test verifies a deployed revision's health, query, refusal,
   and frontend behavior.
-- The frontend suite is not wired into CI, even though it now runs reproducibly
-  from a committed lockfile.
 - Backend has strong behavioral coverage, but no static type-checking gate yet.
+- **The measured coverage gaps are concentrated, not diffuse.** Backend:
+  `eval/bench_ingest.py` (30%) and `eval/audit.py` (49%) are long
+  report-writing scripts, and `pipeline/sources.py` (60%) is the Hugging Face
+  download path the fixture profile never takes. Frontend: `App.tsx` is at 0% —
+  its fetch, error and loading branches have no test at all, which is what
+  drags the frontend number down from the components' 93.88%.
 - **The eval suites score retrieval, not generation.** Every metric above is
   computed from the *evidence gate's* decision, before the model runs. A query
   the gate accepts on weak evidence may still be refused by the model, and an

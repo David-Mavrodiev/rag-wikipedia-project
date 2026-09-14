@@ -1,0 +1,73 @@
+name: Frontend CI
+
+# Vitest and its coverage gate. Separate from Backend CI rather than a job
+# inside it: that workflow installs a Python toolchain and a ~200 MB dependency
+# graph, and none of it is needed to run four React component suites.
+#
+# Deliberately NO deployment, NO secrets, and NO production credentials - this
+# workflow cannot change anything outside the runner.
+on:
+  push:
+  pull_request:
+
+# Read-only token: the job never needs to write to the repository.
+permissions:
+  contents: read
+
+# A newer push to the same ref cancels the older run instead of queueing both.
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# No path filter, matching Backend CI. The job takes about a minute, and a
+# filtered workflow reports no status at all on the runs it skips - which is
+# indistinguishable from "not finished yet" to a branch protection rule.
+jobs:
+  frontend:
+    name: tests + coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: projects/rag-wikipedia/frontend
+
+    steps:
+      # Pinned to an immutable SHA, not a moving tag: a tag can be repointed at
+      # new code, and this step runs before anything in the repo is reviewed.
+      # persist-credentials: false stops the job leaving a usable token in
+      # .git/config for every later step.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.2.2
+        with:
+          persist-credentials: false
+
+      # Node 20 because frontend/Dockerfile builds on node:20-alpine - CI should
+      # run the tests on the runtime the image ships, not a newer one that
+      # happens to be the runner default.
+      - uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af  # v4.1.0
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: projects/rag-wikipedia/frontend/package-lock.json
+
+      # `npm ci`, not `npm install`: it installs exactly what package-lock.json
+      # pins and fails when the lock and package.json disagree, instead of
+      # quietly resolving a different tree than the one committed.
+      - name: Install dependencies
+        run: npm ci
+
+      # The gate. Thresholds live in vite.config.ts under
+      # test.coverage.thresholds, so this command enforces the same number that
+      # `make coverage-frontend` does locally; vitest exits non-zero when the
+      # measured coverage falls below them.
+      - name: Tests + coverage
+        run: npm run test:coverage
+
+      # `always()`: the report is most useful precisely when the test step
+      # failed, because it names the lines that are not covered.
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+        with:
+          name: frontend-coverage
+          path: projects/rag-wikipedia/frontend/coverage/
+          if-no-files-found: error

@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all idf idf-fixture sweep-coverage compare-engines
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test coverage coverage-frontend lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all idf idf-fixture sweep-coverage compare-engines
 
 up:
 	docker compose up --build -d
@@ -38,6 +38,23 @@ eval-audit:
 
 test:
 	cd backend && uv run pytest tests/ -v
+
+# --- code coverage -----------------------------------------------------------
+# NOTE: "coverage" here means CODE coverage - how much of the source the tests
+# execute. It is unrelated to `sweep-coverage` and
+# `refusal_min_evidence_coverage` below, which measure how much of a question's
+# EVIDENCE the retrieved chunks carry. Same word, two different subjects.
+#
+# Terminal summary + browsable HTML (backend/htmlcov/index.html) + coverage.xml
+# for CI tooling. The source packages, branch mode and the fail_under floor all
+# live in backend/pyproject.toml under [tool.coverage.*], so this target and CI
+# enforce the same number.
+coverage:
+	cd backend && uv run pytest tests/ --cov --cov-report=term-missing --cov-report=html --cov-report=xml
+
+# Thresholds live in frontend/vite.config.ts under test.coverage.thresholds.
+coverage-frontend:
+	cd frontend && npm run test:coverage
 
 lint:
 	cd backend && uv run ruff check app/ pipeline/ eval/ engines/ providers/ tests/ ../scripts

@@ -25,6 +25,8 @@ for the section, or delegate the reading. See `AI_CODING_WORKFLOW.md`.
 ```bash
 make test               # pytest, backend
 make lint               # ruff
+make coverage           # backend pytest under coverage; fails below the floor
+make coverage-frontend  # frontend vitest under coverage; same
 make eval-fixture-all   # ingest the committed fixture, then score it
 make docs-check         # assert documented facts against the repository
 cd frontend && npm test # vitest
@@ -38,6 +40,11 @@ Python 3.12, uv workspace (`.venv` here, `backend` is a member) — always
 - **The red gates are red on purpose.** `false_accept_rate` is 0.600 against a
   0.10 gate and the eval exits non-zero. Never relax a threshold to make it
   pass; fix the refusal logic, or record why it can't be fixed.
+- **Coverage floors ratchet up, never down.** `fail_under = 84` in
+  `backend/pyproject.toml` and `test.coverage.thresholds` in
+  `frontend/vite.config.ts` are the measured numbers rounded down. If a change
+  drops coverage, add the test — lowering a floor keeps the gate green while
+  making it mean less, which is the same failure as relaxing an eval gate.
 - **A collection belongs to a profile.** The committed suites describe the
   fixture corpus in `wikipedia_eval`; the served corpus is `wikipedia`. Never
   score one against the other — use the paired `make` targets.
