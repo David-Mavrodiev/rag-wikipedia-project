@@ -26,6 +26,8 @@ from pathlib import Path
 APP = Path(__file__).resolve().parents[1] / "app"
 DIRECT_ENGINE = Path(__file__).resolve().parents[1] / "engines" / "direct.py"
 ENGINE_REGISTRY_FILE = Path(__file__).resolve().parents[1] / "engines" / "registry.py"
+PROVIDER_REGISTRY_FILE = Path(__file__).resolve().parents[1] / "providers" / "registry.py"
+VERTEX_PROVIDER = Path(__file__).resolve().parents[1] / "providers" / "vertex.py"
 
 # The packages `app/` is allowed to reach for. Every one of these is a BASE
 # dependency, so the serving path never needs an optional extra installed.
@@ -67,7 +69,7 @@ FORBIDDEN_PREFIXES = (
 )
 
 # Packages that are part of this project rather than third party.
-LOCAL = frozenset({"app", "pipeline", "eval", "engines", "tests"})
+LOCAL = frozenset({"app", "pipeline", "eval", "engines", "providers", "tests"})
 
 
 def _imports() -> dict[str, set[str]]:
@@ -209,4 +211,50 @@ def test_app_never_imports_an_engine():
     assert not importers, (
         f"`app/` imports `engines/` in {importers}. The dependency runs the other "
         "way: an engine orchestrates app/core, never the reverse."
+    )
+
+
+def test_app_never_imports_a_provider():
+    # Same direction, different reason. `providers/` IMPLEMENTS the interfaces
+    # `app/` declares, so an import here would point the core at a package
+    # whose entire job is cloud SDK adapters - and would do it while the two
+    # tests above still passed, because they only see what `app/` imports
+    # DIRECTLY. Wiring /query to dispatch through the registry therefore needs
+    # a composition root outside `app/`, not an import inside it.
+    importers = sorted(_imports().get("providers", ()))
+    assert not importers, (
+        f"`app/` imports `providers/` in {importers}. The core declares the LLM and "
+        "Embedder interfaces; it must not reach for their implementations. Compose "
+        "them at the edge instead."
+    )
+
+
+def test_the_provider_registry_does_not_hard_depend_on_a_cloud_sdk():
+    # `import providers` has to work wherever the `gcp` extra is NOT installed:
+    # every CI job, and any deployment serving the local models. A module-level
+    # import here would break both, at import time rather than when the
+    # provider is chosen. Same rule as the engine registry above.
+    hard = sorted(
+        name
+        for name in _module_level_third_party(PROVIDER_REGISTRY_FILE)
+        if name.startswith(FORBIDDEN_PREFIXES)
+    )
+    assert not hard, (
+        f"providers/registry.py imports {hard} at module level. Import it inside the "
+        "factory instead, so choosing a local model does not require the gcp extra."
+    )
+
+
+def test_the_vertex_adapter_imports_its_sdk_lazily():
+    # The adapter itself, not just the registry. `providers/vertex.py` is
+    # imported by name from the registry factory, so an SDK import at ITS
+    # module level would reintroduce the hard dependency one level down.
+    hard = sorted(
+        name
+        for name in _module_level_third_party(VERTEX_PROVIDER)
+        if name.startswith(FORBIDDEN_PREFIXES)
+    )
+    assert not hard, (
+        f"providers/vertex.py imports {hard} at module level. The SDK belongs inside "
+        "__init__, so the module can be imported without the gcp extra installed."
     )

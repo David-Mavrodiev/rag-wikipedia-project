@@ -2,10 +2,24 @@
 # providers.py — LLM / Embedder REGISTRY  (DORMANT capability · Option A)
 # =============================================================================
 #
-# STATUS: this whole file is commented out on purpose. It does NOTHING today.
-# Importing it is a no-op (a module of comments = an empty module), so the app
-# keeps running exactly as-is on the local BGEEmbedder + OllamaLLM. Nothing here
-# executes, imports, or loads a dependency until you deliberately activate it.
+# STATUS (2026-09-14): SUPERSEDED IN PART - the registry described here is now
+# REAL, and it lives at `backend/providers/`. It has Vertex AI adapters and
+# `make_llm` / `make_embedder`, selected by LLM_CHOICE / EMBED_CHOICE exactly as
+# sketched below.
+#
+# It could not be activated HERE. The layering test parses `app/` with
+# ast.walk, which sees an import inside a function body just as well as one at
+# module level, so even a lazily imported cloud SDK is a violation in this
+# package. That is precisely why this file is comments rather than code, and
+# why the live implementations sit behind the interface in their own package.
+#
+# WHAT IS STILL ONLY HERE: the Azure OpenAI and OpenAI adapters below, which
+# remain unimplemented. To use one, PORT it into `backend/providers/` the way
+# vertex.py was done - do not uncomment it in place, the layering test will
+# reject it and should.
+#
+# Everything below is kept as the design note it has always been. None of it
+# executes: a module of comments is an empty module.
 #
 # WHAT IT GIVES YOU — a ONE-VALUE swap for ANY model.
 #   Switching Ollama-3B -> Ollama-1B, or Ollama -> Azure OpenAI / OpenAI / any

@@ -59,6 +59,25 @@ agent = [
     "langchain-core>=1.6,<2",
 ]
 
+# Vertex AI adapters for the LLM and Embedder interfaces (backend/providers/).
+# Kept out of the base dependencies for the same reason as `agent`: the served
+# path defaults to the local models, which need none of this.
+#
+# NOT INSTALLED IN CI, on purpose. providers/vertex.py imports the SDK inside
+# __init__, so tests/test_vertex.py patches sys.modules with a fake the way
+# tests/test_llm.py does for ollama. The contracts are therefore enforced on
+# every run on a machine that has never authenticated to Google, and
+# tests/test_layering.py asserts the laziness that makes that possible.
+#
+# `vertexai` is a namespace shipped INSIDE google-cloud-aiplatform, which is
+# why the import name and the distribution name differ. Pinned to the 1.x line:
+# unlike the pins above, this range has NOT been exercised against a live
+# billed endpoint, so a major bump deserves a deliberate diff rather than
+# arriving silently the next time someone re-locks.
+gcp = [
+    "google-cloud-aiplatform>=1.71,<2",
+]
+
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
