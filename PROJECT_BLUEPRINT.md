@@ -151,8 +151,8 @@ exactly what `/query` returns. Today the registry is used by the eval harness (�
 | Refusal | intent filter → evidence gate (score floor **0.45**, IDF-weighted coverage **≥ 0.45**, high-confidence escape) → the model itself | the coverage threshold was measured on the serving corpus and enabled 2026-09-12: `false_accept_rate` 0.600 → 0.500, for `answerable_refusal_rate` 0.000 → 0.033. It improves the gate; the absolute gates stay red |
 | Rate limiting | Redis token bucket (ASGI middleware) | `/query` answers 503 if Redis is unreachable |
 | Frontend | React + Vite + TypeScript | ask / answer / sources / quality |
-| Tests | pytest (backend), Vitest (frontend) | |
-| CI | GitHub Actions: `backend-ci`, `eval-quality` | lint, docs-check, audit-freshness and tests on every push; a fixture re-measurement with the delta posted on every PR |
+| Tests | pytest (backend), Vitest (frontend) | both run under a coverage gate: **84%** floor backend, **76%** lines frontend |
+| CI | GitHub Actions: `backend-ci`, `frontend-ci`, `eval-quality` | lint, docs-check, audit-freshness and tests-under-coverage on every push; Vitest and its coverage gate on every push; a fixture re-measurement with the delta posted on every PR |
 | Deploy | Docker Compose (local) · Azure Container Apps (cloud) | GCP is a planned second target, not a replacement (§1) |
 
 ---
@@ -192,9 +192,11 @@ projects/rag-wikipedia/
 ```
 
 CI lives at the repository root in `.github/workflows/`: `backend-ci.yml` runs lint,
-docs-check, audit-freshness and the tests on every push; `eval-quality.yml`
-re-ingests the fixture corpus, re-runs the audit and posts the delta on every pull
-request that touches retrieval, the eval harness or the pipeline.
+docs-check, audit-freshness and the tests under coverage on every push, failing when
+the measured total drops below the floor in `backend/pyproject.toml`;
+`frontend-ci.yml` runs Vitest under its own coverage gate on Node 20;
+`eval-quality.yml` re-ingests the fixture corpus, re-runs the audit and posts the
+delta on every pull request that touches retrieval, the eval harness or the pipeline.
 
 ---
 
@@ -595,8 +597,9 @@ The LangGraph engine's rewrite branch executed zero times in 40 cases, because t
 - [ ] LLM/embedder **model** swappable via config within the local providers (`LLM_MODEL=llama3.2:1b`, `EMBED_MODEL=...`). *Cross-provider* swapping (Azure/OpenAI via `LLM_CHOICE`) is **future work** — the registry is dormant (§17).
 - [ ] `make eval-fixture-all`, then `make audit-baseline` → per-suite metrics with provenance, and `make audit-freshness` green. The absolute gates are known-red (§8); a **regression** is what fails.
 - [ ] `make test`, `make lint`, `make docs-check` green — including the Qdrant contract tests, the engine conformance test and the layering test.
+- [ ] `make coverage` and `make coverage-frontend` green — both gate on a committed floor, so a drop fails rather than merely being reported.
 - [ ] `make compare-engines` produces a report with no `INCOMPLETE` banner.
-- [ ] On the PR, both workflows green: `backend-ci`, and `eval-quality` with its delta comment posted.
+- [ ] On the PR, all three workflows green: `backend-ci`, `frontend-ci`, and `eval-quality` with its delta comment posted.
 - [ ] Demo console answers a grounded question and a refusal, shows latency + metrics.
 
 ---

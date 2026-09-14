@@ -64,6 +64,18 @@ Or open http://localhost:5173 in your browser.
 make test
 ```
 
+Under coverage, with the gate CI enforces:
+
+```bash
+make coverage            # backend: terminal + htmlcov/ + coverage.xml
+make coverage-frontend   # frontend: terminal + coverage/
+```
+
+Both fail when coverage drops below the committed floor — `fail_under` in
+`backend/pyproject.toml`, `test.coverage.thresholds` in
+`frontend/vite.config.ts`. Raise those floors as coverage improves; do not lower
+one to make a build green.
+
 ### 6. Run evaluation
 
 ```bash

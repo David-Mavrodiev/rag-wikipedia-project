@@ -91,6 +91,40 @@ jobs:
 
       # No Qdrant or Ollama service is needed: the suite uses an in-memory Qdrant
       # for the contract tests and mocks the embedder and LLM everywhere else.
-      - name: Tests
+      #
+      # Runs under coverage, and the run FAILS when the measured total drops
+      # below the fail_under floor in backend/pyproject.toml - a green suite
+      # over shrinking coverage is how untested code lands unnoticed. The floor
+      # lives with the config rather than in a flag here, so `make coverage`
+      # locally and this job enforce one number.
+      - name: Tests + coverage
         working-directory: projects/rag-wikipedia/backend
-        run: uv run --locked pytest -q
+        run: uv run --locked pytest -q --cov --cov-report=term-missing --cov-report=xml --cov-report=html
+
+      # Puts the table on the run's summary page, so the number is visible
+      # without downloading an artifact. `|| true` because the gate is the
+      # step above - this one only reports, and must not turn a pass into a
+      # failure or mask one.
+      - name: Publish the coverage summary
+        if: always()
+        working-directory: projects/rag-wikipedia/backend
+        run: |
+          {
+            echo "### Backend coverage"
+            echo ""
+            echo '```text'
+            uv run --locked coverage report --precision=2 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # `always()`: the report is most useful precisely when the test step
+      # failed, because it names the lines that are not covered.
+      - name: Upload the coverage report
+        if: always()
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08  # v4.6.0
+        with:
+          name: backend-coverage
+          path: |
+            projects/rag-wikipedia/backend/coverage.xml
+            projects/rag-wikipedia/backend/htmlcov/
+          if-no-files-found: error

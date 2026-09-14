@@ -613,14 +613,17 @@ concurrent audit without disabling it.
 
 ## Known gaps
 
-- No numeric pytest/Vitest coverage report is configured.
 - No live service integration test starts FastAPI, Qdrant, Redis, Ollama, and the
   frontend proxy together.
 - No deployment smoke test verifies a deployed revision's health, query, refusal, and
   frontend behavior.
-- The frontend suite is not wired into CI. `package-lock.json` is now committed and
-  the suite runs reproducibly, so this is a workflow gap rather than a dependency one.
 - No static type-checking gate on the backend (the frontend has `tsc --noEmit`).
+- **Coverage is measured and gated, and the remaining gaps are named.** Backend is at
+  84.41% branch coverage against a `fail_under = 84` floor; the misses sit in
+  `eval/bench_ingest.py` (30%), `eval/audit.py` (49%) and `pipeline/sources.py` (60%),
+  which are report-writing scripts and the Hugging Face download path. Frontend is at
+  76.53% of lines, held down by `App.tsx` at 0% — its fetch, error and loading
+  branches have no test at all.
 - **The eval suites score the retrieval decision, not what the user receives.**
   Every metric is computed from the evidence gate's verdict, before the model runs, so
   a query the gate accepts on weak evidence may still be refused by the model. The
@@ -643,6 +646,8 @@ concurrent audit without disabling it.
 cd projects/rag-wikipedia
 make test                                   # backend pytest, verbose
 make lint                                   # backend ruff
+make coverage                               # backend pytest under coverage, gated
+make coverage-frontend                      # frontend Vitest under coverage, gated
 
 cd frontend
 npm ci                                      # reproducible install from the lockfile
@@ -652,7 +657,8 @@ npx tsc --noEmit                            # frontend type check
 
 No Qdrant, Redis, Ollama or Docker is needed for either suite: the vector-store
 contract tests use an in-memory Qdrant, and everything else is mocked. That is what
-lets `.github/workflows/backend-ci.yml` run lint and tests with no services attached.
+lets `.github/workflows/backend-ci.yml` run lint and tests with no services attached,
+and `.github/workflows/frontend-ci.yml` run Vitest with nothing but Node.
 
 ## What to say about your tests in an interview
 
@@ -662,4 +668,4 @@ lets `.github/workflows/backend-ci.yml` run lint and tests with no services atta
 - **"Validation and failure mapping are tested"** — empty/oversized input → 422; a dead dependency → 503; a refusal is a normal 200.
 - **"A test that cannot fail is worse than no test"** — `test_retrieval.py` had a refusal test whose query tripped an earlier short-circuit, so it never reached the branch it named, and it patched `settings` where the code reads runtime config. It passed for two wrong reasons. It now asserts the decision *reason*, not just the outcome.
 - **"I check that a new test fails against the old code"** — before keeping any regression test, I revert the fix and confirm the test goes red. That is the only evidence that it tests what its name claims.
-- **"I do not overclaim coverage"** — the suite has strong behavioral coverage, but numeric line/branch coverage is not configured yet, and the eval numbers describe retrieval rather than the answer the user finally receives.
+- **"I do not overclaim coverage"** — the suite has strong behavioral coverage, and the numeric line/branch number is now measured and gated rather than asserted (84.41% backend, 76.53% frontend), but the eval numbers still describe retrieval rather than the answer the user finally receives.

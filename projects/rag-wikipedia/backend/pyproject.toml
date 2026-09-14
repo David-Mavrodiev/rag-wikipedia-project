@@ -37,7 +37,7 @@ dependencies = [
 # `uv sync --locked` then makes every CI job pay to install it.
 #
 # Who installs what, and why (the workflows carry the same note):
-#   dev    - pytest, ruff. backend-ci only, via `--extra dev`.
+#   dev    - pytest, pytest-cov, ruff. backend-ci only, via `--extra dev`.
 #   agent  - the graph runtime for the langgraph engine. To be added alongside
 #            backend/engines/; backend-ci gains `--extra agent` at that point,
 #            because an agent whose tests do not run is worse than a slow job.
@@ -81,6 +81,10 @@ gcp = [
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
+    # Coverage measurement. >=5 is the first line that reads its settings from
+    # pyproject.toml's [tool.coverage.*] rather than needing a .coveragerc, so
+    # the gate below travels with the project instead of a second config file.
+    "pytest-cov>=5",
     "ruff>=0.4",
     "httpx>=0.27",
 ]
@@ -98,3 +102,63 @@ include = ["app", "pipeline", "eval", "engines", "tests"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+# --- coverage ---------------------------------------------------------------
+# Config lives here rather than in a .coveragerc so `pytest --cov`, `make
+# coverage` and the CI gate all read the same numbers from one file.
+[tool.coverage.run]
+# Every package this project ships, named explicitly. Naming them (rather than
+# letting --cov default to "whatever got imported") is what makes an untouched
+# module count as 0% instead of vanishing from the report: a file nobody
+# imports is exactly the gap a coverage number exists to expose.
+#
+# `tests` is deliberately absent - measuring the suite against itself reports
+# the test files' own execution, which is always ~100% and says nothing about
+# the code under test.
+source = ["app", "pipeline", "eval", "engines", "providers"]
+
+# Branch coverage, not just statement coverage. The refusal and retrieval paths
+# are dense with conditionals whose false side is the interesting one; a
+# statement-only number calls an `if` covered when only one side ever ran.
+branch = true
+
+omit = [
+    "*/__pycache__/*",
+    "*/tests/*",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+# The floor, enforced locally by `make coverage` and in CI by the same command.
+# Set to the measured number rounded down, and RATCHETED UP as coverage
+# improves - never down to make a red build green. Lowering it is the same move
+# as relaxing an eval gate: the number keeps being reported while quietly
+# meaning less.
+#
+# Measured 84.41% over 362 tests when this gate was introduced, so 84 is the
+# baseline held, not an aspiration. The gap is concentrated and known:
+# eval/bench_ingest.py (30%) and eval/audit.py (49%) are long report-writing
+# scripts, and pipeline/sources.py (60%) is the Hugging Face download path that
+# the fixture profile deliberately never takes.
+fail_under = 84
+
+exclude_also = [
+    # Type-checking-only imports never execute at runtime.
+    "if TYPE_CHECKING:",
+    # Script entry points: these run under `make ingest` / `make eval`, not
+    # under pytest, so counting them would measure the Makefile, not the code.
+    "if __name__ == .__main__.:",
+    # Interface declarations. A Protocol/ABC body that raises is a contract,
+    # not behaviour - the implementations are what the tests must cover.
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+    "\\.\\.\\.",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+[tool.coverage.xml]
+output = "coverage.xml"
