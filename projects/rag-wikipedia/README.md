@@ -211,7 +211,10 @@ came from the intent filter, and the model made every genuine out-of-corpus call
 That makes the current safety behaviour a property of one model: [docs/retrieval-only-vs-end-to-end.md](docs/retrieval-only-vs-end-to-end.md).
 Since 2026-09-12 the gate is enabled at 0.45, measured on the serving corpus:
 `false_accept_rate` 0.600 -> 0.500 there, and 0.500 -> 0.400 on golden and
-adversarial at no cost in false refusals.
+adversarial at no cost in false refusals. The 2026-09-13 re-run shows what that
+bought end-to-end: the gate now makes 1 of 8 retrieval-level refusals instead of
+0 of 7, so one out-of-corpus question is declined by the system rather than by
+the model - and seven still are not.
 
 ## Profiles
 

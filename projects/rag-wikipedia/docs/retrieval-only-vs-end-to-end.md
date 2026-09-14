@@ -8,8 +8,8 @@
 > 0.500 → 0.400 at no cost in false refusals (holdout is unchanged at 0.600).
 > So the central finding below — that the evidence gate refuses nothing and the
 > model does all the out-of-corpus work — describes the system *before* that
-> change. What has **not** been re-measured is the end-to-end split, and whether
-> the LangGraph rewrite branch is now reachable. Both need a re-run.
+> change. The re-run it asked for has since been done, on 2026-09-13: see
+> [The re-run](#the-re-run-2026-09-13-what-enabling-the-gate-actually-did).
 
 The published `false_accept_rate` is a **retrieval-only** number. It scores the
 decision `retrieve()` makes, with no model involved. Measured end-to-end — the
@@ -103,6 +103,8 @@ The graph engine's rewrite branch executed zero times across the same 40 cases.
 It is reached only when `decide_evidence` refuses — and `decide_evidence` never
 refuses. The retry loop was not unlucky; it was unreachable by construction. Any
 future verdict on that pattern has to wait until the gate it depends on can fire.
+It has since fired, exactly once — see
+[The re-run](#the-re-run-2026-09-13-what-enabling-the-gate-actually-did).
 
 ## What this changes, and what it does not
 
@@ -119,6 +121,65 @@ because no test asserts that the *model* refuses.
 
 **Therefore:** this measurement must be re-run per provider, not once.
 
+## The re-run (2026-09-13): what enabling the gate actually did
+
+Step 3 of *Next* below, on the same corpus, suites, model, temperature and seed,
+with `refusal_min_evidence_coverage = 0.45` in force. Four engine/suite pairs,
+**zero errored cases**, all four complete.
+
+**The rewrite branch is reachable.** It executed for the first time in the
+project's history, on exactly the kind of case this document predicted would be
+required to reach it — one where the evidence gate, not the intent filter, does
+the refusing:
+
+| case | question | rewrites | reason | correct |
+|---|---|---:|---|---|
+| `adv-017` | *Who was Apollo Creed?* | 2 | `insufficient_evidence_coverage` | yes |
+
+Two bounded rewrites, then a correct refusal.
+
+**The gate fired once in 40 cases, and the end-to-end score did not move.**
+`false_accept_rate` is 0.000 on `holdout` and 0.100 on `adversarial` — identical
+to the figures above. Read carelessly that says enabling the gate achieved
+nothing. What actually happened is the thing this document exists to care about:
+
+> `adv-017` is in the list above of questions that *reached the model and were
+> refused by it*. It is now refused by **retrieval**, at zero model calls in
+> `DirectEngine`.
+
+The score is unchanged; the *kind* of safety behind it is not. One question moved
+from "the model was willing to say it didn't know" to "the system declined
+structurally". Seven have not.
+
+**The engines still agree at the retrieval layer.** Seven identical intent-filter
+refusals in both, plus `adv-017` — which `DirectEngine` labels coarsely
+`no_evidence` at zero model calls, while the graph labels it precisely and spends
+two calls rewriting before reaching the same verdict. Same decision, different
+price, better telemetry.
+
+### The graph's verify node is a net cost on this corpus
+
+The two engines disagree on 3 of 40 cases. All three go the same way:
+
+| case | question | `direct` | `langgraph` | expected |
+|---|---|---|---|---|
+| `adv-001` | *…what creature did Apollo slay at Delphi?* | answered | `unverified_citations` | answerable |
+| `adv-005` | *What does the pH scale measure about an acid?* | answered | `unverified_citations` | answerable |
+| `h-005` | *Who was Allan Dwan?* | answered | `unverified_citations` | answerable |
+
+All three are answerable, `DirectEngine` answers all three, and the citation
+check refuses them. It caught **no** additional unanswerable question:
+`false_accept_rate` is identical on both suites, while `answerable_refusal_rate`
+is strictly worse — 0.067 → 0.133 on `holdout`, 0.000 → 0.200 on `adversarial`.
+
+So on this corpus the verify node buys no safety and costs three correct answers.
+That is a result *against* the pattern this project added. It is recorded rather
+than tuned away, which is the same rule the red quality gates are held to.
+
+**Do not quote the latency column from this run.** It was collected on a machine
+under heavy memory pressure — `adv-017` clocks 3.8s against a ~50s typical case.
+The decision metrics are unaffected; the timings are not measurements.
+
 ## Limits
 
 - One corpus (the committed 150-article fixture, `wikipedia_eval`, 2,422 vectors),
@@ -134,12 +195,16 @@ because no test asserts that the *model* refuses.
 
 ## Next
 
-1. Measure a coverage threshold with `scripts/sweep_coverage.py` and enable
-   `refusal_min_evidence_coverage`, so the evidence gate can refuse at all.
-2. Re-run this measurement; the gate's contribution should stop being zero.
-3. Only then re-run the engine head-to-head: the rewrite branch becomes reachable,
-   and the LangGraph engine gets a fair test.
-4. Re-run it again against each new provider — starting with Vertex AI.
+1. ~~Measure a coverage threshold with `scripts/sweep_coverage.py` and enable
+   `refusal_min_evidence_coverage`~~ — done 2026-09-12, at 0.45.
+2. ~~Re-run this measurement; the gate's contribution should stop being zero.~~ —
+   done 2026-09-13. It is now 1 of 8 retrieval-level refusals, not 0 of 7.
+3. ~~Re-run the engine head-to-head~~ — done 2026-09-13. The rewrite branch
+   executed, and the LangGraph engine got its fair test: it lost, on
+   `answerable_refusal_rate`, for no gain in `false_accept_rate`.
+4. Re-run it again against each new provider — starting with Vertex AI. **Still
+   open, and still the point:** seven of the eight unanswerable questions that
+   retrieval accepts are declined by the model, not by the system.
 
 ## Provenance
 
@@ -148,3 +213,8 @@ Retrieval-only figures: `backend/eval/audit_report.json`, generated at commit
 `BAAI/bge-small-en-v1.5`, k=5. End-to-end figures:
 `backend/eval/engine_comparison.json`, 2026-09-10, same corpus and embedder,
 `llama3.2:3b`, temperature 0, seed 0, zero errored cases. Written 2026-09-12.
+
+Re-run figures (the 2026-09-13 section): the same `engine_comparison.json`,
+regenerated with `refusal_min_evidence_coverage = 0.45` and otherwise identical
+inputs — same corpus, embedder, model, temperature, seed and suites — four
+engine/suite pairs, zero errored cases, all complete.

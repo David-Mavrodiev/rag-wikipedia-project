@@ -18,7 +18,7 @@
         "false_accept_rate": 0.0,
         "answerable_refusal_rate": 0.06666666666666667,
         "mean_llm_calls": 0.9,
-        "mean_latency_ms": 61434.875,
+        "mean_latency_ms": 48375.240000000005,
         "cases": [
           {
             "id": "h-001",
@@ -29,7 +29,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 68779.8
+            "latency_ms": 53033.4
           },
           {
             "id": "h-002",
@@ -40,7 +40,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 74421.1
+            "latency_ms": 54677.4
           },
           {
             "id": "h-003",
@@ -51,7 +51,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 66073.2
+            "latency_ms": 45374.8
           },
           {
             "id": "h-004",
@@ -62,7 +62,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 62492.9
+            "latency_ms": 42177.2
           },
           {
             "id": "h-005",
@@ -73,7 +73,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 66809.3
+            "latency_ms": 49487.0
           },
           {
             "id": "h-006",
@@ -84,7 +84,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 68227.6
+            "latency_ms": 48799.8
           },
           {
             "id": "h-007",
@@ -95,7 +95,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 62627.6
+            "latency_ms": 44114.8
           },
           {
             "id": "h-008",
@@ -106,7 +106,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 65884.6
+            "latency_ms": 49585.2
           },
           {
             "id": "h-009",
@@ -117,7 +117,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 69478.6
+            "latency_ms": 49257.5
           },
           {
             "id": "h-010",
@@ -128,7 +128,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 76869.9
+            "latency_ms": 49072.7
           },
           {
             "id": "h-011",
@@ -139,7 +139,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 59874.2
+            "latency_ms": 40439.2
           },
           {
             "id": "h-012",
@@ -150,7 +150,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 75420.9
+            "latency_ms": 64872.4
           },
           {
             "id": "h-013",
@@ -161,7 +161,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 76620.4
+            "latency_ms": 74847.2
           },
           {
             "id": "h-014",
@@ -172,7 +172,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 78396.2
+            "latency_ms": 75173.6
           },
           {
             "id": "h-015",
@@ -183,7 +183,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 71583.5
+            "latency_ms": 67962.2
           },
           {
             "id": "h-016",
@@ -194,7 +194,7 @@
             "refusal_reason": "no_evidence",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 0.1
+            "latency_ms": 0.7
           },
           {
             "id": "h-017",
@@ -216,7 +216,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 67495.3
+            "latency_ms": 56348.5
           },
           {
             "id": "h-019",
@@ -227,7 +227,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 67251.3
+            "latency_ms": 56880.1
           },
           {
             "id": "h-020",
@@ -238,7 +238,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 50391.0
+            "latency_ms": 45401.1
           }
         ]
       },
@@ -250,8 +250,8 @@
         "refusal_accuracy": 0.9,
         "false_accept_rate": 0.1,
         "answerable_refusal_rate": 0.0,
-        "mean_llm_calls": 0.75,
-        "mean_latency_ms": 55628.094999999994,
+        "mean_llm_calls": 0.7,
+        "mean_latency_ms": 46047.47,
         "cases": [
           {
             "id": "adv-001",
@@ -262,7 +262,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 66547.0
+            "latency_ms": 55960.6
           },
           {
             "id": "adv-002",
@@ -273,7 +273,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 71037.2
+            "latency_ms": 69080.8
           },
           {
             "id": "adv-003",
@@ -284,7 +284,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 68595.2
+            "latency_ms": 64247.0
           },
           {
             "id": "adv-004",
@@ -295,7 +295,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 78979.8
+            "latency_ms": 62620.6
           },
           {
             "id": "adv-005",
@@ -306,7 +306,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 158600.1
+            "latency_ms": 55341.6
           },
           {
             "id": "adv-006",
@@ -317,7 +317,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 74878.7
+            "latency_ms": 81982.5
           },
           {
             "id": "adv-007",
@@ -328,7 +328,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 62555.5
+            "latency_ms": 150420.8
           },
           {
             "id": "adv-008",
@@ -339,7 +339,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 59257.2
+            "latency_ms": 47946.8
           },
           {
             "id": "adv-009",
@@ -350,7 +350,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 65516.3
+            "latency_ms": 54896.1
           },
           {
             "id": "adv-010",
@@ -361,7 +361,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 69241.2
+            "latency_ms": 51524.5
           },
           {
             "id": "adv-011",
@@ -427,7 +427,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 68791.3
+            "latency_ms": 53779.3
           },
           {
             "id": "adv-017",
@@ -435,10 +435,10 @@
             "expected_refusal": true,
             "refused": true,
             "correct": true,
-            "refusal_reason": "soft_refusal",
-            "llm_calls": 1,
+            "refusal_reason": "no_evidence",
+            "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 68564.5
+            "latency_ms": 59.7
           },
           {
             "id": "adv-018",
@@ -449,7 +449,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 79786.3
+            "latency_ms": 68725.1
           },
           {
             "id": "adv-019",
@@ -460,7 +460,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 67397.8
+            "latency_ms": 60916.1
           },
           {
             "id": "adv-020",
@@ -471,7 +471,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 52813.8
+            "latency_ms": 43447.9
           }
         ]
       }
@@ -486,7 +486,7 @@
         "false_accept_rate": 0.0,
         "answerable_refusal_rate": 0.13333333333333333,
         "mean_llm_calls": 0.9,
-        "mean_latency_ms": 59828.815,
+        "mean_latency_ms": 64757.265,
         "cases": [
           {
             "id": "h-001",
@@ -497,7 +497,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 61286.0
+            "latency_ms": 56046.1
           },
           {
             "id": "h-002",
@@ -508,7 +508,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 75528.0
+            "latency_ms": 77204.9
           },
           {
             "id": "h-003",
@@ -519,7 +519,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 64109.2
+            "latency_ms": 53614.8
           },
           {
             "id": "h-004",
@@ -530,7 +530,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 56690.5
+            "latency_ms": 47340.0
           },
           {
             "id": "h-005",
@@ -541,7 +541,7 @@
             "refusal_reason": "unverified_citations",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 82058.5
+            "latency_ms": 54312.1
           },
           {
             "id": "h-006",
@@ -552,7 +552,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 48118.4
+            "latency_ms": 49502.6
           },
           {
             "id": "h-007",
@@ -563,7 +563,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 58160.7
+            "latency_ms": 57995.3
           },
           {
             "id": "h-008",
@@ -574,7 +574,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 66708.2
+            "latency_ms": 79414.9
           },
           {
             "id": "h-009",
@@ -585,7 +585,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 70298.5
+            "latency_ms": 85892.7
           },
           {
             "id": "h-010",
@@ -596,7 +596,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 66319.3
+            "latency_ms": 73702.9
           },
           {
             "id": "h-011",
@@ -607,7 +607,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 55857.5
+            "latency_ms": 65248.6
           },
           {
             "id": "h-012",
@@ -618,7 +618,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 73182.9
+            "latency_ms": 93060.9
           },
           {
             "id": "h-013",
@@ -629,7 +629,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 77896.8
+            "latency_ms": 101495.6
           },
           {
             "id": "h-014",
@@ -640,7 +640,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 93398.7
+            "latency_ms": 95937.8
           },
           {
             "id": "h-015",
@@ -651,7 +651,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 67328.6
+            "latency_ms": 112965.6
           },
           {
             "id": "h-016",
@@ -662,7 +662,7 @@
             "refusal_reason": "private_or_time_dependent_question",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 2.6
+            "latency_ms": 2.0
           },
           {
             "id": "h-017",
@@ -673,7 +673,7 @@
             "refusal_reason": "private_or_time_dependent_question",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 2.3
+            "latency_ms": 1.3
           },
           {
             "id": "h-018",
@@ -684,7 +684,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 62506.3
+            "latency_ms": 71786.4
           },
           {
             "id": "h-019",
@@ -695,7 +695,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 61327.7
+            "latency_ms": 64590.7
           },
           {
             "id": "h-020",
@@ -706,7 +706,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 55795.6
+            "latency_ms": 55030.1
           }
         ]
       },
@@ -718,8 +718,8 @@
         "refusal_accuracy": 0.9,
         "false_accept_rate": 0.1,
         "answerable_refusal_rate": 0.2,
-        "mean_llm_calls": 0.75,
-        "mean_latency_ms": 47781.295,
+        "mean_llm_calls": 0.8,
+        "mean_latency_ms": 42648.155,
         "cases": [
           {
             "id": "adv-001",
@@ -730,7 +730,7 @@
             "refusal_reason": "unverified_citations",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 86162.3
+            "latency_ms": 69726.4
           },
           {
             "id": "adv-002",
@@ -741,7 +741,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 65033.8
+            "latency_ms": 64726.2
           },
           {
             "id": "adv-003",
@@ -752,7 +752,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 65928.5
+            "latency_ms": 59843.0
           },
           {
             "id": "adv-004",
@@ -763,7 +763,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 70190.9
+            "latency_ms": 67664.5
           },
           {
             "id": "adv-005",
@@ -774,7 +774,7 @@
             "refusal_reason": "unverified_citations",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 63657.7
+            "latency_ms": 61809.7
           },
           {
             "id": "adv-006",
@@ -785,7 +785,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 60208.5
+            "latency_ms": 60937.4
           },
           {
             "id": "adv-007",
@@ -796,7 +796,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 64032.9
+            "latency_ms": 71077.3
           },
           {
             "id": "adv-008",
@@ -807,7 +807,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 59565.5
+            "latency_ms": 56696.5
           },
           {
             "id": "adv-009",
@@ -818,7 +818,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 64932.2
+            "latency_ms": 59408.5
           },
           {
             "id": "adv-010",
@@ -829,7 +829,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 61570.4
+            "latency_ms": 55950.4
           },
           {
             "id": "adv-011",
@@ -840,7 +840,7 @@
             "refusal_reason": "private_or_time_dependent_question",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 3.9
+            "latency_ms": 1.2
           },
           {
             "id": "adv-012",
@@ -851,7 +851,7 @@
             "refusal_reason": "private_or_time_dependent_question",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 4.0
+            "latency_ms": 1.6
           },
           {
             "id": "adv-013",
@@ -862,7 +862,7 @@
             "refusal_reason": "private_or_time_dependent_question",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 2.3
+            "latency_ms": 0.9
           },
           {
             "id": "adv-014",
@@ -873,7 +873,7 @@
             "refusal_reason": "private_or_time_dependent_question",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 2.6
+            "latency_ms": 0.9
           },
           {
             "id": "adv-015",
@@ -884,7 +884,7 @@
             "refusal_reason": "private_or_time_dependent_question",
             "llm_calls": 0,
             "rewrites": 0,
-            "latency_ms": 2.1
+            "latency_ms": 0.9
           },
           {
             "id": "adv-016",
@@ -895,7 +895,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 61130.4
+            "latency_ms": 55648.5
           },
           {
             "id": "adv-017",
@@ -903,10 +903,10 @@
             "expected_refusal": true,
             "refused": true,
             "correct": true,
-            "refusal_reason": "soft_refusal",
-            "llm_calls": 1,
-            "rewrites": 0,
-            "latency_ms": 53763.9
+            "refusal_reason": "insufficient_evidence_coverage",
+            "llm_calls": 2,
+            "rewrites": 2,
+            "latency_ms": 3842.2
           },
           {
             "id": "adv-018",
@@ -917,7 +917,7 @@
             "refusal_reason": null,
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 70239.1
+            "latency_ms": 66656.3
           },
           {
             "id": "adv-019",
@@ -928,7 +928,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 61990.7
+            "latency_ms": 55469.4
           },
           {
             "id": "adv-020",
@@ -939,7 +939,7 @@
             "refusal_reason": "soft_refusal",
             "llm_calls": 1,
             "rewrites": 0,
-            "latency_ms": 47204.2
+            "latency_ms": 43501.3
           }
         ]
       }
