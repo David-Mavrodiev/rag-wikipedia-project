@@ -1,5 +1,16 @@
 # Retrieval-only vs end-to-end: what `false_accept_rate = 0.600` actually measures
 
+> **UPDATE 2026-09-12 — the gate now fires.** The measurement below stands as
+> taken, and its first recommendation has since been carried out.
+> `refusal_min_evidence_coverage` was measured on the serving corpus with
+> `scripts/sweep_coverage.py` and enabled at **0.45**: `false_accept_rate`
+> 0.600 → 0.500 there, and on the fixture suites golden and adversarial
+> 0.500 → 0.400 at no cost in false refusals (holdout is unchanged at 0.600).
+> So the central finding below — that the evidence gate refuses nothing and the
+> model does all the out-of-corpus work — describes the system *before* that
+> change. What has **not** been re-measured is the end-to-end split, and whether
+> the LangGraph rewrite branch is now reachable. Both need a re-run.
+
 The published `false_accept_rate` is a **retrieval-only** number. It scores the
 decision `retrieve()` makes, with no model involved. Measured end-to-end — the
 whole engine, model included — the same corpus and the same suites give 0.000 and

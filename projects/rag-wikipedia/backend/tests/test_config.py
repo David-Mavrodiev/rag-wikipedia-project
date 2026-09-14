@@ -24,6 +24,18 @@ def test_env_override(monkeypatch):
     assert settings.profile == "real"
 
 
+def test_the_coverage_gate_ships_at_the_measured_threshold():
+    # Not a plausible-looking tuning knob: 0.45 was measured on the SERVING
+    # corpus with scripts/sweep_coverage.py - false_accept_rate 0.600 -> 0.500
+    # for answerable_refusal_rate 0.000 -> 0.033 - and 0.70, which scores a
+    # better false_accept, was rejected for refusing 18.3% of answerable
+    # questions. Pinned so that moving it has to be a deliberate edit to a test
+    # that says what the number cost.
+    from app.core.config import Settings
+
+    assert Settings().refusal_min_evidence_coverage == 0.45
+
+
 def test_quality_admin_token_defaults_to_disabled():
     from app.core.config import Settings
 

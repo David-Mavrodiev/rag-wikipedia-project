@@ -209,6 +209,9 @@ decision `retrieve()` makes, before any model runs. Reconstructed case by case, 
 evidence gate refused *nothing* on the fixture suites - every retrieval-level refusal
 came from the intent filter, and the model made every genuine out-of-corpus call.
 That makes the current safety behaviour a property of one model: [docs/retrieval-only-vs-end-to-end.md](docs/retrieval-only-vs-end-to-end.md).
+Since 2026-09-12 the gate is enabled at 0.45, measured on the serving corpus:
+`false_accept_rate` 0.600 -> 0.500 there, and 0.500 -> 0.400 on golden and
+adversarial at no cost in false refusals.
 
 ## Profiles
 

@@ -148,7 +148,7 @@ exactly what `/query` returns. Today the registry is used by the eval harness (�
 | Tokenizer | **tiktoken `cl100k_base`** | one tokenizer for chunking AND the context budget so all token math agrees |
 | Chunking | ~**512** tokens / ~**64** overlap | token-based |
 | Retrieval | dense top-**20** candidates → lexical-overlap rerank → top-**k=5**, context budget **3000 tokens** | hybrid (BM25) and cross-encoder rerank still out of scope |
-| Refusal | intent filter → evidence gate (score floor **0.45**, term overlap, high-confidence escape) → the model itself | an IDF-weighted coverage gate is built but shipped **disabled** (`0.0`) until a threshold is measured on the serving corpus |
+| Refusal | intent filter → evidence gate (score floor **0.45**, IDF-weighted coverage **≥ 0.45**, high-confidence escape) → the model itself | the coverage threshold was measured on the serving corpus and enabled 2026-09-12: `false_accept_rate` 0.600 → 0.500, for `answerable_refusal_rate` 0.000 → 0.033. It improves the gate; the absolute gates stay red |
 | Rate limiting | Redis token bucket (ASGI middleware) | `/query` answers 503 if Redis is unreachable |
 | Frontend | React + Vite + TypeScript | ask / answer / sources / quality |
 | Tests | pytest (backend), Vitest (frontend) | |
@@ -489,13 +489,15 @@ system can drive the first to zero by refusing everything.
   0.000 → 0.200): its citation-verify step refused three answerable questions that
   `direct` answered correctly. Its rewrite branch executed **zero** times, because the
   evidence gate never refused a non-private question on this corpus, so the retry loop
-  never had anything to do. Recorded as found; see §12.12.
+  never had anything to do. Recorded as found; see §12.12. *(Measured with the coverage gate disabled; it was
+  measured and enabled at 0.45 on 2026-09-12, so this comparison needs re-running
+  before the branch can be judged.)*
 
 ---
 
 ## 9. Testing
 
-`pytest` — **331 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
+`pytest` — **332 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
 
 - **layering** — `app/` imports nothing outside an allowlist of base packages; the `direct` engine stays framework-free; the engine registry never imports a framework at module level.
 - **engine conformance** — a *differential* test running `POST /query` and `DirectEngine` over identical mocks and asserting identical answers, citations and refusals on every branch of the handler.
@@ -581,7 +583,7 @@ Usually correct: with the `tiny` profile (first 500 articles) that topic isn't i
 `audit_report.json` records the commit that produced it, and `audit-freshness` runs `git cat-file -e` on that SHA. Squash and rebase rewrite every SHA, so the recorded commit stops existing on `main` and the gate fails on the first push after the merge. Merge commits only.
 
 **12.12 — A retry loop that never runs proves nothing.**
-The LangGraph engine's rewrite branch executed zero times in 40 cases, because the evidence gate it depends on never refused a non-private question. Count which branches a graph actually took, not only what it returned: a null result from an unreachable branch is a finding about the gate, not a verdict on the pattern.
+The LangGraph engine's rewrite branch executed zero times in 40 cases, because the evidence gate it depends on never refused a non-private question. Count which branches a graph actually took, not only what it returned: a null result from an unreachable branch is a finding about the gate, not a verdict on the pattern. *(That gate was measured and enabled on 2026-09-12; the head-to-head has not yet been re-run.)*
 
 ---
 
@@ -601,7 +603,7 @@ The LangGraph engine's rewrite branch executed zero times in 40 cases, because t
 
 ## 14. Positioning (for clients / interviews)
 
-This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — and the `Embedder`/`LLM` interfaces make an Azure OpenAI adapter a drop-in, with the registry written and ready to activate, §17), a measured **performance analysis** — and, more tellingly, its own correction: the 25k profile was predicted at ~404k vectors from an N=150 sample and actually produced **87,173** (4.6x over), because Wikipedia dumps front-load their long articles; the GPU plan predicted 20-90 min and delivered far less because the card thermally clamps to 210 MHz of 2100, and the bottleneck moved from embedding to per-article overhead until batching removed it, and honest **"operational vs in-progress"** framing. Since September it also shows the harder half of the job: the model, the embedder and the agent runtime are each **one value**, behind interfaces whose contracts are enforced by tests — and a framework was **measured before it was trusted**. The LangGraph engine was built, scored against the framework-free baseline on the same suites, and did not earn its place on this corpus (§8); the reason was traced to a branch that never ran, rather than left as a verdict on the framework. Next levers: make the rewrite path reachable by measuring and enabling the IDF coverage gate; a Vertex AI adapter behind the dormant registry (§17), with a 768-d re-ingest into a new collection; hybrid search (BM25 + dense); LLM-judge groundedness.
+This project demonstrably covers the **whole chain** — ingestion → chunking → retrieval → grounded generation → **evaluation** → API → **deployment** — with production concerns Inès/Baris-type clients name explicitly: **robustness, cost, latency, reliability**. Differentiators to say out loud: the **refusal path** (measured by refusal accuracy), **hand-rolled RAG** (you understand chunking / token budget / the retrieval→prompt contract, not just gluing a framework — and the `Embedder`/`LLM` interfaces make an Azure OpenAI adapter a drop-in, with the registry written and ready to activate, §17), a measured **performance analysis** — and, more tellingly, its own correction: the 25k profile was predicted at ~404k vectors from an N=150 sample and actually produced **87,173** (4.6x over), because Wikipedia dumps front-load their long articles; the GPU plan predicted 20-90 min and delivered far less because the card thermally clamps to 210 MHz of 2100, and the bottleneck moved from embedding to per-article overhead until batching removed it, and honest **"operational vs in-progress"** framing. Since September it also shows the harder half of the job: the model, the embedder and the agent runtime are each **one value**, behind interfaces whose contracts are enforced by tests — and a framework was **measured before it was trusted**. The LangGraph engine was built, scored against the framework-free baseline on the same suites, and did not earn its place on this corpus (§8); the reason was traced to a branch that never ran, rather than left as a verdict on the framework. The IDF coverage gate has since been measured on the serving corpus and enabled at 0.45 — `false_accept_rate` 0.600 → 0.500 there, 0.500 → 0.400 on golden and adversarial — so the evidence gate is no longer inert; whether that makes the LangGraph rewrite branch reachable is the next thing to re-measure. Other levers: a Vertex AI adapter behind the dormant registry (§17), with a 768-d re-ingest into a new collection; hybrid search (BM25 + dense); LLM-judge groundedness.
 
 ---
 
