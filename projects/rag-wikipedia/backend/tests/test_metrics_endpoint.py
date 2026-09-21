@@ -208,3 +208,34 @@ def test_validation_failure_records_nothing(client):
 
     counts = client.get("/metrics").json()["outcome_counts"]
     assert counts == {"ok": 0, "refused": 0, "error": 0}
+
+
+# --------------------------------------------------------------------------
+# Server-Timing: the per-request sample /metrics aggregates away
+# --------------------------------------------------------------------------
+def _parse_server_timing(header: str) -> dict[str, float]:
+    entries = (part.strip().split(";dur=") for part in header.split(","))
+    return {name: float(ms) for name, ms in entries}
+
+
+def test_an_answer_carries_its_own_stage_timings(client):
+    with _answering_stack() as (mock_embedder, mock_store, mock_llm):
+        mock_embedder.return_value.embed.return_value = [0.1] * 384
+        mock_store.return_value.search.return_value = MOCK_CHUNKS
+        mock_llm.return_value.generate.return_value = "Python [1] is great."
+        response = client.post("/query", json={"question": "What is Python?"})
+
+    timings = _parse_server_timing(response.headers["Server-Timing"])
+    assert {"deps", "embed", "search", "retrieve", "generate", "total"} <= set(timings)
+    # The parts fit inside the whole.
+    assert timings["generate"] <= timings["total"]
+
+
+def test_a_hard_refusal_reports_no_generate_timing(client):
+    with _answering_stack() as (mock_embedder, mock_store, _):
+        mock_embedder.return_value.embed.return_value = [0.1] * 384
+        mock_store.return_value.search.return_value = []
+        response = client.post("/query", json={"question": "What is quantum gravity?"})
+
+    timings = _parse_server_timing(response.headers["Server-Timing"])
+    assert "generate" not in timings and "total" in timings
