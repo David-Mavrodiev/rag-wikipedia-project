@@ -102,6 +102,7 @@ The suites and the gates it enforces:
 | `golden.jsonl` | 60 | 40 | 20 |
 | `holdout.jsonl` | 20 | 15 | 5 |
 | `adversarial.jsonl` | 20 | 10 | 10 |
+| `detail.jsonl` | 60 | 40 | 20 |
 
 Gates enforced (all unconditional):
 

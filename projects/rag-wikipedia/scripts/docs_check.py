@@ -63,7 +63,9 @@ def frontend_tests() -> tuple[int, dict[str, int]]:
 
 def suite_sizes() -> dict[str, tuple[int, int, int]]:
     sizes = {}
-    for name in ("golden", "holdout", "adversarial"):
+    # The committed FIXTURE suites - the ones CI scores. The serving suites describe
+    # a local 24k-article ingest and are documented beside their own numbers.
+    for name in ("golden", "holdout", "adversarial", "detail"):
         path = BACKEND / "eval" / f"{name}.jsonl"
         rows = [
             json.loads(line)
