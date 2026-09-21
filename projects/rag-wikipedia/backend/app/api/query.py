@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from contextlib import contextmanager
 from functools import lru_cache
@@ -35,6 +36,43 @@ def _store() -> QdrantStore:
 @lru_cache(maxsize=1)
 def _llm() -> OllamaLLM:
     return OllamaLLM(model=settings.llm_model, base_url=settings.ollama_url)
+
+
+def warm_up() -> dict[str, float]:
+    """Build the cached dependencies and exercise each once, before a user does.
+
+    Measured 2026-09-21: the first request after a start took 75.4 s - 60.8 s
+    constructing the embedder, 13.2 s loading the LLM - against 2.9-4.9 s warm.
+    Each dependency is warmed separately and a failure is logged, never raised:
+    an Ollama that is still starting must not keep the embedder cold, and a
+    warm-up must never be the reason the API does not come up. Returns seconds
+    per step, for the log line.
+    """
+    timings: dict[str, float] = {}
+    steps = (
+        ("embedder", lambda: _embedder().embed("warm-up")),
+        ("store", _store),
+        # A one-word generation loads the model with the same num_ctx and
+        # keep_alive every real request sends, so Ollama keeps it as loaded.
+        ("llm", lambda: _llm().generate("Reply with the single word OK.")),
+    )
+    for name, step in steps:
+        started = time.perf_counter()
+        try:
+            step()
+        except Exception as exc:  # noqa: BLE001 - logged; startup must not fail
+            logger.warning("warm-up: %s failed (%s); it will load on first use", name, exc)
+            continue
+        timings[name] = round(time.perf_counter() - started, 1)
+    logger.info("warm-up done: %s", " ".join(f"{k}={v}s" for k, v in timings.items()))
+    return timings
+
+
+def start_warm_up() -> threading.Thread:
+    """Warm up in the background, so /health answers while models load."""
+    thread = threading.Thread(target=warm_up, name="warm-up", daemon=True)
+    thread.start()
+    return thread
 
 
 @contextmanager

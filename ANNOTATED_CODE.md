@@ -77,7 +77,7 @@ settings = Settings()  # instantiate once at import time; every module imports t
 > below; `backend/.env.example` documents each one with its default and range.
 
 <!-- docs-check:begin settings -->
-`Settings` exposes **24 settings** (env var = the upper-case name); see `backend/.env.example`.
+`Settings` exposes **26 settings** (env var = the upper-case name); see `backend/.env.example`.
 
 ```text
 QDRANT_URL
@@ -86,6 +86,8 @@ EMBED_MODEL
 LLM_MODEL
 COLLECTION
 LLM_NUM_CTX
+LLM_KEEP_ALIVE
+WARMUP_ON_STARTUP
 TOP_K
 PROFILE
 TOKEN_BUDGET

@@ -96,3 +96,26 @@ def test_out_of_range_context_window_is_rejected(monkeypatch, value):
 
     with pytest.raises(ValidationError):
         Settings()
+
+
+def test_generate_pins_how_long_the_model_stays_loaded():
+    # Left to the server's 5-minute default, the answer after an idle gap paid
+    # a 13.2 s reload (measured 2026-09-21).
+    module = _fake_ollama()
+    _client_with(module).generate("prompt")
+
+    _, kwargs = module.Client.return_value.generate.call_args
+    assert kwargs["keep_alive"] == settings.llm_keep_alive
+
+
+@pytest.mark.parametrize("value", ["30m", "1h30m", "0", "-1", "90s"])
+def test_ollama_durations_are_accepted(monkeypatch, value):
+    monkeypatch.setenv("LLM_KEEP_ALIVE", value)
+    assert Settings().llm_keep_alive == value
+
+
+@pytest.mark.parametrize("value", ["forever", "30 minutes", ""])
+def test_a_malformed_keep_alive_fails_at_startup(monkeypatch, value):
+    monkeypatch.setenv("LLM_KEEP_ALIVE", value)
+    with pytest.raises(ValueError):
+        Settings()
