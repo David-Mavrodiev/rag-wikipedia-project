@@ -18,12 +18,16 @@ End-to-end Retrieval-Augmented Generation over Wikipedia, powered by:
 All settings have working defaults, so no configuration is required to run
 locally. To override any of them, copy `backend/.env.example` to `backend/.env`
 and edit it - that file documents every setting, its default, and its allowed
-range. Two are worth knowing about up front:
+range. Three are worth knowing about up front:
 
 - `RATE_LIMIT_ENABLED` (default `true`) requires Redis; `POST /query` answers
   503 without it. Set it to `false` for a single-machine demo.
 - `QUALITY_ADMIN_TOKEN` (default empty) gates the auto-correcting audit, which
   rewrites and persists the refusal thresholds. Empty disables that path.
+- `WARMUP_ON_STARTUP` (default `true`) loads the embedder and the LLM in the
+  background at startup, and `LLM_KEEP_ALIVE` (default `30m`) keeps the LLM
+  loaded between requests. Without them the first answer after a start took
+  75 s, and the first after five idle minutes paid a 13 s model reload.
 
 ### 1. Start services
 ```bash

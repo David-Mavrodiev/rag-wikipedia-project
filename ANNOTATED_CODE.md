@@ -424,6 +424,7 @@ class QueryResponse(BaseModel):              # shape of the outgoing response
     answer: str                              # the generated (or refusal) text
     citations: list[Citation]                # zero or more citations
     refused: bool = False                    # EXPLICIT refusal state — see refusal.py
+    cited: bool = False                      # >=1 citation resolves to a given chunk; reported, never enforced
 ```
 
 ## `backend/app/core/refusal.py` — the refusal contract
@@ -1142,11 +1143,14 @@ export default function QueryBox({ onSubmit, loading }: Props) {
 ## `frontend/src/components/AnswerView.tsx` — render the answer
 
 ```tsx
-interface Props {                                    // props: just the answer string
+interface Props {                                    // props: the answer, and what the API says about it
   answer: string
+  refused?: boolean
+  cited?: boolean                                    // from QueryResponse.cited
 }
 
-export default function AnswerView({ answer }: Props) {
+export default function AnswerView({ answer, refused = false, cited = true }: Props) {
+  const uncited = !refused && !cited                 // an answer no source backs; a refusal needs no note
   return (
     <div
       data-testid="answer-view"
@@ -1154,6 +1158,12 @@ export default function AnswerView({ answer }: Props) {
     >
       <h3>Answer</h3>
       <p>{answer}</p>                                 {/* the generated (or refusal) text */}
+      {uncited && (                                   /* shown, not hidden: it may be right, but can't be checked */
+        <p data-testid="uncited-note" style={{ color: '#8a5a00', fontSize: '0.9em' }}>
+          No source is cited for this answer, so it cannot be checked against the retrieved
+          articles.
+        </p>
+      )}
     </div>
   )
 }
