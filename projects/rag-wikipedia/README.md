@@ -142,13 +142,31 @@ Each run writes:
 - `backend/eval/report.json` for machine-readable metrics and per-question diagnostics.
 - `backend/eval/report.md` for a reviewer-friendly failure analysis.
 
+`detail.jsonl` is different in kind. Every answerable question in the other
+suites names its own article ("What is Aristotle?"), so their recall measures
+title lookup. A detail question asks about a fact in one passage without naming
+the article - `scripts/build_detail_suite.py` checks that no title word appears,
+that the answer occurs verbatim in the passage, and that every unanswerable
+answer occurs nowhere in the indexed corpus. `serving_detail.jsonl` does the
+same for the served corpus. Score them with `make eval-detail` and
+`make eval-serving-detail`.
+
 For slower generation-quality checks, run:
 
 ```bash
-make eval-groundedness
+make eval-groundedness   # retrieval suites plus the generated answers
+make e2e-serving         # end to end on the served corpus, paced and resumable
 ```
 
-Groundedness is reported only; retrieval and refusal remain the quality gates.
+Answers are scored only when they are answers: a refusal is counted, never
+graded as an ungrounded answer. `e2e-serving` records every answer with the
+context it came from, then judges each claim with an entailment model
+(`backend/eval/grounding.py`); it paces generation by GPU temperature and
+checkpoints every case, because the reference laptop reaches 96 C unpaced.
+`make bench-latency` measures serving latency against a running API with each
+sample's stage split (`Server-Timing`) and GPU regime. Groundedness and latency
+are reported only; retrieval and refusal remain the quality gates. The first
+measurement of all three: [docs/measurement-baseline.md](docs/measurement-baseline.md).
 
 To check for golden-set overfitting, run the audit suite:
 
