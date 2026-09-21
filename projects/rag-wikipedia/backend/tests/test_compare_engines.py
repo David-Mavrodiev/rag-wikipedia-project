@@ -146,3 +146,43 @@ def test_resume_keeps_pairs_already_scored(tmp_path, monkeypatch):
     saved = compare_engines.json.loads(out.with_suffix(".json").read_text(encoding="utf-8"))
     assert saved["engines"]["direct"]["holdout"]["kept"] is True
     assert built == []
+
+
+# --- conditions: a latency number carries the regime it was taken in --------
+
+class _Sampler:
+    def summary(self, start, end):
+        return {"regime": "throttled", "sm_mhz": 210}
+
+
+def test_each_generating_case_records_its_gpu_regime():
+    scored = score_suite(_Engine(), [CASE, CASE], sampler=_Sampler())
+    assert scored["gpu_regimes"] == {"throttled": 2}
+    assert scored["cases"][0]["gpu"]["sm_mhz"] == 210
+
+
+def test_a_case_without_a_gpu_reading_says_so():
+    scored = score_suite(_Engine(), [CASE])
+    assert scored["gpu_regimes"] == {"no_reading": 1}
+
+
+def test_the_pacer_is_consulted_before_every_case():
+    class _Pacer:
+        calls = 0
+
+        def before_call(self):
+            self.calls += 1
+            return 3.0
+
+    pacer = _Pacer()
+    scored = score_suite(_Engine(), [CASE, CASE], pacer=pacer)
+    assert pacer.calls == 2
+    assert scored["cases"][0]["cooldown_s"] == 3.0
+
+
+def test_a_kept_pair_from_before_conditions_existed_is_labelled_not_recorded():
+    pair = score_suite(_Engine(), [CASE])
+    del pair["gpu_regimes"]
+    report = {"collection": "c", "llm_model": "m", "embed_model": "e", "suites": ["holdout"],
+              "engines": {"direct": {"holdout": pair}}}
+    assert "by regime: not recorded" in build_markdown(report)
