@@ -172,6 +172,7 @@ async def query(request: QueryRequest, response: Response) -> QueryResponse:
             answer=answer,
             citations=[Citation(**citation) for citation in citations],
             refused=False,
+            cited=bool(citations),
         )
     finally:
         total_ms = (time.perf_counter() - started) * 1000
