@@ -214,3 +214,22 @@ def test_nothing_answered_reports_none_not_zero():
     summary = summarize_answers([_record(REFUSAL, answered=False)])
     assert summary["citation_valid_rate"] is None
     assert summary["lexical_overlap"] is None
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        "Dave Grohl revealed in 2021 that he and Donald J. Bonebrake are cousins [1].",
+        "He was the organist at the St. Jacob's Church in Citoliby [1].",
+        "The treaty was signed by Dr. Smith and Gen. Jones in 1876 [2].",
+    ],
+)
+def test_an_initial_or_abbreviation_does_not_end_a_claim(answer):
+    # The first end-to-end run split all of these mid-claim, and the judge
+    # scored the fragments as unsupported.
+    assert len(claim_sentences(answer)) == 1
+
+
+def test_real_sentence_ends_still_split():
+    answer = "Lincoln was president in 1861. He led the Union. It was a war [1]."
+    assert len(claim_sentences(answer)) == 3

@@ -48,11 +48,15 @@ with the claim, which bounds the cost; whole windows are always judged.
 The judge runs on CPU by default: on the reference laptop the GPU is the thermal
 bottleneck, and scoring must not heat the card the next generation runs on.
 
-Limits, stated rather than hidden: sentence splitting is a regex and can break
-on abbreviations ("St. Louis"); an NLI model trained on short premises is
-weaker on long ones, which is why context is read in overlapping windows; and a
-sentence with no entailing window is "unsupported by the context", which is not
-the same as false.
+Limits, stated rather than hidden: sentence splitting is a regex (initials and
+common abbreviations are protected, but not every one); an answer that is only
+a name, with no verb, is not a proposition an NLI model can judge; a claim that
+combines facts from two distant sentences is often missed; an answer that
+repeats a detail from the QUESTION which the retrieved text does not state is
+scored unsupported - correctly, since the context does not support it, even
+when the detail is true. And a sentence with no entailing window is
+"unsupported by the context", which is not the same as false. The first
+end-to-end run is broken down case by case in docs/measurement-baseline.md.
 """
 
 from __future__ import annotations
@@ -72,7 +76,14 @@ PLACEHOLDER = re.compile(r"\[\s*n\s*\]", re.IGNORECASE)
 # Citation-like markers are stripped before a sentence is judged: "[1]" is not
 # part of the claim, and an NLI model reading it is reading noise.
 _MARKERS = re.compile(r"\s*\[(?:\s*\d+\s*(?:,\s*\d+\s*)*|\s*n\s*)\]", re.IGNORECASE)
-_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[\"'(\[]?[A-Z0-9])|\n+")
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+(?=[\"'(\[]?[A-Z0-9])")
+# A period that ends an initial or a common abbreviation is not a sentence end.
+# The first end-to-end run split "Donald J. Bonebrake" and "the St. Jacob's
+# Church" mid-claim, and the judge then scored the fragments as unsupported.
+_ABBREVIATION_END = re.compile(
+    r"(?:^|[\s(.])(?:[A-Z]|St|Dr|Mr|Mrs|Ms|Jr|Sr|No|Mt|Ft|vs|etc|Inc|Ltd|Co|Gen|Col|Lt"
+    r"|Sgt|Rev|Prof)\.$"
+)
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+")
 _PARENTHETICAL = re.compile(r"\s*\([^()]*\)")
 # Unicode letters and digits: "[a-z0-9]+" split "César Ramírez" into "c", "sar",
@@ -103,8 +114,24 @@ def check_citations(answer: str, n_context: int) -> CitationCheck:
     return CitationCheck(cited, resolvable, bool(PLACEHOLDER.search(answer)))
 
 
+def _split_line(line: str) -> list[str]:
+    merged: list[str] = []
+    for piece in _SENTENCE_BREAK.split(line):
+        if merged and _ABBREVIATION_END.search(merged[-1]):
+            merged[-1] = f"{merged[-1]} {piece}"
+        else:
+            merged.append(piece)
+    return merged
+
+
 def _sentences(text: str, min_words: int) -> list[str]:
-    parts = (_BULLET.sub("", part).strip() for part in _SENTENCE_BREAK.split(text))
+    # A line break always ends a sentence (bulleted answers); within a line, a
+    # period ends one unless it closes an initial or an abbreviation.
+    parts = (
+        _BULLET.sub("", sentence).strip()
+        for line in re.split(r"\n+", text)
+        for sentence in _split_line(line)
+    )
     return [part for part in parts if len(part.split()) >= min_words]
 
 
