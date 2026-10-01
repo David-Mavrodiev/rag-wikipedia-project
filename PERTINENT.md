@@ -220,3 +220,68 @@ out-of-band. Reinstalling is fast (~26 s) if the wheel is still in uv's cache.
 3. **Undervolt the CPU**, which is the larger heat source under this mixed load.
 4. **Move long ingests off this machine.** The real fix: an hour of rented GPU
    finishes in minutes what takes this laptop a day.
+
+## Oracle Always Free: the three traps between "created" and "reachable"
+
+### Problem
+
+Three failures that look like different bugs and are all setup, found while
+planning this project's hosting (`docs/online-deployment.md`) against the
+owner's JobHack deployment. They are written down before the box exists,
+because each one costs an evening if met live.
+
+### 1. The home region is permanent
+
+The region chosen at sign-up is the tenancy's **home region and cannot be
+changed afterwards**. Always Free shapes live in it. Choosing badly means a new
+account, not a setting.
+
+**Rule:** pick the EU region you will still want in a year, before clicking.
+
+### 2. "Out of host capacity" is about the account type, not the hour
+
+A1 (Ampere) capacity is routinely refused to free-tier accounts with
+`Out of host capacity`, for days. Upgrading to **Pay As You Go** mostly removes
+it, and **stays at €0 inside the Always Free shapes** — the upgrade buys
+priority for capacity, not a bill.
+
+**Rule:** upgrade to PAYG, keep inside the free shapes (4 OCPU / 24 GB of A1
+across the tenancy), and the allowance is still free.
+
+### 3. Ports have to be opened twice
+
+A new instance answers nothing on 80/443 even with a correct VCN rule. Two
+independent firewalls are in the path:
+
+1. the **VCN security list** (or NSG) in the console, and
+2. the **instance's own iptables**, which Oracle's Ubuntu images ship with a
+   default-drop rule for everything except SSH.
+
+```bash
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+```
+
+**Rule:** when an Oracle box is "up but unreachable", check iptables before
+anything else. This is the single most common cause.
+
+## Cloudflare proxy breaks Caddy's certificate request
+
+### Problem
+
+Caddy obtains a certificate over the ACME **HTTP-01** challenge, on port 80. If
+the DNS record is **orange-clouded** (proxied), Cloudflare terminates that
+connection itself and the challenge never reaches Caddy, which retries forever.
+
+The symptom is a site that serves Cloudflare's own error page while the origin
+logs show no challenge request at all.
+
+### Preferred fix
+
+Keep the record **grey-clouded (proxy off) until the certificate is issued**;
+turn the proxy on afterwards if the CDN is wanted. Turning it on permanently
+needs SSL mode **Full (strict)** plus a Cloudflare origin certificate on the
+box — more moving parts, and for a single demo host, no benefit.
+
+**Rule:** DNS-only while Caddy is getting its certificate.
