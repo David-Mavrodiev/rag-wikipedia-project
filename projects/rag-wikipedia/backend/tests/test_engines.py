@@ -121,3 +121,23 @@ def test_errors_are_not_translated():
 
     with pytest.raises(RuntimeError, match="connection refused"):
         DirectEngine(embedder, store, llm).answer("What is Python?")
+
+
+# --- context: what the model was given -------------------------------------
+def test_an_answer_carries_the_context_it_was_generated_from():
+    # Groundedness is judged against this, so it must be the prompt's chunks.
+    embedder, store, llm = _deps([_grounded_chunk()])
+    result = DirectEngine(embedder, store, llm).answer("What is Python?")
+
+    assert [chunk["text"] for chunk in result.context] == ["Python is a programming language."]
+    assert result.context[0]["text"] in llm.generate.call_args.args[0]
+
+
+def test_a_soft_refusal_keeps_the_context_the_model_declined():
+    engine = DirectEngine(*_deps([_grounded_chunk()], generated=REFUSAL_MESSAGE))
+    assert [chunk["title"] for chunk in engine.answer("What is Python?").context] == ["Python"]
+
+
+def test_a_hard_refusal_has_no_context_because_no_model_saw_any():
+    result = DirectEngine(*_deps([])).answer("What is quantum gravity?")
+    assert result.context == []

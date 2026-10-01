@@ -246,4 +246,7 @@ class LangGraphEngine(Engine):
                 "retrieved": len(final["chunks"]),
                 "rewrites": final["rewrites"],
             },
+            # The chunks the graph finished with - after any rewrite, these are
+            # the ones the final generation (if one ran) was given.
+            context=final["chunks"] if final["llm_calls"] else [],
         )
