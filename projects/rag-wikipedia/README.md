@@ -170,7 +170,9 @@ checkpoints every case, because the reference laptop reaches 96 C unpaced.
 `make bench-latency` measures serving latency against a running API with each
 sample's stage split (`Server-Timing`) and GPU regime. Groundedness and latency
 are reported only; retrieval and refusal remain the quality gates. The first
-measurement of all three: [docs/measurement-baseline.md](docs/measurement-baseline.md).
+measurement of all three: [docs/measurement-baseline.md](docs/measurement-baseline.md),
+and what it changed about the serving path:
+[docs/serving-fixes.md](docs/serving-fixes.md).
 
 To check for golden-set overfitting, run the audit suite:
 
