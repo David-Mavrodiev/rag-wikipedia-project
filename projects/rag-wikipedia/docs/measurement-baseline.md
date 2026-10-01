@@ -110,8 +110,9 @@ fix alone moved the supported-claim rate from 0.774 to 0.792). Full report:
 | refusal_accuracy | 0.850 | | citation resolves to a chunk | 0.818 (45/55) |
 | context_hit_rate | 0.950 | | literal `[n]` placeholder | 0.145 (8/55) |
 
-`serving_golden` is not reported: the GPU reached 96 C with 49 of its 90 cases
-generated, and a partial suite is not a measurement.
+`serving_golden` was not reported here: the GPU reached 96 C with 49 of its 90
+cases generated, and a partial suite is not a measurement. It finished on
+1 Oct - see the addendum at the end of this section.
 
 **The model, not the gate, does most of the refusing.** Retrieval let 16 of the 20
 held-out questions through (false_accept 0.800); end to end, 3 were answered
@@ -145,6 +146,44 @@ markers", and in 8 of 55 answers the model copied `[n]` literally; two more cite
 nothing. Such an answer reaches the UI with no source and nothing saying so. The
 prompt is corrected in the serving changes that follow this baseline, and this
 rate is the number that change has to move.
+
+### Addendum, 1 Oct 2026: `serving_golden` end to end
+
+The 41 cases the heat stopped were generated on 1 Oct with the same serving path
+(only the harness changed in between) and scored with the same judge. Full
+report: [`backend/eval/e2e/serving_golden.direct.md`](../backend/eval/e2e/serving_golden.direct.md).
+
+| refusal | value | | answers (44 of 90) | value |
+|---|---:|---|---|---:|
+| false_accept_rate | 0.167 (5/30) | | supported claims (judge) | 0.995 |
+| answerable_refusal_rate | **0.350** (21/60) | | fully supported answers (judge) | 0.955 |
+| refusal_accuracy | 0.833 | | citation resolves to a chunk | 0.841 |
+| context_hit_rate | 0.933 | | literal `[n]` placeholder | 0.068 |
+
+**The model refuses a third of the questions it could answer.** 21 of 60, where
+`serving_detail` gave 0.133 - and 19 of the 21 are the model's own refusals, 17
+of them with the right article already in the context. The questions it refuses
+are the vague ones: "Tell me about Guarani", "What is Yang Yang?". Retrieval did
+its job and the answer was not written. That is a worse failure than a wrong
+answer for a demo, and it is invisible in any retrieval-only metric.
+
+**Do not read 0.995 as groundedness.** The judge flagged 2 claims out of ~125.
+A hand-labelled sample of 57 claims from 25 of these answers - labelled before
+any judge scored them, in the judge-accuracy work that follows this branch -
+found **5 unsupported claims, of which the judge caught 1**. The three it missed
+that matter:
+
+| case | what the answer says | what the context says |
+|---|---|---|
+| `sg-a-033` | Prussian schooling was "free public education for everyone" | free public education was available **for boys** |
+| `sg-a-051` | plants in "Finland, Sweden, Lithuania, **and other countries**" | exactly those three |
+| `sg-u-001` | what All Souls' Day is and when it falls | nothing: the chunks are *Festivals in Kolkata*, *April*, the *General Roman Calendar*. The answer is correct **from the model's own memory** |
+
+`sg-u-001` is the clearest case in either suite of why refusal is the control
+that matters: a true, fluent, unsupported answer to a question the corpus cannot
+answer. On `serving_detail` the same judge over-flagged (8 of 11 flags were
+correct answers); here it under-flags. Both directions are measured in
+`eval/judge/LABELS.md` on the branch that follows.
 
 ## Latency
 
