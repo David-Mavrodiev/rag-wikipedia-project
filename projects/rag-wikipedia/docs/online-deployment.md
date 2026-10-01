@@ -183,6 +183,25 @@ Oracle CPU with a visible notice. That is the whole reason for two hosts.
 
 Phases 1-2 are the ones that make it "online"; 3-5 are what make it survivable.
 
+## 8a. What is already in the repository (1 Oct)
+
+Phases 1, 4 and 5 have their parts written and tested where testing is possible
+without an account:
+
+| File | What it is | Verified |
+|---|---|---|
+| `backend/Dockerfile` | two targets: `dev` (the local stack) and `serving` (Oracle and Modal), the embedder baked in, `HF_HUB_OFFLINE=1`, non-root, healthcheck | **not built yet**: the laptop's disk is full (3.5 GB free of 476 GB) and the image is ~2 GB |
+| `infra/oracle/compose.yml`, `Caddyfile`, `.env.example` | the always-on host: API, Qdrant on a LOCAL volume, Redis, Ollama, Caddy for TLS; only Caddy is published | `docker compose config` accepts it |
+| `scripts/corpus_snapshot.py` | `create` / `download` / `restore` / `verify` - ship the corpus as a file | **round-trip run for real**: a 2,422-point collection snapshotted (19.1 MB) and restored into a fresh collection, verified; `verify` refuses the wrong size, a yellow status and a 768-d collection |
+| `infra/modal/inference.py` | the GPU half: scale-to-zero, one container, day/night scaledown, model baked in | not deployed (no account yet) |
+| `infra/modal/worker.py` | nightly audit, on-demand evaluation, `--score-only` re-scoring, a `wake` endpoint | not deployed |
+| `infra/modal/watchdog.py` + `.github/workflows/modal-watchdog.yml` | the daily read of Modal's real bill; over the ceiling it stops the apps | 11 tests; the workflow skips cleanly while Modal is unconfigured |
+
+What is deliberately NOT written yet: the **router and the pacer** (§4, §6).
+They are serving-path code, and they need a measured number to be tuned
+against - the one phase 0 produces. Writing them before that would be inventing
+thresholds.
+
 ## 9. What is needed from the owner
 
 - An **Oracle Cloud** account upgraded to Pay-As-You-Go (stays €0 inside the

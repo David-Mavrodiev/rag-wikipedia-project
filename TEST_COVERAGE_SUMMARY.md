@@ -32,7 +32,7 @@ fails if it drifts.
 ## Inventory
 
 <!-- docs-check:begin test-inventory -->
-Backend: **362 tests** across 32 files.
+Backend: **373 tests** across 33 files.
 
 ```text
 test_refusal.py          56
@@ -45,6 +45,7 @@ test_config.py           15
 test_metrics.py          15
 test_vertex.py           15
 test_providers.py        12
+test_deployment_tools.py 11
 test_metrics_endpoint.py 11
 test_engines.py          10
 test_holdout.py          9

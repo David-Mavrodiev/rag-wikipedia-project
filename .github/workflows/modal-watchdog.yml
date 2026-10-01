@@ -1,0 +1,59 @@
+# A daily look at Modal's real bill. Over the ceiling, the apps are stopped.
+#
+# The pacer in the API spends against our ESTIMATE of a request's cost; this
+# reads what Modal actually charged. Keeping both is the point: a gap between
+# them is a bug, and it shows up every morning.
+#
+# One-time setup: repository secrets MODAL_TOKEN_ID / MODAL_TOKEN_SECRET, and
+# optionally the variable MODAL_DAILY_CEILING_USD (default $1).
+name: modal-watchdog
+
+on:
+  schedule:
+    - cron: "0 6 * * *"   # 06:00 UTC, after a night of whatever happened
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+      MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+      MODAL_DAILY_CEILING_USD: ${{ vars.MODAL_DAILY_CEILING_USD || '1.00' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+
+      - name: Skip when Modal is not configured yet
+        id: configured
+        run: |
+          if [ -z "$MODAL_TOKEN_ID" ] || [ -z "$MODAL_TOKEN_SECRET" ]; then
+            echo "Modal is not configured: nothing to watch." >> "$GITHUB_STEP_SUMMARY"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Today's bill
+        if: steps.configured.outputs.skip != 'true'
+        run: uvx modal billing report --for today --json > today.json
+
+      - name: Judge it
+        if: steps.configured.outputs.skip != 'true'
+        id: judge
+        run: |
+          set -o pipefail
+          python projects/rag-wikipedia/infra/modal/watchdog.py today.json \
+            | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Over the ceiling - stop the apps
+        if: failure() && steps.judge.outcome == 'failure'
+        run: |
+          uvx modal app stop rag-wikipedia-inference || true
+          uvx modal app stop rag-wikipedia-worker || true
+          echo "Apps stopped. The API falls back to Oracle CPU; redeploy when the cause is known." \
+            >> "$GITHUB_STEP_SUMMARY"
