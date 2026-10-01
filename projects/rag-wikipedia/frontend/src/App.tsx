@@ -14,6 +14,8 @@ export interface Citation {
 export interface QueryResult {
   answer: string
   citations: Citation[]
+  refused?: boolean
+  cited?: boolean
 }
 
 // strip trailing slashes so a base ending in "/" doesn't produce "//query"
@@ -54,7 +56,7 @@ export default function App() {
       {error && <p className="error">{error}</p>}
       {result && (
         <>
-          <AnswerView answer={result.answer} />
+          <AnswerView answer={result.answer} refused={result.refused} cited={result.cited} />
           <CitationList citations={result.citations} />
         </>
       )}

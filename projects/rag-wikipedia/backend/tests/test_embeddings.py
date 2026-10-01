@@ -122,3 +122,31 @@ def test_bge_refuses_a_model_with_no_fixed_dimension():
     # and int(None) would raise a TypeError that says nothing about why.
     with pytest.raises(ValueError, match="no fixed embedding dimension"):
         _ = _bge_with(_ModelWithNoFixedDimension()).dim
+
+
+# --- loading: cache first, network only when the model is not cached --------
+class _FakeSentenceTransformer:
+    calls: list[dict] = []
+
+    def __init__(self, name, **kwargs):
+        type(self).calls.append(kwargs)
+        if kwargs.get("local_files_only") and not type(self).cached:
+            raise OSError("couldn't find them in the cached files")
+
+
+def _load_with(monkeypatch, cached: bool) -> list[dict]:
+    import sentence_transformers
+
+    fake = type("Fake", (_FakeSentenceTransformer,), {"calls": [], "cached": cached})
+    monkeypatch.setattr(sentence_transformers, "SentenceTransformer", fake)
+    BGEEmbedder("BAAI/bge-small-en-v1.5")
+    return fake.calls
+
+
+def test_a_cached_model_loads_without_touching_the_network(monkeypatch):
+    # Loading by name revalidated every file against the Hub on each start.
+    assert _load_with(monkeypatch, cached=True) == [{"local_files_only": True}]
+
+
+def test_an_uncached_model_is_still_downloaded(monkeypatch):
+    assert _load_with(monkeypatch, cached=False) == [{"local_files_only": True}, {}]

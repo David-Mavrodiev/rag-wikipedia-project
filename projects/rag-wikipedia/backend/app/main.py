@@ -9,6 +9,7 @@ from app.api.health import router as health_router
 from app.api.metrics import router as metrics_router
 from app.api.quality import router as quality_router
 from app.api.query import router as query_router
+from app.api.query import start_warm_up
 from app.core.config import settings
 from app.core.rate_limit import RateLimitMiddleware
 from app.core.runtime_config import (
@@ -59,6 +60,10 @@ def restore_runtime_config(path: Path | None = None) -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     restore_runtime_config()
+    if settings.warmup_on_startup:
+        # Background, not awaited: /health must answer while models load, or a
+        # container probe would restart the API mid warm-up.
+        start_warm_up()
     yield
 
 

@@ -16,6 +16,15 @@ class Settings(BaseSettings):
     # card, so it is pinned rather than inherited from the server's default.
     # Must exceed token_budget plus prompt and answer headroom.
     llm_num_ctx: int = Field(default=8192, ge=512, le=131072)
+    # How long Ollama keeps the model loaded after a request, as an Ollama
+    # duration ("30m", "1h30m"; "0" unloads at once, "-1" never). Its server
+    # default is 5m, and the answer after an idle gap then pays a model reload:
+    # 13.2 s on the reference laptop (measured 2026-09-21).
+    llm_keep_alive: str = Field(default="30m", pattern=r"^(-?\d+|(\d+(\.\d+)?(ms|s|m|h))+)$")
+    # Load the embedder and the LLM in the background at startup, so the first
+    # request does not pay for it. Measured 2026-09-21: the first answer after a
+    # start took 75.4 s (60.8 s embedder, 13.2 s LLM) against 2.9-4.9 s warm.
+    warmup_on_startup: bool = True
     top_k: int = Field(default=5, ge=1, le=100)
     profile: str = "tiny"
     token_budget: int = Field(default=3000, ge=1)
