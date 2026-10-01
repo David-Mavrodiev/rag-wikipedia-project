@@ -204,12 +204,16 @@ thresholds.
 
 ## 9. What is needed from the owner
 
+Step by step, with what already exists and the traps at each stage:
+**[online-credentials.md](online-credentials.md)**. In short:
+
 - An **Oracle Cloud** account upgraded to Pay-As-You-Go (stays €0 inside the
-  Always Free shapes, and PAYG gets the larger A1 shape), in an EU region.
-- A **domain** (the only cash cost), on **Cloudflare** DNS.
-- A **Modal** account; its monthly credit is the GPU budget.
-- GitHub secrets: `MODAL_TOKEN_ID`, `MODAL_TOKEN_SECRET`, `MODAL_GATEWAY_TOKEN`,
-  plus the R2 credentials for the snapshot.
+  Always Free shapes, and PAYG is far likelier to be given A1 capacity), EU region.
+- A **domain** (the only cash cost), on **Cloudflare** DNS, proxy OFF so Caddy
+  can get its certificate.
+- A **Modal** account - one exists already - plus a CI token and two secrets.
+- GitHub secrets, which need **Admin** on the repository; this account has Write,
+  so that step needs David or a fork.
 
 ## 10. Risks, named
 
