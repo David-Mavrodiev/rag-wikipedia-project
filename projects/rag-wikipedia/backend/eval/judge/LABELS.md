@@ -79,8 +79,29 @@ a judge change: see the splits below.
 
 | split | claims | used for |
 |---|---|---|
-| `dev` | the first end-to-end run (`serving_detail`, 2026-09-21/22) | designing judge changes |
-| `test` | runs generated afterwards | one measurement per judge version, after the design is frozen |
+| `dev` | 53, the first end-to-end run (`serving_detail`, 2026-09-21/22) | designing judge changes |
+| `test` | 57, from `serving_golden` (generated 2026-10-01) | one measurement per judge version, after the design is frozen |
+
+The `test` claims come from a seeded random sample of 25 of the 44 answered
+cases (`random.Random(20261001).sample`), every claim in each. They were
+labelled **while no judge had scored them**: the run that generated them used
+`--no-nli`, and the scoring pass started only after the labels were written.
+Where a claim occurs verbatim in its context that was taken as sufficient
+evidence under rule 1, and recorded as the reason; the rest were read.
+
+They are 52 supported and 5 unsupported, and the unsupported ones are worth
+naming, because they are what an answer-level rate hides:
+
+- `sg-a-033` (three claims) - "Tell me about Prussian education system" drew
+  "free public education for everyone" where the context says free public
+  education was available *for boys*, and invented a tripartite mapping of
+  primary school, gymnasium and university that the chunk never states.
+- `sg-a-051` - the plants are in "Finland, Sweden, Lithuania, and other
+  countries"; the context lists exactly three.
+- `sg-u-001` - "Tell me about All Souls' Day" retrieved Festivals in Kolkata,
+  April and the General Roman Calendar, none of which says what the day is, and
+  the model answered correctly from its own knowledge anyway. A question that
+  should have been refused, answered from parametric memory.
 
 A judge change that is designed on `dev` and then reported on `dev` measures
 nothing. The synthetic set (`scripts/build_judge_set.py`) carries its own
