@@ -1,5 +1,11 @@
 # Deployment Strategy — RAG over Wikipedia on Azure (Container Apps via Azure CLI)
 
+> **Superseded on 1 Oct 2026 by [online-deployment.md](online-deployment.md).**
+> Kept as the record of the Azure decision. Two things ended it: §6 puts
+> `/qdrant/storage` on Azure Files, and Qdrant's install notes rule out a network
+> filesystem; and Container Apps bills by the hour, where this project needs to
+> cost nothing while idle.
+
 ## 1. Overview & goals
 
 This document defines how the RAG-over-Wikipedia system is deployed to Azure and
