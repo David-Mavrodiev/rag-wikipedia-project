@@ -335,12 +335,17 @@ def _fmt(value, digits: int = 3) -> str:
 def build_markdown(report: dict) -> str:
     m, a, lat = report["metrics"], report["answers"], report["latency"]
     prov, cond = report["provenance"], report["conditions"]
+    # A --score-only run judges old answers with the current code: name both
+    # commits, or the report points at one that does not reproduce its scores.
+    generated, scored = prov.get("git_sha"), report.get("scored_git_sha")
+    git = (f"git `{generated}`" if scored in (None, generated)
+           else f"answers from git `{generated}`, scored at git `{scored}`")
     lines = [
         f"## End-to-end: `{report['suite']}` / `{report['engine']}`",
         "",
         f"_corpus `{prov.get('collection')}` ({prov.get('vector_count')} vectors, profile "
         f"`{prov.get('profile')}`) | model `{prov.get('llm_model')}` | judge "
-        f"`{report.get('nli_model') or 'not run'}` | git `{prov.get('git_sha')}`_",
+        f"`{report.get('nli_model') or 'not run'}` | {git}_",
         "",
         "| refusal | value | | answers | value |",
         "|---|---:|---|---|---:|",
@@ -461,7 +466,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
     from app.core.config import settings
-    from app.core.quality import build_provenance
+    from app.core.quality import _git_sha, build_provenance
     from app.core.vectorstore import QdrantStore
 
     for suite in args.suite:
@@ -525,6 +530,8 @@ def main(argv: list[str] | None = None) -> int:
             "engine": args.engine,
             "nli_model": judge.model_name if judge else None,
             "provenance": meta.get("provenance", {}),
+            "scored_at": datetime.now(UTC).isoformat(),
+            "scored_git_sha": _git_sha(),
             "conditions": {key: meta.get(key) for key in
                            ("gpu", "pause_at", "resume_at", "pauses", "total_cooldown_s",
                             "started_at", "finished_at", "limit")},

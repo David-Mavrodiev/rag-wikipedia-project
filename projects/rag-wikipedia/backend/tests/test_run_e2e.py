@@ -271,6 +271,14 @@ def test_unsupported_claims_are_listed_by_case():
     assert "`a1` (0.10)" in markdown
 
 
+
+def test_a_rescored_report_names_the_commit_that_scored_it():
+    records, cases = _records()
+    report = {**_report(records, cases), "provenance": {"git_sha": "aaa"}}
+    assert "git `aaa`" in build_markdown({**report, "scored_git_sha": "aaa"})
+    header = build_markdown({**report, "scored_git_sha": "bbb"}).splitlines()[2]
+    assert "answers from git `aaa`, scored at git `bbb`" in header
+
 # --- the corpus guard ---------------------------------------------------------
 
 def test_a_suite_is_refused_against_the_wrong_corpus_before_anything_runs(monkeypatch):

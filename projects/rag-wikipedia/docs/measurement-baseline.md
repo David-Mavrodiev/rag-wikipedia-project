@@ -1,6 +1,6 @@
 # Measurement baseline - before hybrid search and reranking
 
-> **Status: point-in-time record, 21 Sep 2026.** The numbers every later change in
+> **Status: point-in-time record, 21-22 Sep 2026.** The numbers every later change in
 > retrieval is judged against. Measured on branch `feat/measurement-v2`, whose
 > serving path is `main` at `b395c45` plus two changes that do not alter an answer
 > (a `Server-Timing` header on `/query`, and engines reporting the context they
@@ -95,14 +95,60 @@ and a limit on chunks per article, both target this.
 
 ## End to end (answers)
 
-_Pending: `make e2e-serving` is running, paced at 90/87 C (see Conditions)._
+`serving_detail` on the served corpus: all 80 cases answered by llama3.2:3b
+through the direct engine, and every answer's claims judged against the context
+it was generated from. Answers were generated at `2bcc858` on 21-22 Sep, paced at
+90/87 C (61 pauses, 94 min of cooling); they were scored at `9d14a3b`, after the
+claim splitter stopped cutting sentences at initials such as "Donald J." (that
+fix alone moved the supported-claim rate from 0.774 to 0.792). Full report:
+[`backend/eval/e2e/serving_detail.direct.md`](../backend/eval/e2e/serving_detail.direct.md).
+
+| refusal | value | | answers (55 of 80) | value |
+|---|---:|---|---|---:|
+| false_accept_rate | 0.150 (3/20) | | supported claims (judge) | 0.792 (42/53) |
+| answerable_refusal_rate | 0.133 (8/60) | | fully supported answers (judge) | 0.792 |
+| refusal_accuracy | 0.850 | | citation resolves to a chunk | 0.818 (45/55) |
+| context_hit_rate | 0.950 | | literal `[n]` placeholder | 0.145 (8/55) |
+
+`serving_golden` is not reported: the GPU reached 96 C with 49 of its 90 cases
+generated, and a partial suite is not a measurement.
+
+**The model, not the gate, does most of the refusing.** Retrieval let 16 of the 20
+held-out questions through (false_accept 0.800); end to end, 3 were answered
+(0.150), so the model itself refused 13 of the 16. The same caution costs
+answers: it refused 6 answerable questions that retrieval had accepted, 5 of them
+with the right article in its context, and answerable refusal rises from 0.033
+(2/60) at retrieval to 0.133 (8/60) end to end. The gate's weakness is being paid
+for by a 3B model's reluctance, in both directions.
+
+**Every fabrication came from a question that should have been refused.** The
+judge found 11 of 53 claims unsupported. Each was read against its context:
+
+| on reading | n | cases |
+|---|---:|---|
+| a fabrication - the context does not say it | 2 | `sd-u-006` gives the etymology of "oil" for a question about non-aromatic hydrocarbons; `sd-u-016` gives a Basque city the three rivers of Valdivia, Chile |
+| stated by the context, but about something else | 1 | `sd-u-010` reports the AIM-54's 78 victories for a question about a different missile |
+| correct and stated by the context; the judge missed it | 8 | 6 join facts from different sentences (`sd-a-014` takes "Donald J." from a chunk's first sentence and the 2021 revelation from its seventh; `sd-a-064` calls SCADE Suite a "model-based design tool", which the chunk says in its first sentence about the product's maker); 1 repeats the question's wording where the context uses other words ("killed" where the source says "involved in the murder"); 1 is a bare name |
+
+So 0.792 is a floor: on reading, 51 of the 53 claims are stated by their context.
+Only the flagged claims were read - the 42 the judge accepted were not - and
+groundedness is not correctness, as `sd-u-010` shows. All three answers to
+unanswerable questions were flagged. Two answers were not judged at all, because
+a two-word name ("Clas Thunberg") is below the judge's minimum claim length.
+
+The run's only fabrications therefore sit behind the refusal gate, which is where
+step 3 aims: a relevance score that refuses those three questions before
+generation removes them.
+
+**One answer in seven cited a placeholder.** The prompt said "Cite inline with [n]
+markers", and in 8 of 55 answers the model copied `[n]` literally; two more cite
+nothing. Such an answer reaches the UI with no source and nothing saying so. The
+prompt is corrected in the serving changes that follow this baseline, and this
+rate is the number that change has to move.
 
 ## Latency
 
-_Pending: `make bench-latency` runs after the end-to-end run, because two GPU
-workloads at once would measure neither._
-
-Already measured on 2026-09-21, single requests against the running API:
+Single requests against the running API, 2026-09-21:
 
 | condition | total | where the time goes |
 |---|---:|---|
@@ -110,10 +156,26 @@ Already measured on 2026-09-21, single requests against the running API:
 | warm, GPU cool (1,425 MHz) | 2.9-4.9 s | generation ~98%; retrieval 45-75 ms |
 | refused before retrieval (intent filter) | 24 ms | - |
 
-What a clamped GPU costs is NOT in this table yet. The wall-clock rate of an
-unpaced run suggested ~20 s per generation at 210 MHz, but paced runs have
-recorded 3-6 s generations under a 210 MHz reading, so the per-sample data from
-the bench decides it rather than an inference from a rate.
+Per answer in the end-to-end run on `serving_detail` (74 generations, client-side,
+retrieval included):
+
+| condition | n | p50 | min | max |
+|---|---:|---:|---:|---:|
+| clamped clock (median busy clock 210 MHz of 2,100 in 71, 348-555 MHz in 3) | 74 | 7.3 s | 3.1 s | 64.4 s |
+| full clock | 0 | - | - | - |
+
+**A clamped GPU costs about twice the cool time, not ten times.** Paced or not, the
+card never stayed at full clock under sustained load - not one of the 74 samples
+did - so 7.3 s is this laptop's sustained number and 2.9-4.9 s its best case. The
+two slowest answers (64.4 s and 35.3 s) each came right after a cooldown pause
+longer than five minutes (327 s and 394 s), which is Ollama's default keep-alive:
+the model had been unloaded and was reloaded on a hot card, with the GPU busy in
+only 2-4 of 13-18 polls. The 48 s mean in `engine_comparison.md` is therefore not
+explained by the clamp alone; its run recorded no conditions to say more.
+
+The `make bench-latency` run was made after the startup changes that followed this
+baseline (models loaded at startup, the LLM kept resident), so it is reported with
+them rather than here.
 
 ## Conditions and limits
 
