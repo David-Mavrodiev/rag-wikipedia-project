@@ -1,0 +1,25 @@
+# TLS is Caddy's job: a certificate is obtained and renewed on its own.
+{$DOMAIN} {
+	encode zstd gzip
+
+	# The API only. The frontend is static and served by Cloudflare Pages.
+	reverse_proxy api:8000 {
+		# An answer can take a minute on CPU (see docs/online-deployment.md §3):
+		# the proxy must not give up before the model does.
+		transport http {
+			response_header_timeout 180s
+			read_timeout 180s
+		}
+	}
+
+	# Health and the published metrics stay readable; the audit path does not
+	# exist in production (QUALITY_ADMIN_TOKEN is empty), but say so here too.
+	@admin path /quality/audit*
+	respond @admin 404
+
+	log {
+		output stdout
+		format console
+		# Questions are user input: log the route, never the body.
+	}
+}
