@@ -183,6 +183,39 @@ Oracle CPU with a visible notice. That is the whole reason for two hosts.
 
 Phases 1-2 are the ones that make it "online"; 3-5 are what make it survivable.
 
+## 7a. Plan A, as built (11 Oct): Vercel + Modal, no domain yet
+
+The Oracle design below is still the always-on target, but the first version
+online is smaller, and uses only accounts that already exist:
+
+```
+  visitor ──► Vercel (static, <1 s, free Hobby)   ──► Modal (scale-to-zero GPU)
+               React UI + the published numbers        FastAPI + Qdrant + Redis + Ollama
+                                                       llama3.2:3b baked into the image
+                                                       corpus on a Modal Volume
+```
+
+**Why the page is not in the container.** A visitor must never meet a blank
+page while a GPU boots. Vercel serves the UI and the measurements instantly;
+only the answer waits. (JobHack could not use Vercel Hobby because ads made it
+commercial - this demo has no ads and no payments, so the free plan fits.)
+
+**Cold starts are paid for by intent.** `useWakeOnFocus` knocks on `/health`
+when the visitor focuses the question box, so the container boots while they
+type. Waking on page load would be smoother and would spend GPU seconds on
+every passer-by; a second focus does not fire a second request.
+
+**Verified on 11 Oct, against the live account:** the image builds (Ollama base,
+the Qdrant binary, the model baked in, torch and the embedder), the corpus
+volume holds the 328 MB snapshot, and `restore_corpus` reports
+`wikipedia 87173 points, status green, 384-d vectors` from inside a Modal
+container. Two bugs were found by running it rather than reasoning about it:
+the image shipped `backend/` but not `scripts/`, and `Path(__file__).parents[2]`
+crashed every function because the file is `/root/demo.py` in the container.
+
+**Still unmeasured:** the cold start a first visitor pays, and the warm answer
+latency on a T4. Both get published the day it is deployed.
+
 ## 8a. What is already in the repository (1 Oct)
 
 Phases 1, 4 and 5 have their parts written and tested where testing is possible

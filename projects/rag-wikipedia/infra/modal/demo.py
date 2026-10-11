@@ -37,7 +37,11 @@ from pathlib import Path
 
 import modal
 
-ROOT = Path(__file__).resolve().parents[2]
+# Only needed while the image is being defined, on the laptop. Inside the
+# container this file is /root/demo.py, which has no parents[2] - and Modal
+# re-imports the module there, so a bare parents[2] crashes every function.
+_HERE = Path(__file__).resolve()
+ROOT = _HERE.parents[2] if len(_HERE.parents) > 2 else Path("/srv")
 MODEL = os.environ.get("RAG_MODAL_MODEL", "llama3.2:3b")
 GPU = os.environ.get("RAG_MODAL_GPU", "T4")
 COLLECTION = "wikipedia"
@@ -50,7 +54,7 @@ corpus = modal.Volume.from_name("rag-wikipedia-corpus", create_if_missing=True)
 image = (
     # Ollama's image already carries the server and the GPU runtime; everything
     # else is added on top so there is one image to cold-start, not three.
-    modal.Image.from_registry(f"ollama/ollama:0.12.3", add_python="3.12")
+    modal.Image.from_registry("ollama/ollama:0.12.3", add_python="3.12")
     .entrypoint([])
     .apt_install("redis-server", "curl", "ca-certificates")
     .run_commands(
@@ -74,6 +78,7 @@ image = (
     )
     .env({"HF_HUB_OFFLINE": "1"})
     .add_local_dir(ROOT / "backend", "/srv/backend")
+    .add_local_dir(ROOT / "scripts", "/srv/scripts")
 )
 
 app = modal.App("rag-wikipedia-demo")
@@ -118,7 +123,6 @@ def restore_corpus(snapshot: str = "/corpus/wikipedia.snapshot") -> dict:
     if not _wait_for("http://127.0.0.1:6333/readyz", 900):
         return {"ok": False, "error": "qdrant did not come up"}
 
-    sys.path.insert(0, "/srv/backend/../..")
     from scripts.corpus_snapshot import verify  # noqa: PLC0415
 
     code = verify("http://127.0.0.1:6333", COLLECTION, EXPECTED_POINTS)
