@@ -23,16 +23,16 @@ from collections.abc import Callable
 
 from app.core.embeddings import Embedder
 from app.core.llm import LLM
-from app.core.vectorstore import QdrantStore
+from app.core.stores import VectorStore
 
 from engines.base import Engine
 from engines.direct import DirectEngine
 
-EngineFactory = Callable[[Embedder, QdrantStore, LLM], Engine]
+EngineFactory = Callable[[Embedder, VectorStore, LLM], Engine]
 
 DEFAULT_ENGINE = "direct"
 
-def _langgraph(embedder: Embedder, store: QdrantStore, llm: LLM) -> Engine:
+def _langgraph(embedder: Embedder, store: VectorStore, llm: LLM) -> Engine:
     """Build the graph engine, importing its runtime only when it is chosen.
 
     LAZY on purpose. A module-level import here would make langgraph a hard
@@ -55,7 +55,7 @@ ENGINE_REGISTRY: dict[str, EngineFactory] = {
 
 def make_engine(
     embedder: Embedder,
-    store: QdrantStore,
+    store: VectorStore,
     llm: LLM,
     choice: str | None = None,
 ) -> Engine:
