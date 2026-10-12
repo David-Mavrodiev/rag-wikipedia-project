@@ -6,6 +6,8 @@ three. Adding an engine is one line here. Choosing one is one environment
 variable.
 
     ENGINE_CHOICE=direct     the v1 chain (the default)
+    ENGINE_CHOICE=langgraph  a graph: grade, rewrite, verify
+    ENGINE_CHOICE=langchain  an LCEL chain whose middle step is the model choosing
 
 ENGINE_CHOICE is read from the environment rather than declared on `Settings`
 for now. Settings would be better - it validates at startup - but `config.py`
@@ -46,9 +48,17 @@ def _langgraph(embedder: Embedder, store: VectorStore, llm: LLM) -> Engine:
     return LangGraphEngine(embedder, store, llm)
 
 
+def _langchain(embedder: Embedder, store: VectorStore, llm: LLM) -> Engine:
+    """The LCEL chain with an agent step. Lazy for the same reason as above."""
+    from engines.langchain_engine import LangChainEngine
+
+    return LangChainEngine(embedder, store, llm)
+
+
 ENGINE_REGISTRY: dict[str, EngineFactory] = {
     "direct": lambda embedder, store, llm: DirectEngine(embedder, store, llm),
     "langgraph": _langgraph,
+    "langchain": _langchain,
     # <- ADD A NEW ENGINE AS ONE LINE HERE
 }
 

@@ -126,5 +126,33 @@ and `plan`; it never runs `apply`.
 | 4. Azure AI Search + ACL | ~3 days | the capability most often asked for in job adverts |
 | 5. Terraform | ~1 day | needs phase 4's resources to exist |
 
-Phases 1 and 2 are started in this branch. Phases 3-5 wait behind the live
-demo, which is the thing a recruiter actually opens.
+## What was built, and what the layering test changed about it
+
+All five phases are in this branch, in their **free** form: no billable Azure
+SKU, no new paid service, and nothing installed by default or in CI.
+
+| | Built | Verified |
+|---|---|---|
+| store Protocol | `app/core/stores/base.py` | `QdrantStore` satisfies it unmodified; audit-freshness still green |
+| store registry | `providers/stores.py` | unknown name fails loudly; `STORE_CHOICE` honoured |
+| LangChain agent engine | `engines/langchain_engine.py`, `ENGINE_CHOICE=langchain` | 16 tests: budget, parsing, and that it never re-decides what a refusal is |
+| Azure AI Search + ACL | `providers/azure_search.py`, `STORE_CHOICE=azure-search` | 14 tests with a faked SDK: the filter is in the QUERY, and it fails closed |
+| the subset index | `scripts/build_azure_index.py` | deterministic groups, `acl_groups` filterable, 384-d cosine |
+| Terraform | `infra/terraform/` | free SKU by default, `confirm_paid_tier` in front of anything billable; `fmt`/`validate` in CI |
+| MLflow publisher | `scripts/mlflow_publish.py` | 13 tests on the mapping, retroactive over committed reports |
+
+**The layering test moved two files for me.** `tests/test_layering.py` walks the
+AST and forbids a cloud SDK anywhere under `app/` - lazily imported or not - and
+separately forbids `app/` importing `providers/` at all. So the Azure adapter
+lives in `providers/azure_search.py` beside the Vertex one, and the store
+registry lives in `providers/stores.py`. `app/core/stores/` keeps the Protocol
+and nothing else. That is the architecture asserting itself, which is the point
+of having the test.
+
+**Still unmeasured, and labelled as such:** the agent engine has not been run on
+the suites (that is a GPU run and a `compare_engines.py` report), and no Azure
+resource has been created - `terraform validate` has never run on this machine,
+because Terraform is not installed here; CI is what will check it.
+
+Phases 3-5 are additive and off by default. They wait behind the live demo,
+which is the thing a recruiter actually opens.

@@ -5,8 +5,14 @@ codebase has one pattern to learn rather than three. Adding a store is one line
 here. Choosing one is one environment variable.
 
     STORE_CHOICE=qdrant         what every published number was measured on
+    STORE_CHOICE=azure-search   a managed index, with server-side ACL trimming
 
-`azure-search` is added here in phase 4, with its adapter.
+WHY THIS LIVES IN `providers/` AND NOT IN `app/`. The same rule the model
+registry follows, and tests/test_layering.py enforces: `app/` declares the
+VectorStore Protocol, this package names implementations of it. A registry
+inside the core would point the core at a package whose job is cloud SDK
+adapters. Wiring `/query` to dispatch through here is a composition root at the
+edge, not an import in the middle.
 
 STORE_CHOICE is read from the environment rather than declared on `Settings`,
 for the reason `ENGINE_CHOICE` gives: `config.py` is watched by
@@ -25,7 +31,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from app.core.stores.base import VectorStore
+from app.core.stores import VectorStore
 
 StoreFactory = Callable[..., VectorStore]
 
@@ -39,13 +45,25 @@ def _qdrant(**kwargs: Any) -> VectorStore:
     return QdrantStore(url=kwargs["url"], collection=kwargs["collection"])
 
 
+def _azure_search(**kwargs: Any) -> VectorStore:
+    """Azure AI Search, with the caller's groups bound to the instance.
+
+    The adapter lives in `providers/`, beside the Vertex one, because
+    tests/test_layering.py forbids a cloud SDK anywhere under `app/` - lazily
+    imported or not, it walks the AST and finds it. `app.core` keeps the
+    interface and the registry; the SDK stays outside.
+    """
+    from providers.azure_search import AzureSearchStore
+
+    return AzureSearchStore(**kwargs)
+
+
 STORE_REGISTRY: dict[str, StoreFactory] = {
     "qdrant": _qdrant,
+    "azure-search": _azure_search,
     # <- ADD A NEW STORE AS ONE LINE HERE. Its SDK is imported inside its
     # factory, never at module level: `import app.core.stores` has to work on a
     # machine that installed none of the optional extras, which includes CI.
-    # `azure-search` lands here with app/core/stores/azure_search.py (phase 4);
-    # a name pointing at a module that does not exist yet would be a landmine.
 }
 
 

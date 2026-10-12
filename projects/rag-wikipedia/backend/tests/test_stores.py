@@ -11,8 +11,8 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from app.core.stores import STORE_REGISTRY, VectorStore, WritableVectorStore, make_store
-from app.core.stores.registry import DEFAULT_STORE
+from app.core.stores import VectorStore, WritableVectorStore
+from providers.stores import DEFAULT_STORE, STORE_REGISTRY, make_store
 
 
 class _Store:
