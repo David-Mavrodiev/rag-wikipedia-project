@@ -66,10 +66,18 @@ image = (
         f"(ollama serve &) && sleep 8 && ollama pull {MODEL} && pkill ollama || true",
     )
     .env({"UV_TORCH_BACKEND": "cpu", "HF_HOME": "/opt/hf", "HF_HUB_DISABLE_TELEMETRY": "1"})
+    # The SERVING subset of backend/pyproject.toml: no prefect, no datasets -
+    # those belong to ingestion, which does not run here, and they would make
+    # the image (and so every cold start) bigger for nothing.
+    #
+    # The subset is a deliberate choice and therefore a drift risk: the first
+    # deploy answered /health and returned 500 on /query because `ollama` - the
+    # client, not the server in the base image - was missing from this list. If
+    # it drifts again, the symptom is a ModuleNotFoundError in the app logs.
     .uv_pip_install(
-        "fastapi>=0.117", "uvicorn>=0.30", "httpx>=0.28", "pydantic>=2.9",
-        "pydantic-settings>=2.5", "qdrant-client>=1.12", "sentence-transformers>=3.0",
-        "torch>=2.4", "redis>=5.0", "tiktoken>=0.7",
+        "fastapi>=0.111", "uvicorn[standard]>=0.30", "httpx>=0.27", "pydantic>=2.9",
+        "pydantic-settings>=2.3", "qdrant-client>=1.12,<2", "sentence-transformers>=5.4,<6",
+        "torch>=2.4", "redis>=5.0", "tiktoken>=0.7", "ollama>=0.2",
     )
     # The embedder too: measured, a cold load from the Hub cost 60.8 s.
     .run_commands(
