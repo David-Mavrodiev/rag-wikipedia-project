@@ -248,3 +248,24 @@ button:disabled {
   font-size: 0.85rem;
   color: var(--muted);
 }
+
+/* --- auth ---------------------------------------------------------------- */
+
+.auth-controls {
+  display: inline-flex;
+  align-items: center;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.875rem;
+  padding: 0;
+  cursor: pointer;
+}
+
+.link-button:hover {
+  text-decoration: underline;
+}

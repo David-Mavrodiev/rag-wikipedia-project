@@ -78,6 +78,7 @@ image = (
         "fastapi>=0.111", "uvicorn[standard]>=0.30", "httpx>=0.27", "pydantic>=2.9",
         "pydantic-settings>=2.3", "qdrant-client>=1.12,<2", "sentence-transformers>=5.4,<6",
         "torch>=2.4", "redis>=5.0", "tiktoken>=0.7", "ollama>=0.2",
+        "pyjwt[crypto]>=2.9,<3",
     )
     # The embedder too: measured, a cold load from the Hub cost 60.8 s.
     .run_commands(
@@ -164,7 +165,11 @@ def serve() -> None:
     _wait_for("http://127.0.0.1:6333/readyz", 300)
 
     subprocess.Popen(
-        ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"],
+        # serving.app is the composition root: the API, plus authentication when
+        # AUTH_MODE and CLERK_ISSUER are set. With neither, it is app.main
+        # unchanged - so this line is safe before Clerk exists.
+        ["uvicorn", "serving.app:app", "--host", "0.0.0.0", "--port", "8000",
+         "--no-access-log"],
         cwd="/srv/backend",
         env=os.environ | {
             "PYTHONPATH": "/srv/backend",
@@ -184,6 +189,10 @@ def serve() -> None:
             "ALLOWED_ORIGINS": os.environ["ALLOWED_ORIGINS"],
             # The auto-correcting audit does not exist in production.
             "QUALITY_ADMIN_TOKEN": "",
+            # Authentication: off until the Clerk secret carries an issuer.
+            "AUTH_MODE": os.environ.get("AUTH_MODE", "off"),
+            "CLERK_ISSUER": os.environ.get("CLERK_ISSUER", ""),
+            "CLERK_AUDIENCE": os.environ.get("CLERK_AUDIENCE", ""),
         },
     )
 

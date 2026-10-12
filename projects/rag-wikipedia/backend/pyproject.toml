@@ -48,6 +48,15 @@ dependencies = [
 # eval-quality installs NO extras: it measures retrieval and runs neither
 # pytest nor ruff.
 [project.optional-dependencies]
+# Verifying Clerk session tokens at the edge (serving/app.py). INSTALLED IN CI,
+# unlike the other extras: tests/test_clerk_auth.py signs real RS256 tokens and
+# checks that tampered, expired and foreign-issuer ones are refused. A security
+# test skipped for a missing dependency is worse than no test, because the
+# summary still says green.
+auth = [
+    "pyjwt[crypto]>=2.9,<3",
+]
+
 # The graph runtime for the `langgraph` engine. Kept out of the base
 # dependencies: the serving path defaults to `direct`, which needs none of this,
 # so a deployment that does not run the agent does not install it.

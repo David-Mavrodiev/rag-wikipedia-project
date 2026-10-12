@@ -4,6 +4,7 @@ import CitationList from './components/CitationList'
 import ExampleQuestions from './components/ExampleQuestions'
 import QualityPanel from './components/QualityPanel'
 import QueryBox from './components/QueryBox'
+import { AuthControls, useSessionToken } from './auth'
 import { useWakeOnFocus } from './useWakeOnFocus'
 
 export interface Citation {
@@ -31,6 +32,7 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { wakeState, wake } = useWakeOnFocus(API_BASE)
+  const sessionToken = useSessionToken()
 
   const handleQuery = async (question: string) => {
     setLoading(true)
@@ -38,9 +40,14 @@ export default function App() {
     setResult(null)
     setAsked(question)
     try {
+      // Sent only when there is one: an anonymous visitor is a supported
+      // case, and the API verifies the token rather than trusting it.
+      const token = await sessionToken()
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers.Authorization = `Bearer ${token}`
       const response = await fetch(`${API_BASE}/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ question }),
       })
       if (!response.ok) {
@@ -65,6 +72,7 @@ export default function App() {
               The numbers
             </a>
             <a href={REPO}>Source</a>
+            <AuthControls />
           </span>
         </nav>
       </header>
