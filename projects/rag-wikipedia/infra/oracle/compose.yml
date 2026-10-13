@@ -1,0 +1,117 @@
+# Oracle Cloud A1 (Always Free, arm64, EU region). Always on: no cold starts.
+#
+#   cp .env.example .env      # set DOMAIN, and the corpus snapshot URL
+#   docker compose up -d --build
+#   docker compose run --rm restore-corpus     # once, after the first start
+#
+# What is published: Caddy only (80/443). Qdrant, Redis and Ollama listen on the
+# compose network, never on the host.
+name: rag-wikipedia
+
+services:
+  api:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+      target: serving
+    restart: unless-stopped
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      OLLAMA_URL: http://ollama:11434
+      RATE_LIMIT_REDIS_URL: redis://redis:6379/0
+      COLLECTION: ${COLLECTION:-wikipedia}
+      PROFILE: real
+      # The public demo: a question a few seconds apart is fine, a loop is not.
+      RATE_LIMIT_ENABLED: "true"
+      RATE_LIMIT_QUERY_PER_MINUTE: ${RATE_LIMIT_QUERY_PER_MINUTE:-6}
+      RATE_LIMIT_QUERY_BURST: ${RATE_LIMIT_QUERY_BURST:-10}
+      RATE_LIMIT_CLIENT_HEADER: X-Forwarded-For
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?set ALLOWED_ORIGINS in .env}
+      # Empty, on purpose: the auto-correcting audit must not exist in production.
+      QUALITY_ADMIN_TOKEN: ""
+    expose: ["8000"]
+    depends_on:
+      qdrant: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      ollama: {condition: service_started}
+
+  qdrant:
+    image: qdrant/qdrant:v1.18.3
+    restart: unless-stopped
+    volumes:
+      # A LOCAL volume, never a network filesystem: Qdrant's install notes rule
+      # out NFS and SMB, which is what ended the Azure plan.
+      - qdrant_data:/qdrant/storage
+      - snapshots:/qdrant/snapshots
+    expose: ["6333"]
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    expose: ["6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ollama:
+    image: ollama/ollama:0.12.3
+    restart: unless-stopped
+    environment:
+      # This host is never cold, so the model stays resident; 2-4 cores answer
+      # one request at a time faster than two at once.
+      OLLAMA_KEEP_ALIVE: "-1"
+      OLLAMA_NUM_PARALLEL: "1"
+      OLLAMA_MAX_QUEUE: "64"
+    volumes:
+      - ollama_data:/root/.ollama
+    expose: ["11434"]
+
+  # One-shot helpers, run with `docker compose run --rm <name>`.
+  pull-model:
+    image: ollama/ollama:0.12.3
+    profiles: ["setup"]
+    entrypoint: ["sh", "-c", "OLLAMA_HOST=http://ollama:11434 ollama pull ${LLM_MODEL:-llama3.2:3b}"]
+    depends_on: [ollama]
+
+  restore-corpus:
+    build:
+      context: ../../backend
+      dockerfile: Dockerfile
+      target: serving
+    profiles: ["setup"]
+    environment:
+      QDRANT_URL: http://qdrant:6333
+      COLLECTION: ${COLLECTION:-wikipedia}
+      SNAPSHOT_URL: ${SNAPSHOT_URL:?set SNAPSHOT_URL in .env}
+      EXPECTED_POINTS: ${EXPECTED_POINTS:-87173}
+    entrypoint: ["python", "/app/../scripts/corpus_snapshot.py", "restore",
+                 "--from-url", "${SNAPSHOT_URL}", "--expect", "${EXPECTED_POINTS:-87173}"]
+    depends_on:
+      qdrant: {condition: service_healthy}
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [api]
+
+volumes:
+  qdrant_data:
+  snapshots:
+  ollama_data:
+  caddy_data:
+  caddy_config:

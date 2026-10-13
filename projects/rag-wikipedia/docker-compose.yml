@@ -59,6 +59,8 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      # backend/Dockerfile builds two images; this stack is the dev one.
+      target: dev
     ports:
       - "8000:8000"
     environment:
