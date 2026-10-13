@@ -100,7 +100,27 @@ def _with_sources(built: modal.Image) -> modal.Image:
     )
 
 
-image = _with_sources(base_image)
+def _deploy_sha() -> str:
+    """The commit being deployed, read on the laptop while the image is defined.
+
+    The container gets the working tree without its `.git`, so `/quality` served
+    a provenance block whose git_sha was null - a live metric belonging to no
+    commit. Empty outside a checkout (including when Modal re-imports this file
+    in the container, where the baked value is already in the environment).
+    """
+    try:
+        done = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT,
+            capture_output=True, text=True, timeout=5, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    return done.stdout.strip() if done.returncode == 0 else ""
+
+
+# Last layer before the local files, so a new commit rebuilds nothing that
+# costs anything. `serve` passes os.environ through, so the API inherits it.
+image = _with_sources(base_image.env({"RAG_GIT_SHA": _deploy_sha()}))
 
 reports = modal.Volume.from_name("rag-wikipedia-reports", create_if_missing=True)
 
