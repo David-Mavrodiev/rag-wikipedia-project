@@ -51,7 +51,7 @@ QDRANT_VERSION = "v1.18.3"
 
 corpus = modal.Volume.from_name("rag-wikipedia-corpus", create_if_missing=True)
 
-image = (
+base_image = (
     # Ollama's image already carries the server and the GPU runtime; everything
     # else is added on top so there is one image to cold-start, not three.
     modal.Image.from_registry("ollama/ollama:0.12.3", add_python="3.12")
@@ -86,8 +86,36 @@ image = (
         " SentenceTransformer('BAAI/bge-small-en-v1.5')\"",
     )
     .env({"HF_HUB_OFFLINE": "1"})
-    .add_local_dir(ROOT / "backend", "/srv/backend")
-    .add_local_dir(ROOT / "scripts", "/srv/scripts")
+)
+
+
+def _with_sources(built: modal.Image) -> modal.Image:
+    """Local files go on LAST. Modal forbids a build step after add_local_*,
+    and adding them last is also what keeps an edit here from rebuilding the
+    whole image."""
+    return (
+        built
+        .add_local_dir(ROOT / "backend", "/srv/backend")
+        .add_local_dir(ROOT / "scripts", "/srv/scripts")
+    )
+
+
+image = _with_sources(base_image)
+
+reports = modal.Volume.from_name("rag-wikipedia-reports", create_if_missing=True)
+
+# The evaluation image is the serving image plus the judge's weights, branched
+# from the BASE rather than from the serving image. Separate on purpose: the
+# NLI model is ~700 MB, and baking it into the image the DEMO cold-starts from
+# would make every first visitor wait for weights no answer needs.
+# HF_HUB_OFFLINE is lifted for the download and put back afterwards.
+eval_image = _with_sources(
+    base_image.env({"HF_HUB_OFFLINE": "0"})
+    .run_commands(
+        "python -c \"from sentence_transformers import CrossEncoder;"
+        " CrossEncoder('cross-encoder/nli-deberta-v3-base')\"",
+    )
+    .env({"HF_HUB_OFFLINE": "1"})
 )
 
 app = modal.App("rag-wikipedia-demo")
@@ -208,3 +236,87 @@ def retune() -> None:
     modal.Function.from_name("rag-wikipedia-demo", "serve").update_autoscaler(
         scaledown_window=window
     )
+
+
+@app.function(
+    image=eval_image,
+    gpu=GPU,
+    volumes={"/corpus": corpus, "/reports": reports},
+    cpu=4,
+    memory=16384,
+    timeout=7200,
+    max_containers=1,
+)
+def evaluate(suite: str = "serving_detail", engine: str = "direct",
+             score: bool = True, limit: int | None = None,
+             score_only: bool = False, git_sha: str = "") -> dict:
+    """Run the end-to-end harness here instead of on a laptop.
+
+    The reference laptop idles at 88-91 C: a paced run of 80 cases takes about
+    an hour and a half, and twice a thermal guard has stopped one outright. The
+    same work on a rented T4 takes minutes, costs a few cents, and the pacing
+    constraint becomes COST rather than heat - `--no-pace` below is not
+    carelessness, it is the absence of a thermal problem worth pacing around.
+
+    Reports land on the `rag-wikipedia-reports` volume, so a run survives the
+    container that produced it:
+
+        SHA=$(git rev-parse HEAD)
+        modal run infra/modal/demo.py::evaluate --suite serving_detail --git-sha $SHA
+        modal volume get rag-wikipedia-reports /e2e ./reports
+
+    `--git-sha` is not decoration. The image carries the code without the
+    `.git` that produced it, so the first cloud run recorded `git_sha: null`
+    and its numbers could not be tied to a commit. The caller knows the sha;
+    it is passed in and `app.core.quality._git_sha` falls back to it.
+    """
+    import json
+    import subprocess
+
+    _start_qdrant()
+    subprocess.Popen(
+        ["ollama", "serve"],
+        env=os.environ | {"OLLAMA_HOST": "127.0.0.1:11434", "OLLAMA_KEEP_ALIVE": "-1"},
+    )
+    if not _wait_for("http://127.0.0.1:6333/readyz", 600):
+        return {"ok": False, "error": "qdrant did not come up"}
+
+    args = ["python", "eval/run_e2e.py", "--suite", suite, "--engine", engine,
+            "--out-dir", "/reports/e2e", "--no-pace"]
+    if score_only:
+        args.append("--score-only")
+    if not score:
+        args.append("--no-nli")
+    if limit:
+        args += ["--limit", str(limit)]
+
+    done = subprocess.run(
+        args, cwd="/srv/backend", check=False, capture_output=True, text=True,
+        env=os.environ | {
+            "PYTHONPATH": "/srv/backend",
+            "PYTHONIOENCODING": "utf-8",
+            "QDRANT_URL": "http://127.0.0.1:6333",
+            "OLLAMA_URL": "http://127.0.0.1:11434",
+            "COLLECTION": COLLECTION,
+            "PROFILE": "real",
+            "LLM_MODEL": MODEL,
+            # Provenance for a checkout-less container: both the generating and
+            # the scoring side read it, so one run has one commit attached.
+            "RAG_GIT_SHA": git_sha,
+        },
+    )
+    reports.commit()
+
+    report_path = Path(f"/reports/e2e/{suite}.{engine}.json")
+    report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
+    if not git_sha:
+        print("WARNING: no --git-sha given; this report names no commit")
+    return {
+        "ok": done.returncode == 0,
+        "git_sha": ((report or {}).get("provenance") or {}).get("git_sha"),
+        "returncode": done.returncode,
+        "stdout_tail": done.stdout[-4000:],
+        "stderr_tail": done.stderr[-2000:],
+        "metrics": (report or {}).get("metrics"),
+        "answers": (report or {}).get("answers"),
+    }

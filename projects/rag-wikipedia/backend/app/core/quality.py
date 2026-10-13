@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import subprocess
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
@@ -49,7 +50,16 @@ def reset_quality_state() -> None:
 
 
 def _git_sha() -> str | None:
-    """Best-effort commit hash. None outside a git checkout - never raises."""
+    """Best-effort commit hash. None outside a git checkout - never raises.
+
+    A checkout answers for itself. RAG_GIT_SHA is the fallback for a container
+    that holds the code but not the `.git` that produced it - the cloud eval
+    runs there, and reported `git_sha: null`, which makes a metric unattributable
+    to a commit.
+
+    The order matters: measured beats declared. A stale exported variable must
+    not be able to relabel a real checkout's run as some other commit.
+    """
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -60,8 +70,10 @@ def _git_sha() -> str | None:
             check=False,
         )
     except (OSError, subprocess.SubprocessError):
-        return None
-    return result.stdout.strip() or None if result.returncode == 0 else None
+        result = None
+    if result is not None and result.returncode == 0 and result.stdout.strip():
+        return result.stdout.strip()
+    return os.environ.get("RAG_GIT_SHA", "").strip() or None
 
 
 def build_provenance(*, store=None, top_k: int) -> dict[str, object]:
