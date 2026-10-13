@@ -2,6 +2,7 @@ import { useState } from 'react'
 import AnswerView from './components/AnswerView'
 import CitationList from './components/CitationList'
 import ExampleQuestions from './components/ExampleQuestions'
+import HowItIsMeasured from './components/HowItIsMeasured'
 import QualityPanel from './components/QualityPanel'
 import QueryBox from './components/QueryBox'
 import { AuthControls, useSessionToken } from './auth'
@@ -107,6 +108,7 @@ export default function App() {
           </div>
         )}
 
+        <HowItIsMeasured />
         <QualityPanel />
       </main>
 

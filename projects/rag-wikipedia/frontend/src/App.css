@@ -269,3 +269,71 @@ button:disabled {
 .link-button:hover {
   text-decoration: underline;
 }
+
+/* --- how it is measured -------------------------------------------------- */
+
+.measured {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin: 1.5rem 0 1rem;
+}
+
+.measured h2 {
+  margin-bottom: 1rem;
+}
+
+.measured-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(19rem, 1fr));
+  gap: 1rem;
+}
+
+.measured-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.9rem 1rem;
+}
+
+.measured-card h3 {
+  margin-bottom: 0.4rem;
+}
+
+.published {
+  margin: 0.8rem 0 0;
+}
+
+.published > div {
+  border-top: 1px solid var(--line);
+  padding: 0.5rem 0 0.4rem;
+}
+
+.published dt {
+  font-size: 0.9rem;
+}
+
+.published dt strong {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.published dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.lessons-title {
+  margin: 1.25rem 0 0.5rem;
+}
+
+.lessons {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.lessons li {
+  margin-bottom: 0.5rem;
+  font-size: 0.92rem;
+}
