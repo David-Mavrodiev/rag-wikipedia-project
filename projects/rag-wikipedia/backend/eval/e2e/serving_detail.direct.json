@@ -1,0 +1,1921 @@
+{
+  "suite": "serving_detail",
+  "engine": "direct",
+  "nli_model": "cross-encoder/nli-deberta-v3-base",
+  "provenance": {
+    "generated_at": "2026-09-22T07:02:15.587909+00:00",
+    "git_sha": "2bcc8584b425471631e60dbaeb322d93a1bead03",
+    "profile": "real",
+    "collection": "wikipedia",
+    "vector_count": 87173,
+    "embed_model": "BAAI/bge-small-en-v1.5",
+    "top_k": 5,
+    "gates": {
+      "recall": 0.8,
+      "precision": 0.6,
+      "refusal_accuracy": 0.8,
+      "false_accept_rate_max": 0.1
+    },
+    "llm_model": "llama3.2:3b",
+    "engine": "direct"
+  },
+  "scored_at": "2026-09-22T10:38:40.096631+00:00",
+  "scored_git_sha": "9d14a3bbe69a8f97de049f22b6bef8772180b5f0",
+  "conditions": {
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "pause_at": 90,
+    "resume_at": 87,
+    "pauses": 61,
+    "total_cooldown_s": 5659.0,
+    "started_at": "2026-09-21T15:03:00+00:00",
+    "finished_at": "2026-09-22T07:02:15+00:00",
+    "limit": null
+  },
+  "metrics": {
+    "n_cases": 80,
+    "n_scored": 80,
+    "n_errors": 0,
+    "n_missing": 0,
+    "n_answerable": 60,
+    "n_unanswerable": 20,
+    "refusal_accuracy": 0.85,
+    "false_accept_rate": 0.15,
+    "answerable_refusal_rate": 0.13333333333333333,
+    "context_hit_rate": 0.95,
+    "soft_refusals_answerable": 6,
+    "soft_refusals_with_article_in_context": 5,
+    "complete": true
+  },
+  "answers": {
+    "n_answered": 55,
+    "n_refused": 25,
+    "citation_valid_rate": 0.8181818181818182,
+    "placeholder_citation_rate": 0.14545454545454545,
+    "lexical_overlap": 0.8447425209594044,
+    "support_threshold": 0.5,
+    "n_judged": 55,
+    "n_without_claims": 2,
+    "supported_sentence_rate": 0.7924528301886793,
+    "fully_supported_answer_rate": 0.7924528301886793
+  },
+  "latency": {
+    "generated": {
+      "n": 74,
+      "p50_ms": 7328.0,
+      "p95_ms": null,
+      "min_ms": 3094.0,
+      "max_ms": 64359.0
+    },
+    "no_generation": {
+      "n": 6,
+      "p50_ms": 94.0,
+      "p95_ms": null,
+      "min_ms": 47.0,
+      "max_ms": 109.0
+    },
+    "generated_full": {
+      "n": 0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "min_ms": null,
+      "max_ms": null
+    },
+    "generated_throttled": {
+      "n": 74,
+      "p50_ms": 7328.0,
+      "p95_ms": null,
+      "min_ms": 3094.0,
+      "max_ms": 64359.0
+    },
+    "generated_unknown": {
+      "n": 0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "min_ms": null,
+      "max_ms": null
+    },
+    "generated_no_gpu_reading": {
+      "n": 0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "min_ms": null,
+      "max_ms": null
+    }
+  },
+  "cases": [
+    {
+      "id": "sd-a-000",
+      "question": "Which company bought the Spanish-language station out of the Pappas bankruptcy for $4 million and took ownership on April 1, 2009?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Entravision Communications bought the Spanish-language station out of the Pappas bankruptcy for $4 million and took ownership on April 1, 2009 [1].",
+      "context_titles": [
+        "KREN-TV",
+        "KREN-TV",
+        "WPBF",
+        "WEVU-LP",
+        "Cadena SER"
+      ],
+      "latency_ms": 4953.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Entravision Communications bought the Spanish-language station out of the Pappas bankruptcy for $4 million and took ownership on April 1, 2009.",
+          "support": 0.8204
+        }
+      ]
+    },
+    {
+      "id": "sd-a-001",
+      "question": "Which producer offered the director of The Italian Job his debut feature, The Penthouse (1967)?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Peter Collinson (film director)",
+        "Roberto Pacini",
+        "Alfred Hitchcock",
+        "Diego Abatantuono",
+        "Lando Buzzanca"
+      ],
+      "latency_ms": 3094.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sd-a-002",
+      "question": "Which founding member of a Vancouver artist-run centre adopted the persona of Mr. Peanut and ran for mayor in 1974?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Vincent Trasov, a founding member of Western Front, adopted the persona of Mr. Peanut and ran for mayor of Vancouver in 1974 [1].",
+      "context_titles": [
+        "Western Front Society",
+        "Harry Hays",
+        "Western Front Society",
+        "Marijuana Party candidates in the 2006 Canadian federal election",
+        "Artist-run space"
+      ],
+      "latency_ms": 35344.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Vincent Trasov, a founding member of Western Front, adopted the persona of Mr. Peanut and ran for mayor of Vancouver in 1974.",
+          "support": 0.9985
+        }
+      ]
+    },
+    {
+      "id": "sd-a-003",
+      "question": "What is the philosophical belief that sentience derives from matter, often wrongly equated with panpsychism?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The philosophical belief that sentience derives from matter, often wrongly equated with panpsychism, is hylopathism [1].",
+      "context_titles": [
+        "Hylopathism",
+        "Atomic theory",
+        "Animism",
+        "Anaximenes of Miletus",
+        "Animism"
+      ],
+      "latency_ms": 7500.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The philosophical belief that sentience derives from matter, often wrongly equated with panpsychism, is hylopathism.",
+          "support": 0.998
+        }
+      ]
+    },
+    {
+      "id": "sd-a-004",
+      "question": "What was the German polar exploration ship renamed after Canada bought it in 1904?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The ship was renamed CGS Arctic [1].",
+      "context_titles": [
+        "Gauss (ship)",
+        "Holland 602 type submarine",
+        "Albert Armitage",
+        "Bombardier Inc.",
+        "Predigtstuhl Cable Car"
+      ],
+      "latency_ms": 6656.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The ship was renamed CGS Arctic.",
+          "support": 0.9974
+        }
+      ]
+    },
+    {
+      "id": "sd-a-005",
+      "question": "Who succeeded Jaroslav Hlad'o as commander of the Spitfire unit on 15 November 1944?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Sqn Ldr Václav Šlouf succeeded Jaroslav Hlad'o as squadron commander on 15 November 1944 [1].",
+      "context_titles": [
+        "No. 312 (Czechoslovak) Squadron RAF",
+        "No. 313 Squadron RAF",
+        "No. 310 Squadron RAF",
+        "No. 313 Squadron RAF",
+        "No. 19 Squadron RAF"
+      ],
+      "latency_ms": 13860.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Sqn Ldr Václav Šlouf succeeded Jaroslav Hlad'o as squadron commander on 15 November 1944.",
+          "support": 0.9932
+        }
+      ]
+    },
+    {
+      "id": "sd-a-006",
+      "question": "Which co-founder does the 2006 viral parody of a social networking site portray as its \"creator\"?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The 2006 viral parody of a social networking site portrays Tom Anderson, the \"creator\" of Myspace, as its \"creator\".",
+      "context_titles": [
+        "The MySpace Movie",
+        "Piczo",
+        "AIM (software)",
+        "MyLackey.com",
+        "Zooomr"
+      ],
+      "latency_ms": 7547.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The 2006 viral parody of a social networking site portrays Tom Anderson, the \"creator\" of Myspace, as its \"creator\".",
+          "support": 0.9891
+        }
+      ]
+    },
+    {
+      "id": "sd-a-007",
+      "question": "At which Toronto venue did an Odisha batsman play both of his ODIs against Pakistan in 1998?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Skating & Curling Club, Toronto [1].",
+      "context_titles": [
+        "Sanjay Raul",
+        "Sport in Pakistan",
+        "Rohit Sharma",
+        "Shaheedur Rahman",
+        "Mehrab Hossain (cricketer, born 1978)"
+      ],
+      "latency_ms": 5687.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Skating & Curling Club, Toronto.",
+          "support": 0.989
+        }
+      ]
+    },
+    {
+      "id": "sd-a-008",
+      "question": "What was the title of the 1966 book in which Churchill's doctor described his patient's failing health?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The title of the 1966 book in which Churchill's doctor described his patient's failing health was The Struggle for Survival [1].",
+      "context_titles": [
+        "Charles Wilson, 1st Baron Moran",
+        "Charles Wilson, 1st Baron Moran",
+        "Charles Wilson, 1st Baron Moran",
+        "Charles Wilson, 1st Baron Moran",
+        "Robert A. Wilson"
+      ],
+      "latency_ms": 64359.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The title of the 1966 book in which Churchill's doctor described his patient's failing health was The Struggle for Survival.",
+          "support": 0.9976
+        }
+      ]
+    },
+    {
+      "id": "sd-a-009",
+      "question": "Which earls kept most of the records of the Scottish tribunal for crimes committed near the monarch?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "High Court of Constabulary",
+        "Balmoral Castle",
+        "Lord High Commissioner to the General Assembly of the Church of Scotland",
+        "Walter Stewart, Earl of Atholl",
+        "List of peers 1360–1369"
+      ],
+      "latency_ms": 8578.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sd-a-011",
+      "question": "Which California city is named after a Miwok leader probably baptised with the name of a 2nd-century saint?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The city of Novato, California, is named after a local Miwok leader who had probably been given the name of Saint Novatus at his baptism [1].",
+      "context_titles": [
+        "Novatus",
+        "Berkeley, California",
+        "Alameda, California",
+        "Holy Name of Jesus Church (San Francisco)",
+        "Welsh Americans"
+      ],
+      "latency_ms": 3360.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The city of Novato, California, is named after a local Miwok leader who had probably been given the name of Saint Novatus at his baptism.",
+          "support": 0.9858
+        }
+      ]
+    },
+    {
+      "id": "sd-a-012",
+      "question": "What was the motto of the Royal Air Force's supply organisation formed on 1 April 1994?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The motto of the Royal Air Force's Logistics Command was Sustentamus ut Bellent, which means 'We sustain that they may fight'. [1]",
+      "context_titles": [
+        "RAF Logistics Command",
+        "RAF Logistics Command",
+        "No. 19 Squadron RAF",
+        "Royal Canadian Logistics Service",
+        "British Army"
+      ],
+      "latency_ms": 3843.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The motto of the Royal Air Force's Logistics Command was Sustentamus ut Bellent, which means 'We sustain that they may fight'.",
+          "support": 0.9835
+        }
+      ]
+    },
+    {
+      "id": "sd-a-013",
+      "question": "Which court of burgesses governed the former abbey lands immediately west of London's financial district from 1585 to 1900?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The court of burgesses governed the former abbey lands immediately west of London's financial district from 1585 to 1900, which is now the southern part of the City of Westminster in Greater London [1].",
+      "context_titles": [
+        "City and Liberty of Westminster",
+        "Benedictines",
+        "Bank of England",
+        "Buckingham Palace",
+        "West Brompton"
+      ],
+      "latency_ms": 6438.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The court of burgesses governed the former abbey lands immediately west of London's financial district from 1585 to 1900, which is now the southern part of the City of Westminster in Greater London.",
+          "support": 0.5945
+        }
+      ]
+    },
+    {
+      "id": "sd-a-014",
+      "question": "Which rock musician revealed in 2021 that he is a cousin of the drummer of the Los Angeles punk band X?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Dave Grohl revealed in 2021 that he and Donald J. Bonebrake are cousins through Grohl's grandmother [n].",
+      "context_titles": [
+        "D. J. Bonebrake",
+        "Gavin Harrison",
+        "Billy Zoom",
+        "Thomas Lang",
+        "Aztlan Underground"
+      ],
+      "latency_ms": 7454.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "Dave Grohl revealed in 2021 that he and Donald J. Bonebrake are cousins through Grohl's grandmother.",
+          "support": 0.0153
+        }
+      ]
+    },
+    {
+      "id": "sd-a-015",
+      "question": "Which kind of surgeon establishes the airway while the baby is still attached to the placenta in an ex utero intrapartum treatment delivery?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "A pediatric otolaryngologist-head & neck surgeon establishes the airway while the baby is still attached to the placenta in an ex utero intrapartum treatment delivery [1].",
+      "context_titles": [
+        "EXIT procedure",
+        "Sacrococcygeal teratoma",
+        "EXIT procedure",
+        "Abortion",
+        "Cervix"
+      ],
+      "latency_ms": 7734.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "A pediatric otolaryngologist-head & neck surgeon establishes the airway while the baby is still attached to the placenta in an ex utero intrapartum treatment delivery.",
+          "support": 0.9925
+        }
+      ]
+    },
+    {
+      "id": "sd-a-016",
+      "question": "Who first depicted the bird-of-paradise constellation on a celestial globe in 1598?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Petrus Plancius first depicted the bird-of-paradise constellation on a celestial globe in 1598 [1].",
+      "context_titles": [
+        "Apus",
+        "Aries (constellation)",
+        "Astrometry",
+        "Aries (constellation)",
+        "Ara (constellation)"
+      ],
+      "latency_ms": 7922.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Petrus Plancius first depicted the bird-of-paradise constellation on a celestial globe in 1598.",
+          "support": 0.9976
+        }
+      ]
+    },
+    {
+      "id": "sd-a-017",
+      "question": "Besides the Esperanto Museum, which museum does the Austrian National Library house in the Baroque building at Herrengasse 9 in Vienna?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Palais Mollard-Clary",
+        "Palais Lobkowitz, Vienna",
+        "Palais Caprara-Geymüller",
+        "Eszterháza",
+        "Schloss Neuwaldegg"
+      ],
+      "latency_ms": 6140.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sd-a-018",
+      "question": "What destroyed almost the whole wetlands complex of the rare Toluca Valley mole species, making it locally extinct there?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The drainage of the marshes destroyed almost the whole Lake Lerma wetlands complex, leading to the local extinction of the Toluca Valley mole species [1].",
+      "context_titles": [
+        "Lake Lerma salamander",
+        "Colombian grebe",
+        "Titicaca grebe",
+        "Calakmul Biosphere Reserve",
+        "Cretaceous"
+      ],
+      "latency_ms": 7328.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The drainage of the marshes destroyed almost the whole Lake Lerma wetlands complex, leading to the local extinction of the Toluca Valley mole species.",
+          "support": 0.9934
+        }
+      ]
+    },
+    {
+      "id": "sd-a-019",
+      "question": "On what date did the Calgary Stampeders' third quarterback retire, saying football was no longer fun for him?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Nealy retired from the Stampeders after two meetings with head coach Hufnagel on Friday, June 11, 2010, saying that football was no longer fun for him [1].",
+      "context_titles": [
+        "Barrick Nealy",
+        "Barrick Nealy",
+        "Babe Laufenberg",
+        "Paul Bowman (rugby league)",
+        "Jim Dooley"
+      ],
+      "latency_ms": 7813.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Nealy retired from the Stampeders after two meetings with head coach Hufnagel on Friday, June 11, 2010, saying that football was no longer fun for him.",
+          "support": 0.9946
+        }
+      ]
+    },
+    {
+      "id": "sd-a-020",
+      "question": "In which Georgia town was the Chicago blues slide guitarist born Hudson Woodbridge?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Smithville, Georgia [1].",
+      "context_titles": [
+        "Tampa Red",
+        "Blind Willie McTell",
+        "Tampa Red",
+        "Brownie McGhee",
+        "Blues"
+      ],
+      "latency_ms": 6407.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": []
+    },
+    {
+      "id": "sd-a-021",
+      "question": "What was the Atlanta street address of the Methodist bishop assigned the Atlanta episcopal area in 1940?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "63 Auburn Ave., N.E., Atlanta [n]",
+      "context_titles": [
+        "Arthur James Moore",
+        "Richard Green Waterhouse",
+        "David Hastings Moore",
+        "Lorenzo Houston King",
+        "Ernest Lynn Waldorf"
+      ],
+      "latency_ms": 6547.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "63 Auburn Ave., N.E., Atlanta",
+          "support": 0.9867
+        }
+      ]
+    },
+    {
+      "id": "sd-a-022",
+      "question": "Which company completed a TACLANE version, the KG-175R, that houses both a red and a black Cisco router?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "General Dynamics Mission Systems completed its TACLANE version (KG-175R), which houses both a red and a black Cisco router [1].",
+      "context_titles": [
+        "High Assurance Internet Protocol Encryptor",
+        "High Assurance Internet Protocol Encryptor",
+        "Atari 2600",
+        "Zuken",
+        "Bluetooth"
+      ],
+      "latency_ms": 7781.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "General Dynamics Mission Systems completed its TACLANE version (KG-175R), which houses both a red and a black Cisco router.",
+          "support": 0.9426
+        }
+      ]
+    },
+    {
+      "id": "sd-a-023",
+      "question": "With whom did Norway's first Olympic speed skating champion share first place in the 1928 500 m?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Clas Thunberg [1].",
+      "context_titles": [
+        "Bernt Evensen",
+        "Jan Egil Storholt",
+        "Amund Sjøbrend",
+        "International figure skating",
+        "Speed skating at the 2006 Winter Olympics – Men's 500 metres"
+      ],
+      "latency_ms": 6656.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": []
+    },
+    {
+      "id": "sd-a-024",
+      "question": "On what date did the male half of the Canadian pair that first performed the death spiral one-handed die?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Wallace Diestelmeyer",
+        "Brian MacLeod (Canadian musician)",
+        "Schulich School of Medicine & Dentistry",
+        "The Deadly Snakes",
+        "Alex Lifeson"
+      ],
+      "latency_ms": 5953.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sd-a-025",
+      "question": "Whose prediction of the death of Henry II of France did Catherine de Medici pay Nostradamus to verify in 1566?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Catherine de Medici paid Michael Nostradamus in 1566 to verify the prediction of the death of her husband, king Henry II of France, made by her astrologer Lucus Gauricus [1].",
+      "context_titles": [
+        "Astrology",
+        "John Stewart, Duke of Albany",
+        "Battle of Agincourt",
+        "Charlotte Marguerite de Montmorency",
+        "Nostradamus in popular culture"
+      ],
+      "latency_ms": 9109.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Catherine de Medici paid Michael Nostradamus in 1566 to verify the prediction of the death of her husband, king Henry II of France, made by her astrologer Lucus Gauricus.",
+          "support": 0.9961
+        }
+      ]
+    },
+    {
+      "id": "sd-a-026",
+      "question": "Which island's 6th Chief Minister, in office from 1997 to 2001, was sentenced to fifteen years in prison in 2021?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "David Samuel Brandt, the 6th Chief Minister of Montserrat, was sentenced to fifteen years imprisonment in 2021 [1].",
+      "context_titles": [
+        "David Brandt (politician)",
+        "Christmas Island",
+        "Aung San Suu Kyi",
+        "Washington Misick",
+        "Premier of the Turks and Caicos Islands"
+      ],
+      "latency_ms": 7734.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "David Samuel Brandt, the 6th Chief Minister of Montserrat, was sentenced to fifteen years imprisonment in 2021.",
+          "support": 0.9978
+        }
+      ]
+    },
+    {
+      "id": "sd-a-027",
+      "question": "Whom did the Burlington, New Jersey Christian school's boys soccer team beat 3-2 in overtime in the 2021 NCSAA final?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Burlington, New Jersey Christian school's boys soccer team beat Blair County Christian School 3-2 in overtime in the 2021 NCSAA final [1].",
+      "context_titles": [
+        "Life Center Academy",
+        "North Warren Regional High School",
+        "Leonia High School",
+        "Unity Christian High School (Hudsonville)",
+        "Northern New Jersey Interscholastic League"
+      ],
+      "latency_ms": 8531.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Burlington, New Jersey Christian school's boys soccer team beat Blair County Christian School 3-2 in overtime in the 2021 NCSAA final.",
+          "support": 0.9775
+        }
+      ]
+    },
+    {
+      "id": "sd-a-028",
+      "question": "What term names the maximum rate of change of an output signal, usually quoted in volts per microsecond?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The term that names the maximum rate of change of an output signal, usually quoted in volts per microsecond, is slew rate [n].",
+      "context_titles": [
+        "Amplifier figures of merit",
+        "Amplitude modulation",
+        "Amplifier figures of merit",
+        "Amplifier figures of merit",
+        "Bandwidth (signal processing)"
+      ],
+      "latency_ms": 7968.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "The term that names the maximum rate of change of an output signal, usually quoted in volts per microsecond, is slew rate.",
+          "support": 0.9985
+        }
+      ]
+    },
+    {
+      "id": "sd-a-029",
+      "question": "Which wayside shrine in a central Slovenian settlement founded in 1945 appears on its municipality's coat of arms?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 47.0,
+      "gpu_regime": null,
+      "context_hit": false
+    },
+    {
+      "id": "sd-a-030",
+      "question": "Which Baroque sculptor made an altar in the Archangel Michael parish church of a small town on the western edge of the Savinja Valley?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Baroque sculptor Francesco Robba made an altar in the Archangel Michael parish church of a small town on the western edge of the Savinja Valley [n].",
+      "context_titles": [
+        "Vransko",
+        "Šentjernej",
+        "Železniki",
+        "Kozje",
+        "Mozirje"
+      ],
+      "latency_ms": 6171.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "The Baroque sculptor Francesco Robba made an altar in the Archangel Michael parish church of a small town on the western edge of the Savinja Valley.",
+          "support": 0.9964
+        }
+      ]
+    },
+    {
+      "id": "sd-a-031",
+      "question": "What was the track \"Crowd Chant\" on Joe Satriani's 2006 album originally going to be named?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "\"Party on the Enterprise\" [1].",
+      "context_titles": [
+        "Super Colossal",
+        "Super Colossal",
+        "Dreaming No. 11",
+        "Live in San Francisco (Joe Satriani album)",
+        "No More Panic"
+      ],
+      "latency_ms": 5859.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "\"Party on the Enterprise\".",
+          "support": 0.0296
+        }
+      ]
+    },
+    {
+      "id": "sd-a-033",
+      "question": "How many bays does Singapore's fourth air-conditioned transit hub, the first along the East West MRT line, have?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Boon Lay Bus Interchange has 60 bus bays [1].",
+      "context_titles": [
+        "Boon Lay Bus Interchange",
+        "Boon Lay Bus Interchange",
+        "Sengkang Bus Interchange",
+        "Serangoon Bus Interchange",
+        "Pasir Ris Bus Interchange"
+      ],
+      "latency_ms": 6938.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Boon Lay Bus Interchange has 60 bus bays.",
+          "support": 0.9898
+        }
+      ]
+    },
+    {
+      "id": "sd-a-034",
+      "question": "Whose aide-de-camp at the Battle of Borodino was the Russian count who later commanded the occupying troops in Wallachia?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Count Pavel Dmitrievich Kiselyov [1] was the aide-de-camp of Count Miloradovich at the Battle of Borodino [1], and later commanded the occupying troops in Wallachia [1].",
+      "context_titles": [
+        "Pavel Kiselyov",
+        "Dmitry Dokhturov",
+        "Battle of Berestechko",
+        "Theodor Dannecker",
+        "Pavel Kiselyov"
+      ],
+      "latency_ms": 8485.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Count Pavel Dmitrievich Kiselyov was the aide-de-camp of Count Miloradovich at the Battle of Borodino, and later commanded the occupying troops in Wallachia.",
+          "support": 0.0043
+        }
+      ]
+    },
+    {
+      "id": "sd-a-036",
+      "question": "Which island in the neighbouring district of Demre is a common excursion from the Turkish resort known for its submerged Douglas DC-3?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Kekova island [1] is a common excursion from Kaş, a Turkish resort known for its underwater sculptures and submerged Douglas DC-3 plane.",
+      "context_titles": [
+        "Kaş",
+        "Cyprus",
+        "Kandıra",
+        "Afyonkarahisar",
+        "Belfast"
+      ],
+      "latency_ms": 7625.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Kekova island is a common excursion from Kaş, a Turkish resort known for its underwater sculptures and submerged Douglas DC-3 plane.",
+          "support": 0.9836
+        }
+      ]
+    },
+    {
+      "id": "sd-a-037",
+      "question": "At which motor show was the Italian supercar maker's first off-road prototype revealed alongside the Jalpa in 1981?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Italian supercar maker's first off-road prototype, the Lamborghini Cheetah, was revealed alongside the Jalpa at the 1981 Geneva Auto Show [2].",
+      "context_titles": [
+        "Lamborghini LM001",
+        "Lamborghini Cheetah",
+        "Maserati Boomerang",
+        "Lamborghini Calà",
+        "Lamborghini LMA002"
+      ],
+      "latency_ms": 7422.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Italian supercar maker's first off-road prototype, the Lamborghini Cheetah, was revealed alongside the Jalpa at the 1981 Geneva Auto Show.",
+          "support": 0.9428
+        }
+      ]
+    },
+    {
+      "id": "sd-a-038",
+      "question": "Who directed the 1955 film in which Humphrey Bogart plays a hunted man masquerading as a Catholic priest in China?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The 1955 film in which Humphrey Bogart plays a hunted man masquerading as a Catholic priest in China was directed by Edward Dmytryk [1].",
+      "context_titles": [
+        "The Left Hand of God",
+        "The Left Hand of God",
+        "The Trial (1962 film)",
+        "Cast a Dark Shadow",
+        "Séraphin: Heart of Stone"
+      ],
+      "latency_ms": 7859.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The 1955 film in which Humphrey Bogart plays a hunted man masquerading as a Catholic priest in China was directed by Edward Dmytryk.",
+          "support": 0.997
+        }
+      ]
+    },
+    {
+      "id": "sd-a-039",
+      "question": "Where did the racehorse that won the 2005 Boxing Day chase at Sandown spend his retirement?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Kicking King went to spend his retirement with the living legends at the Irish National Stud in County Kildare [2].",
+      "context_titles": [
+        "Kicking King",
+        "Kicking King",
+        "Champion Hurdle",
+        "National Museum of Racing Hall of Fame Stakes",
+        "Thomas King (boxer)"
+      ],
+      "latency_ms": 7438.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Kicking King went to spend his retirement with the living legends at the Irish National Stud in County Kildare.",
+          "support": 0.9954
+        }
+      ]
+    },
+    {
+      "id": "sd-a-040",
+      "question": "Who had the idea of founding a Latino fraternity at San José State University in 1991?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Francisco Huerta had the idea of creating a new organization on campus to serve the needs Latinos [1].",
+      "context_titles": [
+        "Sigma Delta Alpha",
+        "Sigma Delta Alpha",
+        "José María Vélaz",
+        "Universidad de San Carlos de Guatemala",
+        "Universidad de San Carlos de Guatemala"
+      ],
+      "latency_ms": 6781.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Francisco Huerta had the idea of creating a new organization on campus to serve the needs Latinos.",
+          "support": 0.9953
+        }
+      ]
+    },
+    {
+      "id": "sd-a-042",
+      "question": "Which system of plant taxonomy used a botanical name meaning \"with tubular flowers\" for an order in the Sympetalae?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Engler system used a botanical name meaning \"with tubular flowers\" for an order in the Sympetalae, which is Tubiflorae [1].",
+      "context_titles": [
+        "Tubiflorae",
+        "Sympetalae",
+        "Arecales",
+        "Asparagales",
+        "Botany"
+      ],
+      "latency_ms": 8015.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Engler system used a botanical name meaning \"with tubular flowers\" for an order in the Sympetalae, which is Tubiflorae.",
+          "support": 0.9985
+        }
+      ]
+    },
+    {
+      "id": "sd-a-043",
+      "question": "Since 1 January 1988, which body has operated the former US airbase Bluie West One in Greenland?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Mittarfeqarfiit, the Greenland Airport Administration [n]",
+      "context_titles": [
+        "Narsarsuaq Airport",
+        "Narsarsuaq Airport",
+        "Narsarsuaq Airport",
+        "Kulusuk Airport",
+        "Knud Rasmussen Glacier"
+      ],
+      "latency_ms": 6468.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "Mittarfeqarfiit, the Greenland Airport Administration",
+          "support": 0.983
+        }
+      ]
+    },
+    {
+      "id": "sd-a-044",
+      "question": "What is the Portuguese version of Shakira's 1996 single \"Bare Feet, White Dreams\" called?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Portuguese version of Shakira's 1996 single \"Bare Feet, White Dreams\" is called \"Pés Descalços\" [2].",
+      "context_titles": [
+        "Pies Descalzos, Sueños Blancos",
+        "¿Dónde Estás Corazón?",
+        "Hips Don't Lie",
+        "Dragana Mirković",
+        "UHF (Portuguese band)"
+      ],
+      "latency_ms": 8157.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Portuguese version of Shakira's 1996 single \"Bare Feet, White Dreams\" is called \"Pés Descalços\".",
+          "support": 0.0372
+        }
+      ]
+    },
+    {
+      "id": "sd-a-045",
+      "question": "At what conversion rate did the Saarland switch its currency to the Deutsche Mark in July 1959?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Saarland switched its currency to the Deutsche Mark in July 1959 at the conversion rate of 100 Saar francs = 0.8507 Deutsche Mark [n].",
+      "context_titles": [
+        "Saar franc",
+        "Saar franc",
+        "Saar mark",
+        "Belarus",
+        "CFA franc"
+      ],
+      "latency_ms": 8594.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "The Saarland switched its currency to the Deutsche Mark in July 1959 at the conversion rate of 100 Saar francs = 0.8507 Deutsche Mark.",
+          "support": 0.9892
+        }
+      ]
+    },
+    {
+      "id": "sd-a-046",
+      "question": "Which ornithologist determined in 1843 that Latham's three names for a red honeyeater all referred to one species?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "John Gould determined Latham's three names to be the one species in 1843, adopting the first-written binomial name as the valid one and relegating the others to synonymy, though the name Myzomela dibapha was occasionally used, particularly in New Caledonia [1].",
+      "context_titles": [
+        "Scarlet myzomela",
+        "Scarlet myzomela",
+        "Eastern spinebill",
+        "White-naped honeyeater",
+        "Lewin's honeyeater"
+      ],
+      "latency_ms": 9562.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "John Gould determined Latham's three names to be the one species in 1843, adopting the first-written binomial name as the valid one and relegating the others to synonymy, though the name Myzomela dibapha was occasionally used, particularly in New Caledonia.",
+          "support": 0.9973
+        }
+      ]
+    },
+    {
+      "id": "sd-a-047",
+      "question": "How many protected parks does the South American country's protected areas system include, alongside 48 natural reserves and 15 natural monuments?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Geography of Costa Rica",
+        "Andalusia",
+        "Laguna San Rafael National Park",
+        "Brazil",
+        "Albania"
+      ],
+      "latency_ms": 6406.0,
+      "gpu_regime": "throttled",
+      "context_hit": false
+    },
+    {
+      "id": "sd-a-048",
+      "question": "Where was the 1966 congress held that merged the UNT and the Liberation Front of Chad into FROLINAT?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The 1966 congress that merged the UNT and the Liberation Front of Chad into FROLINAT was held at Nyala, between June 19 and June 22, 1966 [1].",
+      "context_titles": [
+        "Ibrahim Abatcha",
+        "Ibrahim Abatcha",
+        "Abba Siddick",
+        "Abba Siddick",
+        "Popular Movement for the Liberation of Chad"
+      ],
+      "latency_ms": 8766.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The 1966 congress that merged the UNT and the Liberation Front of Chad into FROLINAT was held at Nyala, between June 19 and June 22, 1966.",
+          "support": 0.9984
+        }
+      ]
+    },
+    {
+      "id": "sd-a-049",
+      "question": "What name does art history give the unknown master-builder of the tomb of the Benedictine abbot Erminold near Regensburg?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The unknown master-builder of the tomb of the Benedictine abbot Erminold near Regensburg is known in art history as the \"Erminold Master\" [n].",
+      "context_titles": [
+        "Prüfening Abbey",
+        "Thierhaupten Abbey",
+        "Albrecht Dürer",
+        "Plankstetten Abbey",
+        "Meinrad of Einsiedeln"
+      ],
+      "latency_ms": 8219.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "The unknown master-builder of the tomb of the Benedictine abbot Erminold near Regensburg is known in art history as the \"Erminold Master\".",
+          "support": 0.0682
+        }
+      ]
+    },
+    {
+      "id": "sd-a-051",
+      "question": "Which company manages the largest shopping centre in New Hampshire and owns 28.2% of it?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Simon Property Group [1] manages the largest shopping centre in New Hampshire and owns 28.2% of it.",
+      "context_titles": [
+        "The Mall at Rockingham Park",
+        "Poughkeepsie Galleria",
+        "The Mall at Rockingham Park",
+        "University Mall (Vermont)",
+        "Fashion Center"
+      ],
+      "latency_ms": 7359.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Simon Property Group manages the largest shopping centre in New Hampshire and owns 28.2% of it.",
+          "support": 0.0043
+        }
+      ]
+    },
+    {
+      "id": "sd-a-052",
+      "question": "Whose great-uncle Hanns Alexander was believed by his family to have killed the Nazi Gauleiter of Luxembourg?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Hanns Alexander, the great-uncle of Thomas Harding, was believed by his family to have killed the Nazi Gauleiter of Luxembourg, Gustav Simon [1].",
+      "context_titles": [
+        "Gustav Simon",
+        "Alexander Jannaeus",
+        "Alexander III of Russia",
+        "Ajax the Great",
+        "Alexander III of Russia"
+      ],
+      "latency_ms": 8594.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Hanns Alexander, the great-uncle of Thomas Harding, was believed by his family to have killed the Nazi Gauleiter of Luxembourg, Gustav Simon.",
+          "support": 0.0024
+        }
+      ]
+    },
+    {
+      "id": "sd-a-053",
+      "question": "Which Bavarian duke, the last of the Agilolfings, founded the Benedictine monastery near the Lech dedicated to Saints Peter and Paul?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Duke Tassilo III of Bavaria [1] founded the Benedictine monastery near the Lech dedicated to Saints Peter and Paul.",
+      "context_titles": [
+        "Thierhaupten Abbey",
+        "Beuerberg Abbey",
+        "Abbey of Saint Peter in the Black Forest",
+        "Weihenstephan Abbey",
+        "Prüfening Abbey"
+      ],
+      "latency_ms": 8125.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Duke Tassilo III of Bavaria founded the Benedictine monastery near the Lech dedicated to Saints Peter and Paul.",
+          "support": 0.9981
+        }
+      ]
+    },
+    {
+      "id": "sd-a-054",
+      "question": "Which award did the Tampa Bay Buccaneers defensive tackle from Baylor win in 1992 after registering 10 sacks?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Tampa Bay Buccaneers defensive tackle from Baylor won the 1992 NFL Defensive Rookie of the Year award [2].",
+      "context_titles": [
+        "Santana Dotson",
+        "Ronnie Bradford",
+        "Earl Dotson",
+        "Jarret Johnson",
+        "Tom Waddle"
+      ],
+      "latency_ms": 7187.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Tampa Bay Buccaneers defensive tackle from Baylor won the 1992 NFL Defensive Rookie of the Year award.",
+          "support": 0.9796
+        }
+      ]
+    },
+    {
+      "id": "sd-a-055",
+      "question": "For up to how long can a used teeth-cleaning twig be stored and still give good forensic DNA profiles?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Miswak",
+        "Miswak",
+        "Agarose gel electrophoresis",
+        "Agarose gel electrophoresis",
+        "Agarose gel electrophoresis"
+      ],
+      "latency_ms": 6828.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sd-a-056",
+      "question": "What is the retail development on the site of Brighton & Hove Albion's stadium demolished in 1997 called?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The retail development on the site of Brighton & Hove Albion's stadium demolished in 1997 is called the Goldstone Retail Park [1].",
+      "context_titles": [
+        "Goldstone Ground",
+        "Goldstone Ground",
+        "Goldstone Ground",
+        "Brighton, Queensland",
+        "Manor Ground (Oxford)"
+      ],
+      "latency_ms": 7281.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The retail development on the site of Brighton & Hove Albion's stadium demolished in 1997 is called the Goldstone Retail Park.",
+          "support": 0.9902
+        }
+      ]
+    },
+    {
+      "id": "sd-a-057",
+      "question": "What did the Hudson's Bay Company name the outpost it established in 1927 near the confluence of the Finlay and Fox Rivers?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Hudson's Bay Company named the outpost it established in 1927 near the confluence of the Finlay and Fox Rivers as the Whitewater trading post [1].",
+      "context_titles": [
+        "Kwadacha",
+        "Alberta",
+        "British Columbia",
+        "Kwadacha",
+        "Colony of Vancouver Island"
+      ],
+      "latency_ms": 8016.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Hudson's Bay Company named the outpost it established in 1927 near the confluence of the Finlay and Fox Rivers as the Whitewater trading post.",
+          "support": 0.9979
+        }
+      ]
+    },
+    {
+      "id": "sd-a-058",
+      "question": "Which NBR chairman wired John Conacher that the best policy was to beat the West Coast rivals at any cost?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 94.0,
+      "gpu_regime": null,
+      "context_hit": false
+    },
+    {
+      "id": "sd-a-059",
+      "question": "Who holds both the goals and appearances records of the Warwickshire football club founded in 1905?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Bob Hancocks holds both the goals and appearances records of the Warwickshire football club founded in 1905 [n].",
+      "context_titles": [
+        "Southam United F.C.",
+        "Nuneaton Griff F.C.",
+        "Southam United F.C.",
+        "Brierley Hill & Withymoor F.C.",
+        "Bewdley Town F.C."
+      ],
+      "latency_ms": 7250.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "Bob Hancocks holds both the goals and appearances records of the Warwickshire football club founded in 1905.",
+          "support": 0.9621
+        }
+      ]
+    },
+    {
+      "id": "sd-a-060",
+      "question": "What is the biggest employer, with 410 staff, in the Münsterland town on the \"tree hills line\" railway?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The biggest employer in Billerbeck is the company Dr. Suwelack, which employs 410 staff [1].",
+      "context_titles": [
+        "Billerbeck",
+        "Bestwig",
+        "Transnet Freight Rail",
+        "Great Northern Railway (Ireland)",
+        "Beckum, Germany"
+      ],
+      "latency_ms": 8531.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The biggest employer in Billerbeck is the company Dr. Suwelack, which employs 410 staff.",
+          "support": 0.9955
+        }
+      ]
+    },
+    {
+      "id": "sd-a-061",
+      "question": "At which church in Cítoliby was the 18th-century Czech composer of organ concertos the organist?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The 18th-century Czech composer of organ concertos was the organist at the St. Jacob's Church in Cítoliby [1].",
+      "context_titles": [
+        "Karel Blažej Kopřiva",
+        "Josef Seger",
+        "Gaspard Corrette",
+        "Šimon Brixi",
+        "Johann Ludwig Krebs"
+      ],
+      "latency_ms": 7469.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The 18th-century Czech composer of organ concertos was the organist at the St. Jacob's Church in Cítoliby.",
+          "support": 0.9921
+        }
+      ]
+    },
+    {
+      "id": "sd-a-062",
+      "question": "Which member of a Marvel superteam resembles a large-headed baby floating in a levitating cybernetic egg-cradle?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Joyboy resembles a grotesquely large-headed and fat humanoid baby, floating around in a levitating, cybernetic egg-cradle [1].",
+      "context_titles": [
+        "Technet (comics)",
+        "Technet (comics)",
+        "Maximus (comics)",
+        "Ulik",
+        "Superboy-Prime"
+      ],
+      "latency_ms": 7907.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Joyboy resembles a grotesquely large-headed and fat humanoid baby, floating around in a levitating, cybernetic egg-cradle.",
+          "support": 0.9525
+        }
+      ]
+    },
+    {
+      "id": "sd-a-063",
+      "question": "Which actor plays Sacha Levy, whose daughter Rachel is diagnosed with leukaemia?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Bob Barrett plays Sacha Levy [1].",
+      "context_titles": [
+        "Chrissie Williams",
+        "Chrissie Williams",
+        "Carol Jackson",
+        "Kevin Covais",
+        "Blythe Danner"
+      ],
+      "latency_ms": 7047.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Bob Barrett plays Sacha Levy.",
+          "support": 0.9981
+        }
+      ]
+    },
+    {
+      "id": "sd-a-064",
+      "question": "From which company was the SCADE Suite model-based design tool acquired in 2001?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The SCADE Suite model-based design tool was acquired from Telelogic in 2001 [1].",
+      "context_titles": [
+        "Esterel Technologies",
+        "Esterel Technologies",
+        "Zuken",
+        "KnowledgeWare",
+        "Adobe Inc."
+      ],
+      "latency_ms": 6125.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The SCADE Suite model-based design tool was acquired from Telelogic in 2001.",
+          "support": 0.002
+        }
+      ]
+    },
+    {
+      "id": "sd-u-001",
+      "question": "What is the Sicilian community celebration of the dead, meaning \"Night of Sugar\", called?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Calavera",
+        "Licodia Eubea",
+        "Violant of Hungary",
+        "Cantu a tenore",
+        "Gaspare Pisciotta"
+      ],
+      "latency_ms": 7172.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-002",
+      "question": "What may someone who creates rearranged-letter wordplay be called?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 94.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sd-u-006",
+      "question": "From which Greek word meaning \"fat, oil\" does the name for non-aromatic hydrocarbons derive?",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The name for non-aromatic hydrocarbons derives from the Greek word (elaion), meaning \"olive oil, oil\" and that from (elaia), \"olive tree\", \"olive fruit\".",
+      "context_titles": [
+        "Oil",
+        "Bitumen",
+        "Aromatic compound",
+        "Antimony",
+        "Bitumen"
+      ],
+      "latency_ms": 8781.0,
+      "gpu_regime": "throttled",
+      "citation_valid": false,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The name for non-aromatic hydrocarbons derives from the Greek word (elaion), meaning \"olive oil, oil\" and that from (elaia), \"olive tree\", \"olive fruit\".",
+          "support": 0.0301
+        }
+      ]
+    },
+    {
+      "id": "sd-u-009",
+      "question": "What was the third and final cartridge style of the handheld console that Sega's Game Gear competed against in 1991?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Atari 7800",
+        "Super R-Type",
+        "Total!",
+        "Arcadia 2001",
+        "Atari 7800"
+      ],
+      "latency_ms": 7062.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-010",
+      "question": "How many air-to-air kills had the US active-radar medium-range missile achieved in conflicts over Iraq, Bosnia, Kosovo, India and Syria?",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "According to [3], the AIM-54 Phoenix achieved 78 air-to-air kills against Iraqi MiG-21s, MiG-23s, and MiG-25s during the Iran–Iraq War.",
+      "context_titles": [
+        "AIM-54 Phoenix",
+        "AIM-54 Phoenix",
+        "AIM-54 Phoenix",
+        "CIM-10 Bomarc",
+        "AIM-7 Sparrow"
+      ],
+      "latency_ms": 8766.0,
+      "gpu_regime": "throttled",
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "According to, the AIM-54 Phoenix achieved 78 air-to-air kills against Iraqi MiG-21s, MiG-23s, and MiG-25s during the Iran–Iraq War.",
+          "support": 0.0844
+        }
+      ]
+    },
+    {
+      "id": "sd-u-011",
+      "question": "What term do critics use for the togetherness relation between an object's properties without an underlying substance?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Beauty",
+        "Beauty",
+        "Beauty",
+        "Binary relation",
+        "Binary relation"
+      ],
+      "latency_ms": 6641.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-012",
+      "question": "To whom did Augustine of Hippo write about challenges to the miracle of a man surviving in a great fish?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Heroic virtue",
+        "Augustine of Hippo",
+        "Augustine of Canterbury",
+        "Augustine of Hippo",
+        "Augustine of Hippo"
+      ],
+      "latency_ms": 7266.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-013",
+      "question": "Which Cornish surnames derive from the Cornish for \"long stone\"?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Ælle of Sussex",
+        "Cornwall",
+        "Cornwall",
+        "Stone (surname)",
+        "Trevelyan"
+      ],
+      "latency_ms": 6953.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-014",
+      "question": "Who negotiated the 1876 Treaty of Kalat that brought the Khan's territories under British protection?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Russo-Persian War (1804–1813)",
+        "Abdur Rahman Khan",
+        "Brunei",
+        "Abdur Rahman Khan",
+        "Afghanistan"
+      ],
+      "latency_ms": 7219.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-015",
+      "question": "Which sportswriter for the New York Morning Telegraph first popularised New York City's famous fruit nickname in the 1920s?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 109.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sd-u-016",
+      "question": "At the confluence of which two rivers did the French Basque port city of Labourd develop?",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The French Basque port city of Labourd developed at the confluence of the Calle-Calle, Valdivia, and Cau-Cau Rivers [1].",
+      "context_titles": [
+        "Valdivia",
+        "Andorra",
+        "Bordeaux",
+        "Barcelona",
+        "Basques"
+      ],
+      "latency_ms": 8500.0,
+      "gpu_regime": "throttled",
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The French Basque port city of Labourd developed at the confluence of the Calle-Calle, Valdivia, and Cau-Cau Rivers.",
+          "support": 0.0136
+        }
+      ]
+    },
+    {
+      "id": "sd-u-017",
+      "question": "Which company won the contract to build the British ballistic missile powered by the Rolls-Royce RZ.2 engine?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Bentley",
+        "Blue Steel (missile)",
+        "Henry Folland",
+        "BMW",
+        "Bentley"
+      ],
+      "latency_ms": 7281.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-018",
+      "question": "In which Pennsylvania borough did the NFL commissioner buy his first home after the AAFC merger?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "American Football League",
+        "American Football League",
+        "American Football League",
+        "American Football League",
+        "American Football League"
+      ],
+      "latency_ms": 7390.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-019",
+      "question": "Which Breton translated songs from Ireland, Scotland and Wales into Breton between the two world wars?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Brittonic languages",
+        "Celtic languages",
+        "Cape Breton Island",
+        "British Isles",
+        "Celtic languages"
+      ],
+      "latency_ms": 7234.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-020",
+      "question": "Which Ottoman governor of the Bosnia Eyalet was killed at the Battle of Sisak in June 1593?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 94.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sd-u-021",
+      "question": "Which alliance of the five leading technical universities of Denmark, Finland, Norway and Sweden includes the Gothenburg institute of engineering?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Aarhus",
+        "International Alliance of Research Universities",
+        "Institute for Transuranium Elements",
+        "Copenhagen",
+        "Copenhagen"
+      ],
+      "latency_ms": 7063.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-022",
+      "question": "How did Pembrokeshire historian George Owen describe the Welsh port town in 1602?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 62.0,
+      "gpu_regime": "unknown"
+    },
+    {
+      "id": "sd-u-024",
+      "question": "How much faster can plants grow at 1,000 ppm of the greenhouse gas than under ambient conditions?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Growroom",
+        "Carbon",
+        "Photosynthetic efficiency",
+        "Attribution of recent climate change",
+        "Annual plant"
+      ],
+      "latency_ms": 6891.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-026",
+      "question": "For which Bundaberg club did the Kookaburras striker who won gold in Athens in 2004 play?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "James Elmer",
+        "Dean Butler (field hockey)",
+        "Matthew Wells (field hockey)",
+        "Michael Brennan (field hockey)",
+        "Nathan Eglington"
+      ],
+      "latency_ms": 5344.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sd-u-028",
+      "question": "Which former FEU standout did the PBA team pick sixth overall in the 2011 draft?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Lomas Brown",
+        "Bernie Fabiosa",
+        "Danny Price (baseball coach)",
+        "Shell Turbo Chargers",
+        "Bishop Gorman High School"
+      ],
+      "latency_ms": 6062.0,
+      "gpu_regime": "throttled"
+    }
+  ]
+}

@@ -45,6 +45,7 @@ from app.core.llm import OllamaLLM
 from app.core.vectorstore import QdrantStore
 from engines import ENGINE_REGISTRY, make_engine
 from eval.metrics import refusal_accuracy
+from eval.thermal import GpuSampler, ThermalPacer, gpu_name
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +68,18 @@ MAX_ATTEMPTS = 2
 RETRY_PAUSE_S = 5.0
 
 
-def score_case(engine, case: dict) -> dict:
+def score_case(engine, case: dict, *, sampler=None, pacer=None) -> dict:
     """Run one case and record what happened, including what it cost.
 
     A case that fails after its retries is recorded as an ERROR and excluded
     from the metrics rather than counted as a refusal. An infrastructure
     failure is not a decision the engine made, and scoring it as one would
     quietly credit an engine for a crash.
+
+    With a sampler, each case also records the GPU conditions it ran under.
+    The first published comparison reported a 48 s mean latency without them;
+    it was taken on a thermally clamped card (see eval/thermal.py), and nothing
+    in the report could say so.
     """
     expected_refusal = bool(case.get("expected_refusal"))
     base = {
@@ -81,9 +87,12 @@ def score_case(engine, case: dict) -> dict:
         "question": case["question"],
         "expected_refusal": expected_refusal,
     }
+    if pacer is not None:
+        base["cooldown_s"] = round(pacer.before_call(), 1)
 
     for attempt in range(1, MAX_ATTEMPTS + 1):
         started = time.perf_counter()
+        window_start = time.monotonic()
         try:
             result = engine.answer(case["question"])
         except Exception as exc:  # noqa: BLE001 - recorded, not swallowed
@@ -106,12 +115,23 @@ def score_case(engine, case: dict) -> dict:
             "llm_calls": result.stats.get("llm_calls", 0),
             "rewrites": result.stats.get("rewrites", 0),
             "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+            "gpu": sampler.summary(window_start, time.monotonic()) if sampler else None,
         }
     raise AssertionError("unreachable")
 
 
-def score_suite(engine, cases: list[dict]) -> dict:
-    scored = [score_case(engine, case) for case in cases]
+def gpu_regimes(cases: list[dict]) -> dict[str, int]:
+    """How many GENERATING cases ran in each GPU regime ("no_reading" without one)."""
+    counts: dict[str, int] = {}
+    for case in cases:
+        if case.get("llm_calls"):
+            regime = (case.get("gpu") or {}).get("regime") or "no_reading"
+            counts[regime] = counts.get(regime, 0) + 1
+    return counts
+
+
+def score_suite(engine, cases: list[dict], *, sampler=None, pacer=None) -> dict:
+    scored = [score_case(engine, case, sampler=sampler, pacer=pacer) for case in cases]
     # Errored cases are excluded from every metric and counted separately. A
     # suite with errors is NOT a clean measurement, and says so in the report
     # rather than quietly reporting a rate over a smaller denominator.
@@ -141,6 +161,7 @@ def score_suite(engine, cases: list[dict]) -> dict:
         "mean_latency_ms": (
             sum(case["latency_ms"] for case in usable) / len(usable) if usable else 0.0
         ),
+        "gpu_regimes": gpu_regimes(usable),
         "cases": scored,
     }
 
@@ -181,6 +202,25 @@ def build_markdown(report: dict) -> str:
         "any engine can drive the first to zero by refusing everything._",
         "",
     ]
+    # Latency means nothing without the regime it was taken in. Pairs kept from
+    # a report written before conditions were recorded say so explicitly.
+    regimes: dict[str, int] = {}
+    recorded = False
+    for name in engines:
+        for suite in report["suites"]:
+            pair = report["engines"][name][suite]
+            if "gpu_regimes" in pair:
+                recorded = True
+                for regime, count in pair["gpu_regimes"].items():
+                    regimes[regime] = regimes.get(regime, 0) + count
+    by_regime = ", ".join(f"{regime} {count}" for regime, count in sorted(regimes.items()))
+    conditions = report.get("conditions") or {}
+    lines += [
+        f"_GPU during generation: `{conditions.get('gpu') or 'not recorded'}`; generations "
+        f"by regime: {by_regime if recorded else 'not recorded'}; paced at "
+        f"{conditions.get('pause_at')}/{conditions.get('resume_at')} C._",
+        "",
+    ]
     # Incompleteness is stated at the TOP of the report, never buried in the
     # JSON. A rate computed over the cases that happened to survive is not the
     # rate, and a reader who skims the table must not be able to miss that.
@@ -217,6 +257,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--out", default=str(EVAL_DIR / "engine_comparison"))
     parser.add_argument(
+        "--no-pace", action="store_true",
+        help="do not wait for the GPU to cool between cases. Pacing changes when a "
+             "case starts, never what it measures; without it the reference laptop "
+             "reached 96 C in 33 generations.",
+    )
+    parser.add_argument(
         "--resume", action="store_true",
         help="keep engine/suite pairs already present in the output report and "
              "score only what is missing. The whole point of saving after every "
@@ -246,12 +292,20 @@ def main(argv: list[str] | None = None) -> int:
             done = [f"{e}/{s}" for e, suites in previous.items() for s in suites]
             logger.info("resuming; keeping %s already-scored pair(s): %s", len(done), done)
 
+    pacer = None if args.no_pace else ThermalPacer()
+    sampler = GpuSampler()
+    sampling = sampler.start()
     report: dict = {
         "collection": settings.collection,
         "llm_model": settings.llm_model,
         "embed_model": settings.embed_model,
         "limit": args.limit,
         "suites": suites,
+        "conditions": {
+            "gpu": gpu_name(),
+            "pause_at": pacer.pause_at if pacer else None,
+            "resume_at": pacer.resume_at if pacer else None,
+        },
         "engines": {},
     }
 
@@ -269,7 +323,9 @@ def main(argv: list[str] | None = None) -> int:
                 continue
 
             logger.info("[%s] %s: %s cases", name, suite, len(cases))
-            report["engines"][name][suite] = score_suite(engine, cases)
+            report["engines"][name][suite] = score_suite(
+                engine, cases, sampler=sampler if sampling else None, pacer=pacer
+            )
             scored = report["engines"][name][suite]
             # Saved after every pair. A model runner that dies an hour in must
             # not take the measurement with it.
@@ -287,6 +343,7 @@ def main(argv: list[str] | None = None) -> int:
                 scored["refusal_accuracy"], scored["mean_llm_calls"],
             )
 
+    sampler.stop()
     out = Path(args.out)
     out.with_suffix(".json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     markdown = build_markdown(report)

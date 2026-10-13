@@ -5,7 +5,7 @@ import time
 from contextlib import contextmanager
 from functools import lru_cache
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from app.core.citations import build_citations, extract_citation_indices
 from app.core.config import settings
@@ -92,8 +92,19 @@ class _TimedStore:
         return getattr(self._inner, name)
 
 
+def server_timing(timings: dict[str, float], total_ms: float) -> str:
+    """The W3C Server-Timing header value: `embed;dur=17.2, ..., total;dur=4331.9`.
+
+    /metrics aggregates; this is the single request. A latency benchmark can
+    pair each sample with the GPU conditions it ran under, and a browser's
+    devtools show the split without any log pipeline.
+    """
+    stages = [f"{stage};dur={ms:.1f}" for stage, ms in timings.items()]
+    return ", ".join([*stages, f"total;dur={total_ms:.1f}"])
+
+
 @router.post("/query", response_model=QueryResponse)
-async def query(request: QueryRequest) -> QueryResponse:
+async def query(request: QueryRequest, response: Response) -> QueryResponse:
     started = time.perf_counter()
     timings: dict[str, float] = {}
     # Pessimistic default: an exception that escapes this handler is an error,
@@ -167,6 +178,9 @@ async def query(request: QueryRequest) -> QueryResponse:
         for stage, ms in timings.items():
             recorder.record(stage, outcome, ms)
         recorder.record("total", outcome, total_ms)
+        # Merged into the 200 response. A 503 raised above is built separately
+        # by FastAPI and does not carry it - the log line below still does.
+        response.headers["Server-Timing"] = server_timing(timings, total_ms)
         # One structured line per request, so the timings survive without the
         # /metrics endpoint and can be aggregated by a log pipeline later.
         logger.info(

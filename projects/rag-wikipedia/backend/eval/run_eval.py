@@ -18,6 +18,18 @@ FALSE_ACCEPT_MAX = 0.1
 MIN_CASES = 20
 MIN_UNANSWERABLE = 5
 
+# Present only when answers were generated (--with-groundedness). Rates are
+# over ANSWERED cases, so a refusal never counts as a badly grounded answer.
+ANSWER_KEYS = (
+    "n_answered",
+    "lexical_overlap",
+    "citation_valid_rate",
+    "placeholder_citation_rate",
+    "e2e_refusal_accuracy",
+    "e2e_answerable_refusal_rate",
+    "e2e_false_accept_rate",
+)
+
 
 class InvalidGoldenSet(ValueError):
     """An eval suite is too small or missing a required subset.
@@ -38,7 +50,7 @@ def validate_golden_set(golden: list[dict]) -> tuple[list[dict], list[dict]]:
     # silently skip its gate and the eval would "pass" without measuring it.
     if len(golden) < MIN_CASES or len(unanswerable) < MIN_UNANSWERABLE or not answerable:
         raise InvalidGoldenSet(
-            f"golden.jsonl must contain >= {MIN_CASES} cases, "
+            f"an eval suite must contain >= {MIN_CASES} cases, "
             f">= {MIN_UNANSWERABLE} unanswerable, and >= 1 answerable "
             f"(got {len(golden)} total, {len(unanswerable)} unanswerable, "
             f"{len(answerable)} answerable)"
@@ -121,13 +133,21 @@ def score_answerable_case(item: dict, chunks: list[dict], refused: bool, *, k: i
 def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) -> dict:
     """Score the golden set. Retrieval-only unless *llm* is supplied.
 
-    Passing an ``llm`` enables the groundedness metric, which needs a generated
-    answer per answerable case — one LLM call each. That turns a seconds-long
-    retrieval-only run into a minutes-long one and adds a hard dependency on the
-    LLM being reachable, so it is opt-in (``--with-groundedness``).
+    Passing an ``llm`` generates the answer the API would give for each case -
+    one LLM call per case retrieval accepts - and scores those answers. That
+    turns a seconds-long retrieval-only run into a minutes-long one and adds a
+    hard dependency on the LLM being reachable, so it is opt-in
+    (``--with-groundedness``).
 
-    When groundedness is not measured the key is OMITTED from the report rather
-    than reported as 0.0 — "not measured" must not look like "badly grounded".
+    Answers are scored only when they ARE answers. This used to average a
+    lexical `groundedness` over every answerable case, refusals included, and
+    the eight-word refusal sentence scored 1/8 to 3/8 - reported as a poorly
+    grounded answer. See eval/grounding.py. The entailment-based support score
+    lives in eval/run_e2e.py, which can afford a judge model; this stays
+    model-free.
+
+    When generation is not measured those keys are OMITTED from the report
+    rather than reported as 0.0 - "not measured" must not look like "bad".
     """
     from app.core.refusal import decide_evidence, is_refusal
     from app.core.retrieval import retrieve
@@ -137,11 +157,11 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
     measure_generation = llm is not None
     if measure_generation:
         from app.core.prompt import build_prompt
-        from eval.metrics import groundedness
+        from eval.grounding import check_citations, lexical_overlap, summarize_answers
 
     recall_scores: list[float] = []
     reciprocal_rank_scores: list[float] = []
-    groundedness_scores: list[float] = []
+    answer_records: list[dict] = []
     e2e_answerable_refused: list[bool] = []
     e2e_unanswerable_refused: list[bool] = []
     cases: list[dict] = []
@@ -187,25 +207,33 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
         }
 
         if measure_generation:
-            answer = llm.generate(build_prompt(question, chunks)) if chunks else ""
-            groundedness_score = groundedness(answer, texts)
-            groundedness_scores.append(groundedness_score)
-            case_report["groundedness"] = groundedness_score
+            # Mirrors the API: a question retrieval refused never reaches the
+            # model. Generating one anyway spent a call on an answer no user
+            # could see, and then scored it.
+            answer = llm.generate(build_prompt(question, chunks)) if chunks and not refused else ""
 
             # Three layers, kept separate on purpose. `refused` above is the
             # RETRIEVAL decision; the model can still decline evidence that
             # retrieval accepted, and the combination is what the user sees.
             answer_refused = is_refusal(answer)
+            end_to_end_refused = bool(refused or answer_refused)
+            case_report["answer"] = answer
             case_report["answer_refused"] = answer_refused
-            case_report["end_to_end_refused"] = bool(refused or answer_refused)
-            e2e_answerable_refused.append(case_report["end_to_end_refused"])
+            case_report["end_to_end_refused"] = end_to_end_refused
+            e2e_answerable_refused.append(end_to_end_refused)
+            answer_records.append(
+                {"answered": not end_to_end_refused, "answer": answer, "context": texts}
+            )
+            if not end_to_end_refused:
+                case_report["lexical_overlap"] = lexical_overlap(answer, texts)
+                case_report["citation_valid"] = check_citations(answer, len(chunks)).valid
             logger.info(
-                "Q: %r | recall@%s=%.2f | RR=%.2f | groundedness=%.2f",
+                "Q: %r | recall@%s=%.2f | RR=%.2f | %s",
                 question[:50],
                 k,
                 recall_score,
                 rr_score,
-                groundedness_score,
+                "refused" if end_to_end_refused else "answered",
             )
         else:
             logger.info(
@@ -226,12 +254,23 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
         # LLM, so end-to-end is a refusal without spending a generation.
         e2e_refused = refused
         answer_refused = None
+        answer = ""
         if measure_generation and not refused:
             answer = llm.generate(build_prompt(question, chunks)) if chunks else ""
             answer_refused = is_refusal(answer)
             e2e_refused = bool(answer_refused)
         if measure_generation:
             e2e_unanswerable_refused.append(bool(e2e_refused))
+            # A false accept that reached the model produced a real answer to a
+            # question the corpus cannot support - the case where grounding
+            # matters most, so it is scored with the rest.
+            answer_records.append(
+                {
+                    "answered": not e2e_refused,
+                    "answer": answer,
+                    "context": [chunk["text"] for chunk in chunks],
+                }
+            )
         logger.info("Q: %r | refused=%s", question[:50], refused)
         cases.append(
             {
@@ -243,6 +282,7 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
                 "correct": refused is True,
                 **(
                     {
+                        "answer": answer,
                         "answer_refused": answer_refused,
                         "end_to_end_refused": bool(e2e_refused),
                     }
@@ -293,9 +333,10 @@ def evaluate_golden(golden: list[dict], embedder, store, llm=None, *, k: int) ->
         "cases": cases,
     }
     if measure_generation:
-        report["groundedness"] = (
-            sum(groundedness_scores) / len(answerable) if answerable else 0.0
-        )
+        answers = summarize_answers(answer_records)
+        for key in ("n_answered", "lexical_overlap", "citation_valid_rate",
+                    "placeholder_citation_rate"):
+            report[key] = answers[key]
         # END-TO-END counterparts, reported ALONGSIDE the retrieval metrics and
         # never replacing them: the pair is what reveals whether the model is
         # catching what retrieval let through, or refusing what it accepted.
@@ -330,8 +371,10 @@ def write_markdown_report(report: dict, path: Path, *, k: int) -> None:
         f"- n_answerable: {report['n_answerable']}",
         f"- n_unanswerable: {report['n_unanswerable']}",
     ]
-    if "groundedness" in report:
-        lines.append(f"- groundedness: {report['groundedness']:.4f}")
+    for key in ANSWER_KEYS:
+        if key in report:
+            value = report[key]
+            lines.append(f"- {key}: " + ("n/a" if value is None else f"{value:.4f}"))
 
     lines.extend(["", "## Cases", ""])
     for case in report["cases"]:
@@ -391,30 +434,48 @@ def gate_failures(report: dict, k: int) -> list[str]:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    from eval.suites import SUITE_PROFILES
+
     parser = argparse.ArgumentParser(
-        description="Evaluate retrieval quality and refusal behaviour against golden.jsonl."
+        description="Evaluate retrieval quality and refusal behaviour against an eval suite."
+    )
+    parser.add_argument(
+        "--suite",
+        choices=sorted(SUITE_PROFILES),
+        default="golden",
+        help=(
+            "Which suite to score (default: golden). A suite describes ONE corpus - "
+            "see eval/suites.py - so use the Makefile target that pins it."
+        ),
     )
     parser.add_argument(
         "--with-groundedness",
         action="store_true",
         help=(
-            "Also measure groundedness. Generates one answer per answerable case, so "
-            "this requires the LLM to be running and takes minutes instead of seconds. "
-            "Off by default to keep the fast, retrieval-only path."
+            "Also generate and score answers (citations, lexical overlap, end-to-end "
+            "refusal). One LLM call per case retrieval accepts, so this requires the "
+            "LLM to be running and takes minutes instead of seconds. Off by default "
+            "to keep the fast, retrieval-only path."
         ),
     )
     return parser.parse_args(argv)
+
+
+def report_paths(suite: str) -> tuple[Path, Path]:
+    """`report.json` stays the golden report; other suites get their own name."""
+    stem = "report" if suite == "golden" else f"report_{suite}"
+    base = Path(__file__).parent
+    return base / f"{stem}.json", base / f"{stem}.md"
 
 
 def main(argv: list[str] | None = None) -> None:
     from app.core.config import settings
     from app.core.embeddings import BGEEmbedder
     from app.core.vectorstore import QdrantStore
+    from eval.suites import load_suite
 
     args = parse_args(argv)
-
-    golden_path = Path(__file__).parent / "golden.jsonl"
-    golden = [json.loads(line) for line in golden_path.read_text().splitlines() if line.strip()]
+    golden = load_suite(args.suite)
 
     embedder = BGEEmbedder(model_name=settings.embed_model)
     store = QdrantStore(url=settings.qdrant_url, collection=settings.collection)
@@ -426,7 +487,7 @@ def main(argv: list[str] | None = None) -> None:
         from app.core.llm import OllamaLLM
 
         llm = OllamaLLM(model=settings.llm_model, base_url=settings.ollama_url)
-        logger.info("Groundedness enabled: generating one answer per answerable case.")
+        logger.info("Generation enabled: generating the answer for each accepted case.")
 
     k = settings.top_k
     try:
@@ -434,18 +495,17 @@ def main(argv: list[str] | None = None) -> None:
     except InvalidGoldenSet as exc:
         raise SystemExit(str(exc)) from exc
 
-    print("\n=== Evaluation Report ===")
+    print(f"\n=== Evaluation Report: {args.suite} ===")
     for key, value in report.items():
         if key == "cases":
             continue
         print(f"  {key}: {value:.4f}" if isinstance(value, float) else f"  {key}: {value}")
     if not args.with_groundedness:
-        print("  groundedness: not measured (re-run with --with-groundedness)")
+        print("  answers: not generated (re-run with --with-groundedness)")
 
-    report_path = Path(__file__).parent / "report.json"
-    report_path.write_text(json.dumps(report, indent=2))
+    report_path, markdown_path = report_paths(args.suite)
+    report_path.write_text(json.dumps(report, indent=2), encoding="utf-8")
     logger.info("Report written to %s", report_path)
-    markdown_path = Path(__file__).parent / "report.md"
     write_markdown_report(report, markdown_path, k=k)
     logger.info("Markdown report written to %s", markdown_path)
 

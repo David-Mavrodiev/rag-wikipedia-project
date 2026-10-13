@@ -38,6 +38,11 @@ class EngineResult:
     # the precise evidence reason is not available to a caller of retrieve().
     refusal_reason: str | None = None
     stats: dict[str, int] = field(default_factory=dict)
+    # The chunks the model was given for this answer - empty when no generation
+    # ran. Whether an answer is grounded can only be judged against what the
+    # model actually saw, and only the engine knows that: retrieve() trims to a
+    # token budget, so re-retrieving afterwards would judge a different input.
+    context: list[dict] = field(default_factory=list)
 
 
 class Engine(ABC):

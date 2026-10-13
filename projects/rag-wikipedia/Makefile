@@ -1,4 +1,4 @@
-.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all idf idf-fixture sweep-coverage compare-engines
+.PHONY: up down pull-model ingest ingest-force eval eval-groundedness eval-audit test lint docs-check docs-write audit-freshness eval-corpus audit-baseline eval-fixture eval-fixture-all idf idf-fixture sweep-coverage compare-engines eval-detail eval-serving eval-serving-detail e2e-serving e2e-fixture bench-latency
 
 up:
 	docker compose up --build -d
@@ -122,3 +122,32 @@ sweep-coverage:
 	cd backend && uv run python ../scripts/sweep_coverage.py --collection $(COLLECTION) --suite $(SUITE)
 
 SUITE ?= serving_golden.jsonl
+
+
+# --- title-free suites, end-to-end answers, serving latency -------------------
+# Every answerable question in golden/serving_golden names its own article, so
+# recall there measures title lookup. The detail suites ask about a fact in a
+# passage without naming it. Each target pins its suite to the corpus it
+# describes, for the reason eval-fixture does (see backend/eval/suites.py).
+eval-detail:
+	PROFILE=fixture COLLECTION=$(EVAL_COLLECTION) uv run python backend/eval/run_eval.py --suite detail
+
+eval-serving:
+	PROFILE=real COLLECTION=$(COLLECTION) uv run python backend/eval/run_eval.py --suite serving_golden
+
+eval-serving-detail:
+	PROFILE=real COLLECTION=$(COLLECTION) uv run python backend/eval/run_eval.py --suite serving_detail
+
+# End-to-end: generate the answer the API would give for every case, then judge
+# its claims against its context. Paced by GPU temperature and checkpointed per
+# case - on the reference laptop an unpaced run hit 96 C in 33 generations.
+# ARGS="--resume" continues a run that stopped; ARGS="--score-only" re-scores.
+e2e-serving:
+	cd backend && PROFILE=real COLLECTION=$(COLLECTION) uv run python eval/run_e2e.py --suite serving_golden --suite serving_detail $(ARGS)
+
+e2e-fixture:
+	cd backend && PROFILE=fixture COLLECTION=$(EVAL_COLLECTION) uv run python eval/run_e2e.py --suite detail --suite holdout --suite adversarial $(ARGS)
+
+# Needs the API running. Every sample carries its stage split and GPU regime.
+bench-latency:
+	uv run python scripts/bench_latency.py $(ARGS)

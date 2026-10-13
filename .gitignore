@@ -57,4 +57,12 @@ Thumbs.db
 projects/rag-wikipedia/backend/eval/*_report.md
 projects/rag-wikipedia/backend/eval/report.json
 projects/rag-wikipedia/backend/eval/report.md
+projects/rag-wikipedia/backend/eval/report_*.json
+projects/rag-wikipedia/backend/eval/report_*.md
 projects/rag-wikipedia/demo/report.json
+
+# Intermediate files of scripts/build_detail_suite.py (candidates, drafts) and
+# raw end-to-end answers with full context text. The committed suites and
+# reports carry what is needed to audit them.
+projects/rag-wikipedia/backend/eval/detail_work/
+projects/rag-wikipedia/backend/eval/e2e/raw/

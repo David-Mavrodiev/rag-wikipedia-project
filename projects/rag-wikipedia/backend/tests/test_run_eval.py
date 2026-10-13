@@ -39,7 +39,7 @@ def _patch_retrieve(monkeypatch):
     monkeypatch.setattr("app.core.retrieval.retrieve", fake_retrieve)
 
 
-def test_evaluate_golden_reports_groundedness(monkeypatch):
+def test_evaluate_golden_reports_answer_quality(monkeypatch):
     _patch_retrieve(monkeypatch)
 
     llm = FakeLLM()
@@ -47,7 +47,10 @@ def test_evaluate_golden_reports_groundedness(monkeypatch):
 
     assert report["recall@5"] == 1.0
     assert report["mrr"] == 1.0
-    assert report["groundedness"] == 1.0
+    assert report["n_answered"] == 15
+    assert report["lexical_overlap"] == 1.0
+    # FakeLLM's answer cites nothing, and that is now visible instead of hidden.
+    assert report["citation_valid_rate"] == 0.0
     assert report["refusal_accuracy"] == 1.0
     assert report["n_answerable"] == 15
     assert report["n_unanswerable"] == 5
@@ -68,7 +71,7 @@ def test_fast_path_skips_the_llm_entirely(monkeypatch):
     assert report["refusal_accuracy"] == 1.0
     # Omitted, NOT 0.0 — "not measured" must not read as "badly grounded".
     assert len(report["cases"]) == 20
-    assert "groundedness" not in report
+    assert "lexical_overlap" not in report
 
 
 def test_fast_path_never_builds_a_prompt(monkeypatch):
@@ -92,7 +95,7 @@ def test_fast_path_never_builds_a_prompt(monkeypatch):
 
     report = run_eval.evaluate_golden(_complete_golden_set(), object(), object(), k=5)
 
-    assert "groundedness" not in report
+    assert "lexical_overlap" not in report
     assert len(report["cases"]) == 20
 
 
@@ -117,12 +120,13 @@ def test_flag_defaults_to_off():
     assert run_eval.parse_args(["--with-groundedness"]).with_groundedness is True
 
 
-def test_groundedness_is_report_only_not_a_gate():
+def test_answer_quality_is_report_only_not_a_gate():
     report = {
         "recall@5": 1.0,
         "mrr": 1.0,
         "precision@5": 1.0,
-        "groundedness": 0.0,
+        "lexical_overlap": 0.0,
+        "citation_valid_rate": 0.0,
         "refusal_accuracy": 1.0,
         "false_accept_rate": 0.0,
         "answerable_refusal_rate": 0.0,
@@ -423,3 +427,62 @@ def test_markdown_marks_a_refused_answerable_case_as_fail(tmp_path):
     run_eval.write_markdown_report(report, path, k=5)
 
     assert "### FAIL: Who was Aristotle?" in path.read_text(encoding="utf-8")
+
+
+# --- answer quality: refusals are counted, never scored as answers ----------
+
+def test_a_refusal_is_not_scored_as_an_ungrounded_answer(monkeypatch):
+    # THE bug this replaced: the 8-word refusal sentence scored 1/8-3/8 lexical
+    # overlap and was averaged in as a poorly grounded answer.
+    _patch_retrieve(monkeypatch)
+
+    report = run_eval.evaluate_golden(
+        _complete_golden_set(), object(), object(), RefusingLLM(), k=5
+    )
+
+    assert report["n_answered"] == 0
+    assert report["lexical_overlap"] is None
+    answerable = [c for c in report["cases"] if not c["expected_refusal"]]
+    assert all("lexical_overlap" not in c for c in answerable)
+
+
+def test_a_retrieval_refusal_never_reaches_the_model(monkeypatch):
+    # Mirrors the API, which short-circuits before generation. The old harness
+    # generated anyway and scored an answer no user could ever see.
+    def fake_retrieve(query, embedder, store, top_k):
+        chunk = {"score": 0.5, "text": "Python is a language.", "title": "Python", "source_id": "p"}
+        return [chunk], True
+
+    monkeypatch.setattr("app.core.retrieval.retrieve", fake_retrieve)
+    llm = FakeLLM()
+    report = run_eval.evaluate_golden(_complete_golden_set(), object(), object(), llm, k=5)
+
+    assert llm.prompts == []
+    assert report["e2e_answerable_refusal_rate"] == 1.0
+
+
+def test_a_false_accept_answer_is_scored_with_the_rest(monkeypatch):
+    # Retrieval accepts an unanswerable question and the model answers it: that
+    # answer reached a user, so its grounding counts.
+    def fake_retrieve(query, embedder, store, top_k):
+        chunk = {"score": 0.9, "text": "Python is a programming language.",
+                 "title": "Python", "source_id": "p"}
+        return [chunk], False
+
+    monkeypatch.setattr("app.core.retrieval.retrieve", fake_retrieve)
+    report = run_eval.evaluate_golden(_complete_golden_set(), object(), object(), FakeLLM(), k=5)
+
+    assert report["e2e_false_accept_rate"] == 1.0
+    assert report["n_answered"] == 20
+
+
+def test_suite_defaults_to_golden_and_accepts_the_others():
+    assert run_eval.parse_args([]).suite == "golden"
+    assert run_eval.parse_args(["--suite", "serving_golden"]).suite == "serving_golden"
+    with pytest.raises(SystemExit):
+        run_eval.parse_args(["--suite", "no-such-suite"])
+
+
+def test_golden_keeps_its_report_name_and_other_suites_get_their_own():
+    assert run_eval.report_paths("golden")[0].name == "report.json"
+    assert run_eval.report_paths("detail")[0].name == "report_detail.json"

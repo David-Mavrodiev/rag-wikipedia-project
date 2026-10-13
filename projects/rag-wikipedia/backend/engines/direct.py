@@ -65,6 +65,9 @@ class DirectEngine(Engine):
                 refused=True,
                 refusal_reason="soft_refusal",
                 stats={"llm_calls": 1, "retrieved": len(chunks)},
+                # Kept for a soft refusal too: "was the right article in front
+                # of the model when it declined?" is the question worth asking.
+                context=chunks,
             )
 
         citations = build_citations(chunks, extract_citation_indices(answer))
@@ -73,4 +76,5 @@ class DirectEngine(Engine):
             citations=citations,
             refused=False,
             stats={"llm_calls": 1, "retrieved": len(chunks)},
+            context=chunks,
         )

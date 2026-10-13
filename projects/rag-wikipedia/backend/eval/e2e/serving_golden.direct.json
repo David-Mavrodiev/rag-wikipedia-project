@@ -1,0 +1,2271 @@
+{
+  "suite": "serving_golden",
+  "engine": "direct",
+  "nli_model": "cross-encoder/nli-deberta-v3-base",
+  "provenance": {
+    "generated_at": "2026-10-01T11:18:39.476669+00:00",
+    "git_sha": "a8f548a6b268e78cc4419df30c50a2490fb7ccb6",
+    "profile": "real",
+    "collection": "wikipedia",
+    "vector_count": 87173,
+    "embed_model": "BAAI/bge-small-en-v1.5",
+    "top_k": 5,
+    "gates": {
+      "recall": 0.8,
+      "precision": 0.6,
+      "refusal_accuracy": 0.8,
+      "false_accept_rate_max": 0.1
+    },
+    "llm_model": "llama3.2:3b",
+    "engine": "direct"
+  },
+  "scored_at": "2026-10-01T12:26:18.511340+00:00",
+  "scored_git_sha": "a8f548a6b268e78cc4419df30c50a2490fb7ccb6",
+  "conditions": {
+    "gpu": "NVIDIA GeForce RTX 3060 Laptop GPU",
+    "pause_at": 90,
+    "resume_at": 87,
+    "pauses": 0,
+    "total_cooldown_s": 0.0,
+    "started_at": "2026-09-21T14:57:22+00:00",
+    "finished_at": "2026-10-01T11:19:31+00:00",
+    "limit": null
+  },
+  "metrics": {
+    "n_cases": 90,
+    "n_scored": 90,
+    "n_errors": 0,
+    "n_missing": 0,
+    "n_answerable": 60,
+    "n_unanswerable": 30,
+    "refusal_accuracy": 0.8333333333333334,
+    "false_accept_rate": 0.16666666666666666,
+    "answerable_refusal_rate": 0.35,
+    "context_hit_rate": 0.9333333333333333,
+    "soft_refusals_answerable": 19,
+    "soft_refusals_with_article_in_context": 17,
+    "complete": true
+  },
+  "answers": {
+    "n_answered": 44,
+    "n_refused": 46,
+    "citation_valid_rate": 0.8409090909090909,
+    "placeholder_citation_rate": 0.06818181818181818,
+    "lexical_overlap": 0.8898469162688932,
+    "support_threshold": 0.5,
+    "n_judged": 44,
+    "n_without_claims": 0,
+    "supported_sentence_rate": 0.9948863636363636,
+    "fully_supported_answer_rate": 0.9545454545454546
+  },
+  "latency": {
+    "generated": {
+      "n": 73,
+      "p50_ms": 6469.0,
+      "p95_ms": null,
+      "min_ms": 1484.0,
+      "max_ms": 31969.0
+    },
+    "no_generation": {
+      "n": 17,
+      "p50_ms": 0.0,
+      "p95_ms": null,
+      "min_ms": 0.0,
+      "max_ms": 125.0
+    },
+    "generated_full": {
+      "n": 0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "min_ms": null,
+      "max_ms": null
+    },
+    "generated_throttled": {
+      "n": 73,
+      "p50_ms": 6469.0,
+      "p95_ms": null,
+      "min_ms": 1484.0,
+      "max_ms": 31969.0
+    },
+    "generated_unknown": {
+      "n": 0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "min_ms": null,
+      "max_ms": null
+    },
+    "generated_no_gpu_reading": {
+      "n": 0,
+      "p50_ms": null,
+      "p95_ms": null,
+      "min_ms": null,
+      "max_ms": null
+    }
+  },
+  "cases": [
+    {
+      "id": "sg-a-000",
+      "question": "What is Biotite?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Biotite is a common group of phyllosilicate minerals within the mica group [1].",
+      "context_titles": [
+        "Biotite",
+        "Biotite",
+        "Biotite",
+        "Biotite",
+        "Agate"
+      ],
+      "latency_ms": 3953.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Biotite is a common group of phyllosilicate minerals within the mica group.",
+          "support": 0.998
+        }
+      ]
+    },
+    {
+      "id": "sg-a-001",
+      "question": "Tell me about Guarani.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Gramática do Kamaiurá, Língua Tupi-Guarani do Alto Xingu",
+        "Guarani",
+        "Kpando",
+        "Kulina language",
+        "Gulet"
+      ],
+      "latency_ms": 5750.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-002",
+      "question": "What is Song Seung-tae?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "List of speed skaters",
+        "Seoul Institute of the Arts",
+        "Sandglass (TV series)",
+        "Sujud Sutrisno",
+        "Hyeong"
+      ],
+      "latency_ms": 6344.0,
+      "gpu_regime": "throttled",
+      "context_hit": false
+    },
+    {
+      "id": "sg-a-003",
+      "question": "Tell me about John D. Harvey.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Gerry Harvey",
+        "John D. Harvey",
+        "John Harvey (actor)",
+        "Gerry Harvey",
+        "Tracie Andrews"
+      ],
+      "latency_ms": 6234.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-004",
+      "question": "What is Correspondent account?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "A correspondent account is an account established by a banking institution to receive deposits from, make payments on behalf of, or handle other financial transactions for another financial institution [1].",
+      "context_titles": [
+        "Correspondent account",
+        "Payable-through account",
+        "Bookkeeping",
+        "Separate account",
+        "Standing order (banking)"
+      ],
+      "latency_ms": 8219.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "A correspondent account is an account established by a banking institution to receive deposits from, make payments on behalf of, or handle other financial transactions for another financial institution.",
+          "support": 0.9927
+        }
+      ]
+    },
+    {
+      "id": "sg-a-005",
+      "question": "Tell me about United Kingdom of Portugal, Brazil and the Algarves.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The United Kingdom of Portugal, Brazil and the Algarves was a pluricontinental monarchy formed in 1815, following the transfer of the Portuguese court to Brazil during the Napoleonic invasions of Portugal [1]. It was created by the elevation of the Portuguese colony named State of Brazil to the status of a kingdom and the simultaneous union of that Kingdom of Brazil with the Kingdom of Portugal and the Kingdom of the Algarves, constituting a single state consisting of three kingdoms [1]. The United Kingdom existed for about one year after the court's return to Europe, being de facto dissolved in 1822, when Brazil proclaimed its independence [1].",
+      "context_titles": [
+        "United Kingdom of Portugal, Brazil and the Algarves",
+        "United Kingdom of Portugal, Brazil and the Algarves",
+        "United Kingdom of Portugal, Brazil and the Algarves",
+        "Brazil",
+        "United Kingdom of Portugal, Brazil and the Algarves"
+      ],
+      "latency_ms": 12704.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The United Kingdom of Portugal, Brazil and the Algarves was a pluricontinental monarchy formed in 1815, following the transfer of the Portuguese court to Brazil during the Napoleonic invasions of Portugal.",
+          "support": 0.995
+        },
+        {
+          "sentence": "It was created by the elevation of the Portuguese colony named State of Brazil to the status of a kingdom and the simultaneous union of that Kingdom of Brazil with the Kingdom of Portugal and the Kingdom of the Algarves, constituting a single state consisting of three kingdoms.",
+          "support": 0.9972
+        },
+        {
+          "sentence": "The United Kingdom existed for about one year after the court's return to Europe, being de facto dissolved in 1822, when Brazil proclaimed its independence.",
+          "support": 0.997
+        }
+      ]
+    },
+    {
+      "id": "sg-a-006",
+      "question": "What is Yang Yang?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Yang Yang",
+        "Yang Yang (speed skater, born 1977)",
+        "Nanyin",
+        "Yang Zhongjian",
+        "Etymology of the Korean currencies"
+      ],
+      "latency_ms": 5890.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-007",
+      "question": "Tell me about Schieder-Schwalenberg.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Schieder-Schwalenberg",
+        "Christian Schnabel",
+        "Geseke",
+        "Marienmünster",
+        "Arthur Schopenhauer"
+      ],
+      "latency_ms": 6766.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-008",
+      "question": "What is Middle (sheading)?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Middle (sheading) is one of the six sheadings of the Isle of Man. It is located on the east of the island (part of the traditional South Side division) and consists of the four historic parishes of Braddan, Marown, Onchan and Santon.",
+      "context_titles": [
+        "Middle (sheading)",
+        "Compiler",
+        "Compiler",
+        "Algebraic geometry",
+        "Hermitian symmetric space"
+      ],
+      "latency_ms": 9266.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Middle (sheading) is one of the six sheadings of the Isle of Man.",
+          "support": 0.9911
+        },
+        {
+          "sentence": "It is located on the east of the island (part of the traditional South Side division) and consists of the four historic parishes of Braddan, Marown, Onchan and Santon.",
+          "support": 0.9954
+        }
+      ]
+    },
+    {
+      "id": "sg-a-009",
+      "question": "Tell me about Ramadugu.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Ramadugu",
+        "Parantaka I",
+        "Gramática do Kamaiurá, Língua Tupi-Guarani do Alto Xingu",
+        "Val Plumwood",
+        "Pollachi"
+      ],
+      "latency_ms": 6125.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-010",
+      "question": "What is Ralph Morse?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Ralph Theodore Morse was a career staff photographer for Life magazine [1].",
+      "context_titles": [
+        "Ralph Morse",
+        "Ralph Morse",
+        "Ralph Morse",
+        "Carlton E. Morse",
+        "Ralph Morse"
+      ],
+      "latency_ms": 7172.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Ralph Theodore Morse was a career staff photographer for Life magazine.",
+          "support": 0.9975
+        }
+      ]
+    },
+    {
+      "id": "sg-a-011",
+      "question": "Tell me about Çavdarhisar.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Çavdarhisar",
+        "Vâlvă",
+        "Caladrius",
+        "Achduart",
+        "Dedi"
+      ],
+      "latency_ms": 5922.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-012",
+      "question": "What is Hakan Özoğuz?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Hakan Özoğuz is a Turkish musician [2].",
+      "context_titles": [
+        "Gökhan Özoğuz",
+        "Hakan Özoğuz",
+        "Ashik",
+        "Hacılar",
+        "Tahsin Özgüç"
+      ],
+      "latency_ms": 6047.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Hakan Özoğuz is a Turkish musician.",
+          "support": 0.9967
+        }
+      ]
+    },
+    {
+      "id": "sg-a-013",
+      "question": "Tell me about Tornadotus.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Tornadotus is a small river of Assyria (now in Iraq) that falls into the Tigris at Opis [1].",
+      "context_titles": [
+        "Tornadotus",
+        "Bald eagle",
+        "Chaoboridae",
+        "Echinodorus subalatus",
+        "Ophryocystis elektroscirrha"
+      ],
+      "latency_ms": 7172.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Tornadotus is a small river of Assyria (now in Iraq) that falls into the Tigris at Opis.",
+          "support": 0.9848
+        }
+      ]
+    },
+    {
+      "id": "sg-a-014",
+      "question": "What is 53rd British Academy Film Awards?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The 53rd British Academy Film Awards, given by the British Academy of Film and Television Arts on 9 April 2000, honoured the best in film for 1999.",
+      "context_titles": [
+        "53rd British Academy Film Awards",
+        "54th British Academy Film Awards",
+        "49th British Academy Film Awards",
+        "59th British Academy Film Awards",
+        "55th British Academy Film Awards"
+      ],
+      "latency_ms": 6953.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The 53rd British Academy Film Awards, given by the British Academy of Film and Television Arts on 9 April 2000, honoured the best in film for 1999.",
+          "support": 0.988
+        }
+      ]
+    },
+    {
+      "id": "sg-a-015",
+      "question": "Tell me about Ahmed Kamal (cricketer).",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Ahmed Kamal (cricketer)",
+        "Faruk Ahmed",
+        "Shafiuddin Ahmed",
+        "Nasir Ahmed (Bangladeshi cricketer)",
+        "Jamaluddin Ahmed"
+      ],
+      "latency_ms": 5016.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-016",
+      "question": "What is 1999 in association football?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The 1999 in association football refers to the year 1999 in the context of association football events throughout the world [1].",
+      "context_titles": [
+        "1999 in association football",
+        "1998–99 in English football",
+        "1999–2000 in English football",
+        "1999–2000 in English football",
+        "1999–2000 in English football"
+      ],
+      "latency_ms": 7687.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The 1999 in association football refers to the year 1999 in the context of association football events throughout the world.",
+          "support": 0.9897
+        }
+      ]
+    },
+    {
+      "id": "sg-a-017",
+      "question": "Tell me about New Bothwell, Manitoba.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "New Bothwell, Manitoba",
+        "New Bothwell, Manitoba",
+        "Mitchell, Manitoba",
+        "Saskatchewan Highway 16",
+        "Birds Hill"
+      ],
+      "latency_ms": 6937.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-018",
+      "question": "What is Four discourses?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Four discourses is a concept developed by French psychoanalyst Jacques Lacan, which describes four fundamental types of discourse that relate dynamically to one another. [1]",
+      "context_titles": [
+        "Four discourses",
+        "Four discourses",
+        "Four discourses",
+        "Four discourses",
+        "The Chaser's War on Everything"
+      ],
+      "latency_ms": 8140.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Four discourses is a concept developed by French psychoanalyst Jacques Lacan, which describes four fundamental types of discourse that relate dynamically to one another.",
+          "support": 0.9983
+        }
+      ]
+    },
+    {
+      "id": "sg-a-019",
+      "question": "Tell me about Author.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Author",
+        "Author",
+        "At the Feet of the Master",
+        "Electric Pencil",
+        "Author"
+      ],
+      "latency_ms": 6594.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-020",
+      "question": "What is Apiales?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Apiales are an order of flowering plants [1].",
+      "context_titles": [
+        "Apiales",
+        "Apiaceae",
+        "Apiaceae",
+        "Apicomplexa",
+        "Apiaceae"
+      ],
+      "latency_ms": 6938.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Apiales are an order of flowering plants.",
+          "support": 0.9972
+        }
+      ]
+    },
+    {
+      "id": "sg-a-021",
+      "question": "Tell me about National Cowgirl Museum and Hall of Fame.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The National Cowgirl Museum and Hall of Fame is located in Fort Worth, Texas, US [1]. It was established in 1975 [2] and is dedicated to honoring women of the American West who have displayed extraordinary courage and pioneering fortitude [1]. The museum is an educational resource with exhibits, a research library, and rare photography collection [1]. It adds Honorees to its Hall of Fame annually [1].",
+      "context_titles": [
+        "National Cowgirl Museum and Hall of Fame",
+        "National Cowgirl Museum and Hall of Fame",
+        "National Baseball Hall of Fame and Museum",
+        "National Cowgirl Museum and Hall of Fame",
+        "National Baseball Hall of Fame and Museum"
+      ],
+      "latency_ms": 10891.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The National Cowgirl Museum and Hall of Fame is located in Fort Worth, Texas, US.",
+          "support": 0.9923
+        },
+        {
+          "sentence": "It was established in 1975 and is dedicated to honoring women of the American West who have displayed extraordinary courage and pioneering fortitude.",
+          "support": 0.9976
+        },
+        {
+          "sentence": "The museum is an educational resource with exhibits, a research library, and rare photography collection.",
+          "support": 0.9878
+        },
+        {
+          "sentence": "It adds Honorees to its Hall of Fame annually.",
+          "support": 0.9972
+        }
+      ]
+    },
+    {
+      "id": "sg-a-022",
+      "question": "What is Fuji T-3?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Fuji T-3 is a primary military trainer aircraft used by the Japan Air Self Defense Force, manufactured by Fuji Heavy Industries.",
+      "context_titles": [
+        "Fuji T-3",
+        "Ricky Fuji",
+        "Japanese Touring Car Championship",
+        "Ricky Fuji",
+        "Ricky Fuji"
+      ],
+      "latency_ms": 7344.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Fuji T-3 is a primary military trainer aircraft used by the Japan Air Self Defense Force, manufactured by Fuji Heavy Industries.",
+          "support": 0.9915
+        }
+      ]
+    },
+    {
+      "id": "sg-a-023",
+      "question": "Tell me about Minnesota Texas Adoption Research Project.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Minnesota Texas Adoption Research Project (MTARP) is a longitudinal research study that focuses on the consequences of variations in openness in adoption arrangements for all members of the adoptive kinship network: birthmothers, adoptive parents, and adopted children, and for the relationships within these family systems [1].",
+      "context_titles": [
+        "Minnesota Texas Adoption Research Project",
+        "Bigfoot",
+        "Minnesota Texas Adoption Research Project",
+        "University of Minnesota Medical School",
+        "4 Little Girls"
+      ],
+      "latency_ms": 9141.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Minnesota Texas Adoption Research Project (MTARP) is a longitudinal research study that focuses on the consequences of variations in openness in adoption arrangements for all members of the adoptive kinship network: birthmothers, adoptive parents, and adopted children, and for the relationships within these family systems.",
+          "support": 0.9597
+        }
+      ]
+    },
+    {
+      "id": "sg-a-024",
+      "question": "What is Dylan Addison?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Dylan Addison is a former professional Australian rules footballer [1].",
+      "context_titles": [
+        "Dylan Addison",
+        "Addison Trail High School",
+        "Addison Trail High School",
+        "Blood on the Tracks",
+        "Dylan Howe"
+      ],
+      "latency_ms": 7093.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Dylan Addison is a former professional Australian rules footballer.",
+          "support": 0.9982
+        }
+      ]
+    },
+    {
+      "id": "sg-a-025",
+      "question": "Tell me about Atkaracalar.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Atkaracalar is a town in Çankırı Province in the Central Anatolia region of Turkey [1]. It is the seat of Atkaracalar District [1]. The town has a population of 2,214 (2021) [1]. Atkaracalar is a typical Central Anatolian town, with the inhabitants primarily engaged in agriculture, including barley, wheat, and beans [1]. Animal husbandry is also common in the district [1].",
+      "context_titles": [
+        "Atkaracalar",
+        "Mudi-āttam",
+        "Muttippalam",
+        "Valiyaparamba",
+        "Khakkhara"
+      ],
+      "latency_ms": 9672.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Atkaracalar is a town in Çankırı Province in the Central Anatolia region of Turkey.",
+          "support": 0.9915
+        },
+        {
+          "sentence": "It is the seat of Atkaracalar District.",
+          "support": 0.9956
+        },
+        {
+          "sentence": "The town has a population of 2,214 (2021).",
+          "support": 0.998
+        },
+        {
+          "sentence": "Atkaracalar is a typical Central Anatolian town, with the inhabitants primarily engaged in agriculture, including barley, wheat, and beans.",
+          "support": 0.9983
+        },
+        {
+          "sentence": "Animal husbandry is also common in the district.",
+          "support": 0.9852
+        }
+      ]
+    },
+    {
+      "id": "sg-a-026",
+      "question": "What is Cornelius Stirk?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Cornelius Stirk is a fictional character appearing in DC Comics [1]. He is a cannibalistic supervillain with the ability to cause fear or hallucinations through telepathy [1].",
+      "context_titles": [
+        "Cornelius Stirk",
+        "Cornelius Stirk",
+        "Karel Poláček",
+        "Jan Čarek",
+        "Julius Erasmus Hilgard"
+      ],
+      "latency_ms": 8235.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Cornelius Stirk is a fictional character appearing in DC Comics.",
+          "support": 0.9927
+        },
+        {
+          "sentence": "He is a cannibalistic supervillain with the ability to cause fear or hallucinations through telepathy.",
+          "support": 0.9912
+        }
+      ]
+    },
+    {
+      "id": "sg-a-027",
+      "question": "Tell me about Belle Gunness.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Belle Gunness",
+        "Belle Gunness",
+        "Belle Gunness",
+        "Belle Gunness",
+        "Belle Gunness"
+      ],
+      "latency_ms": 7109.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-028",
+      "question": "What is Fort Fillmore?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Fort Fillmore was a United States military fortification [1].",
+      "context_titles": [
+        "Fort Fillmore",
+        "Fort Fillmore",
+        "Fort Fillmore",
+        "Fort Edward (Nova Scotia)",
+        "Fort Macomb"
+      ],
+      "latency_ms": 6906.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Fort Fillmore was a United States military fortification.",
+          "support": 0.9975
+        }
+      ]
+    },
+    {
+      "id": "sg-a-029",
+      "question": "Tell me about Area codes in Mexico by code (900–999).",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Area codes in Mexico by code (900–999)",
+        "Area codes in Mexico by code (400-499)",
+        "Area codes in Mexico by code (0-99)",
+        "Area codes in Mexico by code (800-899)",
+        "Area codes in Mexico by code (500-599)"
+      ],
+      "latency_ms": 3687.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-030",
+      "question": "What is Frederick Stewart (Australian politician)?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Frederick Stewart (Australian politician) was an Australian businessman, politician and government minister [1].",
+      "context_titles": [
+        "Frederick Stewart (Australian politician)",
+        "Alexander Stewart",
+        "Frederick Stewart (Australian politician)",
+        "Bob Hawke",
+        "Charles Marr"
+      ],
+      "latency_ms": 7000.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Frederick Stewart (Australian politician) was an Australian businessman, politician and government minister.",
+          "support": 0.9979
+        }
+      ]
+    },
+    {
+      "id": "sg-a-031",
+      "question": "Tell me about List of storms named Ken.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Blizzard",
+        "Tropical Storm Claudette (1979)",
+        "North American blizzard of 1999",
+        "Blizzard",
+        "Blizzard"
+      ],
+      "latency_ms": 6235.0,
+      "gpu_regime": "throttled",
+      "context_hit": false
+    },
+    {
+      "id": "sg-a-032",
+      "question": "What is Princely County of Gorizia and Gradisca?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Princely County of Gorizia and Gradisca (; ) was a crown land of the Habsburg dynasty within the Austrian Littoral on the Adriatic Sea, in what is now a multilingual border area of Italy and Slovenia [1].",
+      "context_titles": [
+        "Princely County of Gorizia and Gradisca",
+        "Slovene Littoral",
+        "Princely County of Gorizia and Gradisca",
+        "Slovene Littoral",
+        "Princely County of Gorizia and Gradisca"
+      ],
+      "latency_ms": 8984.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Princely County of Gorizia and Gradisca (; ) was a crown land of the Habsburg dynasty within the Austrian Littoral on the Adriatic Sea, in what is now a multilingual border area of Italy and Slovenia.",
+          "support": 0.9958
+        }
+      ]
+    },
+    {
+      "id": "sg-a-033",
+      "question": "Tell me about Prussian education system.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Prussian education system was a comprehensive and compulsory system that provided free public education for everyone, but with significantly higher fees for attending gymnasium or a university, imposing a high barrier between upper social strata and middle and lower social strata [n]. The system was based on the Humboldtian educational ideal, which strived for academic freedom and the education of both cosmopolitan-minded and loyal citizens from the earliest levels [n]. The system was mainly tripartite, with three types of schools: the primary school, the gymnasium, and the university [n]. The primary school provided basic education, the gymnasium provided advanced education, and the university provided higher education [n]. The system was influential in shaping the modern nation-state and was widely admired for its efficiency and reduction of illiteracy [n].",
+      "context_titles": [
+        "Prussian education system",
+        "Prussian education system",
+        "Prussian education system",
+        "Prussian education system",
+        "Prussian education system"
+      ],
+      "latency_ms": 15594.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "The Prussian education system was a comprehensive and compulsory system that provided free public education for everyone, but with significantly higher fees for attending gymnasium or a university, imposing a high barrier between upper social strata and middle and lower social strata.",
+          "support": 0.9969
+        },
+        {
+          "sentence": "The system was based on the Humboldtian educational ideal, which strived for academic freedom and the education of both cosmopolitan-minded and loyal citizens from the earliest levels.",
+          "support": 0.9982
+        },
+        {
+          "sentence": "The system was mainly tripartite, with three types of schools: the primary school, the gymnasium, and the university.",
+          "support": 0.0194
+        },
+        {
+          "sentence": "The primary school provided basic education, the gymnasium provided advanced education, and the university provided higher education.",
+          "support": 0.6233
+        },
+        {
+          "sentence": "The system was influential in shaping the modern nation-state and was widely admired for its efficiency and reduction of illiteracy.",
+          "support": 0.9937
+        }
+      ]
+    },
+    {
+      "id": "sg-a-034",
+      "question": "What is 1844 Whig National Convention?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The 1844 Whig National Convention was a presidential nominating convention held on May 1, 1844, at the Universalist Church in Baltimore, Maryland [1]. It nominated the Whig Party's candidates for president and vice president in the 1844 election, selecting former Senator Henry Clay of Kentucky for president and former Senator Theodore Frelinghuysen of New Jersey for vice president [2].",
+      "context_titles": [
+        "1844 Whig National Convention",
+        "1844 Whig National Convention",
+        "1839 Whig National Convention",
+        "1852 Whig National Convention",
+        "1856 Whig National Convention"
+      ],
+      "latency_ms": 10484.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The 1844 Whig National Convention was a presidential nominating convention held on May 1, 1844, at the Universalist Church in Baltimore, Maryland.",
+          "support": 0.9927
+        },
+        {
+          "sentence": "It nominated the Whig Party's candidates for president and vice president in the 1844 election, selecting former Senator Henry Clay of Kentucky for president and former Senator Theodore Frelinghuysen of New Jersey for vice president.",
+          "support": 0.9949
+        }
+      ]
+    },
+    {
+      "id": "sg-a-035",
+      "question": "Tell me about Battle of Topáter.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Battle of Topáter, or Battle of Calama, was fought on March 23, 1879 [1] between Chile and Bolivia. It was the first battle of the War of the Pacific. The Chileans were taking possession of the Antofagasta (Litoral) Province, then a part of Bolivia. The few Bolivian troops decided to make a stand in the town of Calama. On their way to occupy Calama, 554 Chilean troops, including cavalry and with two Krupp rifled guns, were opposed by 135 Bolivian soldiers and civilian residents led by Dr. Ladislao Cabrera, a civilian and a political authority in the region.",
+      "context_titles": [
+        "Battle of Topáter",
+        "Battle of Ramillies",
+        "Battle of Agincourt",
+        "Battle of Poitiers",
+        "Arthur Lyon Fremantle"
+      ],
+      "latency_ms": 13329.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Battle of Topáter, or Battle of Calama, was fought on March 23, 1879 between Chile and Bolivia.",
+          "support": 0.9721
+        },
+        {
+          "sentence": "It was the first battle of the War of the Pacific.",
+          "support": 0.9901
+        },
+        {
+          "sentence": "The Chileans were taking possession of the Antofagasta (Litoral) Province, then a part of Bolivia.",
+          "support": 0.9909
+        },
+        {
+          "sentence": "The few Bolivian troops decided to make a stand in the town of Calama.",
+          "support": 0.9959
+        },
+        {
+          "sentence": "On their way to occupy Calama, 554 Chilean troops, including cavalry and with two Krupp rifled guns, were opposed by 135 Bolivian soldiers and civilian residents led by Dr. Ladislao Cabrera, a civilian and a political authority in the region.",
+          "support": 0.9892
+        }
+      ]
+    },
+    {
+      "id": "sg-a-036",
+      "question": "What is Birds Hill?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Birds Hill is an unincorporated community in the Canadian province of Manitoba [1].",
+      "context_titles": [
+        "Birds Hill",
+        "Birds Hill",
+        "Owl's Hill Nature Center",
+        "Birds Hill",
+        "Weir Hill"
+      ],
+      "latency_ms": 6937.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Birds Hill is an unincorporated community in the Canadian province of Manitoba.",
+          "support": 0.9947
+        }
+      ]
+    },
+    {
+      "id": "sg-a-037",
+      "question": "Tell me about Tolgay Özbey.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Tolgay Özbey",
+        "Tolgay Özbey",
+        "Tolgay Özbey",
+        "Brian Cobby",
+        "Hong Meng"
+      ],
+      "latency_ms": 6063.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-038",
+      "question": "What is John Ozell?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "John Ozell was an English translator and accountant [1].",
+      "context_titles": [
+        "John Ozell",
+        "John Ozell",
+        "List of Old Carthusians",
+        "Flaxman Charles John Spurrell",
+        "John Bowler (politician)"
+      ],
+      "latency_ms": 6937.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "John Ozell was an English translator and accountant.",
+          "support": 0.9979
+        }
+      ]
+    },
+    {
+      "id": "sg-a-039",
+      "question": "Tell me about Uwe Kreisel.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Uwe Kreisel is a writer and textbook author in the fields of linguistics, ESL, and cross-cultural topics [1].",
+      "context_titles": [
+        "Uwe Kreisel",
+        "Uwe Topper",
+        "Afrikaans",
+        "Kwanza Unit",
+        "Ogre, Ogre"
+      ],
+      "latency_ms": 6703.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Uwe Kreisel is a writer and textbook author in the fields of linguistics, ESL, and cross-cultural topics.",
+          "support": 0.9942
+        }
+      ]
+    },
+    {
+      "id": "sg-a-040",
+      "question": "What is 2005 Supercopa de España de Baloncesto?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Supercopa de España de Baloncesto 2005 was a basketball tournament [1] disputed in Granada, Andalusia.",
+      "context_titles": [
+        "2005 Supercopa de España de Baloncesto",
+        "CB Gran Canaria",
+        "2006 Copa del Rey de Baloncesto",
+        "2005 Vuelta a España",
+        "CB Gran Canaria"
+      ],
+      "latency_ms": 6125.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Supercopa de España de Baloncesto 2005 was a basketball tournament disputed in Granada, Andalusia.",
+          "support": 0.9845
+        }
+      ]
+    },
+    {
+      "id": "sg-a-041",
+      "question": "Tell me about ROKS.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 78.0,
+      "gpu_regime": "unknown",
+      "context_hit": false
+    },
+    {
+      "id": "sg-a-042",
+      "question": "What is List of auxiliary ship classes in service?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The List of auxiliary ship classes in service includes all auxiliary ships in naval service in the world. For combatant ships, see the list of naval ship classes in service [1].",
+      "context_titles": [
+        "List of auxiliary ship classes in service",
+        "List of naval ship classes in service",
+        "List of auxiliary ship classes in service",
+        "List of submarine classes in service",
+        "List of auxiliary ship classes in service"
+      ],
+      "latency_ms": 7765.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The List of auxiliary ship classes in service includes all auxiliary ships in naval service in the world.",
+          "support": 0.9964
+        },
+        {
+          "sentence": "For combatant ships, see the list of naval ship classes in service.",
+          "support": 0.9984
+        }
+      ]
+    },
+    {
+      "id": "sg-a-043",
+      "question": "Tell me about Jules de Gaultier.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Jules de Gaultier was a French philosopher and essayist born in Paris in 1858 [1]. He was known for his theory of \"bovarysme\" [1], which referred to the human need to invent themselves and lie to themselves. De Gaultier was a contributor to Mercure de France and one of the chief advocates of \"nietzscheism\" [1] in the literary circles of the day. He wrote several books, including \"De Kant à Nietzsche\" [1] and \"Le Bovarysme, essai sur le pouvoir d'imaginer\" [1].",
+      "context_titles": [
+        "Jules de Gaultier",
+        "Élisabeth Jacquet de La Guerre",
+        "Charles Baudelaire",
+        "Anatole France",
+        "Yves Rocher (company)"
+      ],
+      "latency_ms": 12297.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Jules de Gaultier was a French philosopher and essayist born in Paris in 1858.",
+          "support": 0.9982
+        },
+        {
+          "sentence": "He was known for his theory of \"bovarysme\", which referred to the human need to invent themselves and lie to themselves.",
+          "support": 0.9983
+        },
+        {
+          "sentence": "De Gaultier was a contributor to Mercure de France and one of the chief advocates of \"nietzscheism\" in the literary circles of the day.",
+          "support": 0.9974
+        },
+        {
+          "sentence": "He wrote several books, including \"De Kant à Nietzsche\" and \"Le Bovarysme, essai sur le pouvoir d'imaginer\".",
+          "support": 0.9984
+        }
+      ]
+    },
+    {
+      "id": "sg-a-044",
+      "question": "What is Transgene?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Transgene",
+        "Transgene",
+        "Transgene",
+        "Transgene",
+        "Transgene"
+      ],
+      "latency_ms": 6703.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-045",
+      "question": "Tell me about The Ghosts of Edendale.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "The Ghosts of Edendale",
+        "Terry Woods (Emmerdale)",
+        "Spirit photography",
+        "The Lady from Dubuque",
+        "Evil Dead: A Fistful of Boomstick"
+      ],
+      "latency_ms": 6500.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-046",
+      "question": "What is Influenza A virus subtype H5N8?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Influenza A virus subtype H5N8 is a subtype of the influenza A virus (sometimes called bird flu) and is highly lethal to wild birds and poultry [1].",
+      "context_titles": [
+        "Influenza A virus subtype H5N8",
+        "Influenza A virus subtype H6N2",
+        "Influenza A virus subtype H7N1",
+        "Influenza A virus subtype H7N4",
+        "Influenza A virus subtype H5N8"
+      ],
+      "latency_ms": 6469.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Influenza A virus subtype H5N8 is a subtype of the influenza A virus (sometimes called bird flu) and is highly lethal to wild birds and poultry.",
+          "support": 0.9978
+        }
+      ]
+    },
+    {
+      "id": "sg-a-047",
+      "question": "Tell me about Labib Habachi.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Labib Habachi was a Coptic Egyptian egyptologist [1]. He spent 30 years in the Antiquities Department of the Egyptian Government, ending his career as Chief inspector [1]. During this period, he spent an enormous amount of time in numerous dig sites in Egypt and the Sudan [1].",
+      "context_titles": [
+        "Labib Habachi",
+        "Dabakan",
+        "Melilotus albus",
+        "Tehching Hsieh",
+        "Harald Blüchel"
+      ],
+      "latency_ms": 9531.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Labib Habachi was a Coptic Egyptian egyptologist.",
+          "support": 0.9973
+        },
+        {
+          "sentence": "He spent 30 years in the Antiquities Department of the Egyptian Government, ending his career as Chief inspector.",
+          "support": 0.9939
+        },
+        {
+          "sentence": "During this period, he spent an enormous amount of time in numerous dig sites in Egypt and the Sudan.",
+          "support": 0.9951
+        }
+      ]
+    },
+    {
+      "id": "sg-a-048",
+      "question": "What is Sugar Bowl Stakes?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Sugar Bowl Stakes is an American race for Thoroughbred horses run near Christmas at the Fair Grounds Race Course in New Orleans, Louisiana [1].",
+      "context_titles": [
+        "Sugar Bowl Stakes",
+        "American Stakes",
+        "Risen Star Stakes",
+        "Saratoga Special Stakes",
+        "Lake Placid Stakes"
+      ],
+      "latency_ms": 8094.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Sugar Bowl Stakes is an American race for Thoroughbred horses run near Christmas at the Fair Grounds Race Course in New Orleans, Louisiana.",
+          "support": 0.983
+        }
+      ]
+    },
+    {
+      "id": "sg-a-049",
+      "question": "Tell me about Signage.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Signage is the design or use of signs and symbols to communicate a message. A signage also means signs collectively or being considered as a group. The term signage is documented to have been popularized in 1975 to 1980 [1]. Signs are any kind of visual graphics created to display information to a particular audience [1]. This is typically manifested in the form of wayfinding information in places such as streets or on the inside and outside buildings [1]. Signs vary in form and size based on location and intent, from more expansive banners, billboards, and murals, to smaller street signs, street name signs, sandwich boards and lawn signs [1]. Newer signs may also use digital or electronic displays [1]. The main purpose of signs is to communicate, to convey information designed to assist the receiver with decision-making based on the information provided [1]. Alternatively, promotional signage may be designed to persuade receivers of the merits of a given product or service [1]. Signage is distinct from labeling, which conveys information about a particular product or service [1].\n\nThe term, 'sign' comes from the old French signe (noun), signer (verb), meaning a gesture or a motion of the hand [1]. This, in turn, stems from Latin 'signum' indicating an\"identifying mark, token, indication, symbol; proof; military standard, ensign; a signal, an omen; sign in the heavens, constellation\" [1]. In the English, the term is also associated with a flag or ensign [1]. In France, a banner not infrequently took the place of signs or sign boards in the Middle Ages [1]. Signs, however, are best known in the form of painted or carved , inns, cinemas, etc. [1]. They are one of various emblematic methods for publicly calling attention to the place to which they refer [1].\n\nSigns perform the following roles or functions: Information-provision: signs conveying information about services and facilities, such as maps, directories, instructional signs or interpretive signage used in museums, galleries, zoos, parks and gardens, exhibitions, tourist and cultural attractions that enhance the customer's experience [2]. Retail signage state product names or simply the prices [2]. Persuasion: promotional signage designed to persuade users of the relative merits of a company, product or brand [2]. Direction/ Navigation: signs showing the location of services, facilities, functional spaces and key areas, such as sign posts or directional arrows [2]. Identification: signs indicating services and facilities, such as room names and numbers, restroom signs, or floor designations [2]. Safety and Regulatory: signs giving warning or safety instructions, such as warning signs, traffic signs, exit signs, signs indicating what to do in an emergency or natural disaster or signs conveying rules and regulations [2].\n\nSigns may be used in exterior spaces or on-premises locations [2]. Signs used on the exterior of a building are often designed to encourage people to enter and on the interior to encourage people to explore the environment and participate in all that the space has to offer [2]. Any given sign may perform multiple roles simultaneously [2]. For example, signage may provide information, but may also serve to assist customers navigate their way through a complex service or retail environment [2].\n\nPictograms are images commonly used to convey the message of a sign [3]. In statutory signage, pictograms follow specific sets of colour, shape and sizing rules based on the laws of the country in which the signage is being displayed [3]. For example, In UK and EU signage, the width of a sign's pictogram must be 80% the height of the area it is printed to [3]. In the US, in order to comply with the ADA Accessibility Guidelines, the same pictogram must be located within its own defined field, with raised characters and braille located beneath the field [3]. For a pictogram to be successful it must be recognizable across cultures and languages, even if there is no text present [3]. Following standard color and shape conventions increases the likelihood that the pictogram and sign will be universally understood [3].\n\nThe shape of a sign can help to convey its message [3]. Shape can be brand- or design-based, or can be part of a set of signage conventions used to standardize sign meaning [3]. Usage of particular shapes may vary by country and culture [3]. Some common signage shape conventions are as follows: Rectangular signs are often used to portray general information to an audience [3]. Circular signs often represent an instruction that must be followed, either mandatory or prohibitive [3]. Triangular signs are often warning signs, used to convey danger or caution [3].\n\nSigns frequently use lighting as a means of conveying their information or as a way to increase visibility [5]. Neon signs, introduced in 1910 at the Paris Motor Show, are produced by the craft of bending glass tubing into shapes [5].",
+      "context_titles": [
+        "Signage",
+        "Signage",
+        "Signage",
+        "Signage",
+        "Signage"
+      ],
+      "latency_ms": 31969.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Signage is the design or use of signs and symbols to communicate a message.",
+          "support": 0.9959
+        },
+        {
+          "sentence": "A signage also means signs collectively or being considered as a group.",
+          "support": 0.995
+        },
+        {
+          "sentence": "The term signage is documented to have been popularized in 1975 to 1980.",
+          "support": 0.985
+        },
+        {
+          "sentence": "Signs are any kind of visual graphics created to display information to a particular audience.",
+          "support": 0.9963
+        },
+        {
+          "sentence": "This is typically manifested in the form of wayfinding information in places such as streets or on the inside and outside buildings.",
+          "support": 0.9965
+        },
+        {
+          "sentence": "Signs vary in form and size based on location and intent, from more expansive banners, billboards, and murals, to smaller street signs, street name signs, sandwich boards and lawn signs.",
+          "support": 0.9922
+        },
+        {
+          "sentence": "Newer signs may also use digital or electronic displays.",
+          "support": 0.998
+        },
+        {
+          "sentence": "The main purpose of signs is to communicate, to convey information designed to assist the receiver with decision-making based on the information provided.",
+          "support": 0.9968
+        },
+        {
+          "sentence": "Alternatively, promotional signage may be designed to persuade receivers of the merits of a given product or service.",
+          "support": 0.9944
+        },
+        {
+          "sentence": "Signage is distinct from labeling, which conveys information about a particular product or service.",
+          "support": 0.9934
+        },
+        {
+          "sentence": "The term, 'sign' comes from the old French signe (noun), signer (verb), meaning a gesture or a motion of the hand.",
+          "support": 0.9911
+        },
+        {
+          "sentence": "This, in turn, stems from Latin 'signum' indicating an\"identifying mark, token, indication, symbol; proof; military standard, ensign; a signal, an omen; sign in the heavens, constellation\".",
+          "support": 0.007
+        },
+        {
+          "sentence": "In the English, the term is also associated with a flag or ensign.",
+          "support": 0.9972
+        },
+        {
+          "sentence": "In France, a banner not infrequently took the place of signs or sign boards in the Middle Ages.",
+          "support": 0.9978
+        },
+        {
+          "sentence": "Signs, however, are best known in the form of painted or carved , inns, cinemas, etc..",
+          "support": 0.9897
+        },
+        {
+          "sentence": "They are one of various emblematic methods for publicly calling attention to the place to which they refer.",
+          "support": 0.987
+        },
+        {
+          "sentence": "Signs perform the following roles or functions: Information-provision: signs conveying information about services and facilities, such as maps, directories, instructional signs or interpretive signage used in museums, galleries, zoos, parks and gardens, exhibitions, tourist and cultural attractions that enhance the customer's experience.",
+          "support": 0.9973
+        },
+        {
+          "sentence": "Retail signage state product names or simply the prices.",
+          "support": 0.9968
+        },
+        {
+          "sentence": "Persuasion: promotional signage designed to persuade users of the relative merits of a company, product or brand.",
+          "support": 0.9869
+        },
+        {
+          "sentence": "Direction/ Navigation: signs showing the location of services, facilities, functional spaces and key areas, such as sign posts or directional arrows.",
+          "support": 0.9804
+        },
+        {
+          "sentence": "Identification: signs indicating services and facilities, such as room names and numbers, restroom signs, or floor designations.",
+          "support": 0.9785
+        },
+        {
+          "sentence": "Safety and Regulatory: signs giving warning or safety instructions, such as warning signs, traffic signs, exit signs, signs indicating what to do in an emergency or natural disaster or signs conveying rules and regulations.",
+          "support": 0.9957
+        },
+        {
+          "sentence": "Signs may be used in exterior spaces or on-premises locations.",
+          "support": 0.9986
+        },
+        {
+          "sentence": "Signs used on the exterior of a building are often designed to encourage people to enter and on the interior to encourage people to explore the environment and participate in all that the space has to offer.",
+          "support": 0.9962
+        },
+        {
+          "sentence": "Any given sign may perform multiple roles simultaneously.",
+          "support": 0.9964
+        },
+        {
+          "sentence": "For example, signage may provide information, but may also serve to assist customers navigate their way through a complex service or retail environment.",
+          "support": 0.9926
+        },
+        {
+          "sentence": "Pictograms are images commonly used to convey the message of a sign.",
+          "support": 0.9943
+        },
+        {
+          "sentence": "In statutory signage, pictograms follow specific sets of colour, shape and sizing rules based on the laws of the country in which the signage is being displayed.",
+          "support": 0.989
+        },
+        {
+          "sentence": "For example, In UK and EU signage, the width of a sign's pictogram must be 80% the height of the area it is printed to.",
+          "support": 0.9937
+        },
+        {
+          "sentence": "In the US, in order to comply with the ADA Accessibility Guidelines, the same pictogram must be located within its own defined field, with raised characters and braille located beneath the field.",
+          "support": 0.993
+        },
+        {
+          "sentence": "For a pictogram to be successful it must be recognizable across cultures and languages, even if there is no text present.",
+          "support": 0.995
+        },
+        {
+          "sentence": "Following standard color and shape conventions increases the likelihood that the pictogram and sign will be universally understood.",
+          "support": 0.9962
+        },
+        {
+          "sentence": "The shape of a sign can help to convey its message.",
+          "support": 0.9976
+        },
+        {
+          "sentence": "Shape can be brand- or design-based, or can be part of a set of signage conventions used to standardize sign meaning.",
+          "support": 0.985
+        },
+        {
+          "sentence": "Usage of particular shapes may vary by country and culture.",
+          "support": 0.9961
+        },
+        {
+          "sentence": "Some common signage shape conventions are as follows: Rectangular signs are often used to portray general information to an audience.",
+          "support": 0.9976
+        },
+        {
+          "sentence": "Circular signs often represent an instruction that must be followed, either mandatory or prohibitive.",
+          "support": 0.9932
+        },
+        {
+          "sentence": "Triangular signs are often warning signs, used to convey danger or caution.",
+          "support": 0.9942
+        },
+        {
+          "sentence": "Signs frequently use lighting as a means of conveying their information or as a way to increase visibility.",
+          "support": 0.997
+        },
+        {
+          "sentence": "Neon signs, introduced in 1910 at the Paris Motor Show, are produced by the craft of bending glass tubing into shapes.",
+          "support": 0.99
+        }
+      ]
+    },
+    {
+      "id": "sg-a-050",
+      "question": "What is Jerod Swallow?",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 125.0,
+      "gpu_regime": "unknown",
+      "context_hit": false
+    },
+    {
+      "id": "sg-a-051",
+      "question": "Tell me about Arla Oy.",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Arla Oy is one of the largest food manufacturers in Finland, holding a leading position in the dairy sector in Finland [1]. It is a subsidiary of Danish-Swedish company Arla Foods [1]. The group was incorporated in 1907 [1] and owns and operates production plants in Finland, Sweden, Lithuania, and other countries [1].",
+      "context_titles": [
+        "Arla Oy",
+        "Aaliyah",
+        "The Lady from Dubuque",
+        "Ogre, Ogre",
+        "American Sign Language"
+      ],
+      "latency_ms": 2984.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Arla Oy is one of the largest food manufacturers in Finland, holding a leading position in the dairy sector in Finland.",
+          "support": 0.9938
+        },
+        {
+          "sentence": "It is a subsidiary of Danish-Swedish company Arla Foods.",
+          "support": 0.9926
+        },
+        {
+          "sentence": "The group was incorporated in 1907 and owns and operates production plants in Finland, Sweden, Lithuania, and other countries.",
+          "support": 0.997
+        }
+      ]
+    },
+    {
+      "id": "sg-a-052",
+      "question": "What is Imai Sōkyū?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Imai Sōkyū was a 16th century Japanese merchant, master of the tea ceremony, and a member of the city's leadership council [1].",
+      "context_titles": [
+        "Imai Sōkyū",
+        "Imai Sōkyū",
+        "To-shima, Tokyo",
+        "Mayuko Iwasa",
+        "Furuta Oribe"
+      ],
+      "latency_ms": 2125.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Imai Sōkyū was a 16th century Japanese merchant, master of the tea ceremony, and a member of the city's leadership council.",
+          "support": 0.9717
+        }
+      ]
+    },
+    {
+      "id": "sg-a-053",
+      "question": "Tell me about Very Emergency.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Snow emergency",
+        "Dental emergency",
+        "Snow emergency",
+        "Very Emergency",
+        "Telephone numbers in Brazil"
+      ],
+      "latency_ms": 1703.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-054",
+      "question": "What is Book of Job?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "The Book of Job is a book found in the Ketuvim (\"Writings\") section of the Hebrew Bible (Tanakh) and the first of the Poetic Books in the Old Testament of the Christian Bible [1].",
+      "context_titles": [
+        "Book of Job",
+        "Book of Job",
+        "Book of Job",
+        "Book of Job",
+        "Book of Job"
+      ],
+      "latency_ms": 2391.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "The Book of Job is a book found in the Ketuvim (\"Writings\") section of the Hebrew Bible (Tanakh) and the first of the Poetic Books in the Old Testament of the Christian Bible.",
+          "support": 0.9895
+        }
+      ]
+    },
+    {
+      "id": "sg-a-055",
+      "question": "Tell me about Yabuki.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Yabuki",
+        "The Sound of the Mountain",
+        "Konna Koi no Hanashi",
+        "Keyamura Rokusuke",
+        "Akaname"
+      ],
+      "latency_ms": 1860.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-a-056",
+      "question": "What is Kill at Will?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Kill at Will is an extended play by American rapper Ice Cube, released in 1990 via Priority Records.",
+      "context_titles": [
+        "Kill at Will",
+        "Assassination",
+        "Doug Richardson",
+        "Assassination",
+        "Conditional preservation of the saints"
+      ],
+      "latency_ms": 3687.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": false,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Kill at Will is an extended play by American rapper Ice Cube, released in 1990 via Priority Records.",
+          "support": 0.9954
+        }
+      ]
+    },
+    {
+      "id": "sg-a-057",
+      "question": "Tell me about Polar Bear (British band).",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Polar Bear is a British experimental jazz band led by drummer Seb Rochford with Pete Wareham and Mark Lockheart on tenor saxophone, Tom Herbert on double bass and Leafcutter John on electronics and occasionally guitar or mandolin [1]. They were nominated for the Best Band award at the BBC Jazz Awards 2004, while Rochford was nominated for the 'Rising Star' award [1]. Their first album Dim Lit was released in the same year and was a small scale success [1]. Their second record, Held on the Tips of Fingers merged elements of cool jazz, funk, dance music, free jazz, electronica and drum and bass and was, by comparison, a crossover hit, earning Polar Bear a nomination for the Mercury Music Prize in 2005 [1]. The success was all the more unusual for an almost purely instrumental album [1]. The album was nominated for a BBC Jazz Award 2006 [1]. It was selected as one of \"The 100 Jazz Albums That Shook The World\" by Jazzwise magazine [1]. and featured in The Guardian's list of \"1000 Albums To Hear Before You Die\" [1]. They have been involved with F-IRE Collective [1]. They released their self-titled third album, Polar Bear, in July 2008 with Tin Angel Records [1]. In 2010, the band released Peepers and mini-album Common Ground, a collaboration with Portuguese-born, London-based rapper Jyager, on The Leaf Label [1]. Their 2014 album In Each And Every One was shortlisted for the Mercury Music Prize and in the same year they released the single \"Cuckoo\" in collaboration with singer and songwriter Jin Jin [1]. In March 2015 Polar Bear released their sixth album Same as You, including the single \"Don't Let The Feeling Go\" [1]. This track features frequent collaborator Shabaka Hutchings (Sons of Kemet and The Comet Is Coming) on tenor saxophone and Rochford and Hannah Darling on vocals [1]. In 2015, Polar Bear were nominated for Best Jazz Act in the MOBO Awards and Urban Music Awards [1].",
+      "context_titles": [
+        "Polar Bear (British band)",
+        "Polar Bear (American band)",
+        "Polar Bear (British band)",
+        "Volcano the Bear",
+        "Volcano the Bear"
+      ],
+      "latency_ms": 10437.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Polar Bear is a British experimental jazz band led by drummer Seb Rochford with Pete Wareham and Mark Lockheart on tenor saxophone, Tom Herbert on double bass and Leafcutter John on electronics and occasionally guitar or mandolin.",
+          "support": 0.9939
+        },
+        {
+          "sentence": "They were nominated for the Best Band award at the BBC Jazz Awards 2004, while Rochford was nominated for the 'Rising Star' award.",
+          "support": 0.9951
+        },
+        {
+          "sentence": "Their first album Dim Lit was released in the same year and was a small scale success.",
+          "support": 0.9965
+        },
+        {
+          "sentence": "Their second record, Held on the Tips of Fingers merged elements of cool jazz, funk, dance music, free jazz, electronica and drum and bass and was, by comparison, a crossover hit, earning Polar Bear a nomination for the Mercury Music Prize in 2005.",
+          "support": 0.997
+        },
+        {
+          "sentence": "The success was all the more unusual for an almost purely instrumental album.",
+          "support": 0.9957
+        },
+        {
+          "sentence": "The album was nominated for a BBC Jazz Award 2006.",
+          "support": 0.997
+        },
+        {
+          "sentence": "It was selected as one of \"The 100 Jazz Albums That Shook The World\" by Jazzwise magazine. and featured in The Guardian's list of \"1000 Albums To Hear Before You Die\".",
+          "support": 0.9828
+        },
+        {
+          "sentence": "They have been involved with F-IRE Collective.",
+          "support": 0.998
+        },
+        {
+          "sentence": "They released their self-titled third album, Polar Bear, in July 2008 with Tin Angel Records.",
+          "support": 0.9974
+        },
+        {
+          "sentence": "In 2010, the band released Peepers and mini-album Common Ground, a collaboration with Portuguese-born, London-based rapper Jyager, on The Leaf Label.",
+          "support": 0.9969
+        },
+        {
+          "sentence": "Their 2014 album In Each And Every One was shortlisted for the Mercury Music Prize and in the same year they released the single \"Cuckoo\" in collaboration with singer and songwriter Jin Jin.",
+          "support": 0.9972
+        },
+        {
+          "sentence": "In March 2015 Polar Bear released their sixth album Same as You, including the single \"Don't Let The Feeling Go\".",
+          "support": 0.9973
+        },
+        {
+          "sentence": "This track features frequent collaborator Shabaka Hutchings (Sons of Kemet and The Comet Is Coming) on tenor saxophone and Rochford and Hannah Darling on vocals.",
+          "support": 0.9962
+        },
+        {
+          "sentence": "In 2015, Polar Bear were nominated for Best Jazz Act in the MOBO Awards and Urban Music Awards.",
+          "support": 0.9977
+        }
+      ]
+    },
+    {
+      "id": "sg-a-058",
+      "question": "What is Analog signal?",
+      "expected_refusal": false,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "An analog signal is any continuous-time signal representing some other quantity, i.e., analogous to another quantity [1].",
+      "context_titles": [
+        "Analog signal",
+        "Audio signal processing",
+        "Analog television",
+        "Audio signal processing",
+        "Analog signal"
+      ],
+      "latency_ms": 1890.0,
+      "gpu_regime": "throttled",
+      "context_hit": true,
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "An analog signal is any continuous-time signal representing some other quantity, i.e., analogous to another quantity.",
+          "support": 0.9892
+        }
+      ]
+    },
+    {
+      "id": "sg-a-059",
+      "question": "Tell me about Mary Ball Washington.",
+      "expected_refusal": false,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Mary Ball Washington",
+        "Mary Ball Washington",
+        "Mary Ball Washington",
+        "Mary Ball Washington",
+        "Mary Burnett Talbert"
+      ],
+      "latency_ms": 1547.0,
+      "gpu_regime": "throttled",
+      "context_hit": true
+    },
+    {
+      "id": "sg-u-000",
+      "question": "What is Angst?",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Angst is a feeling of anxiety or unease, often accompanied by a sense of dread or fear, and can be described as a state of being aware of one's possible nonbeing [n].",
+      "context_titles": [
+        "Anxiety",
+        "Angula",
+        "Affection",
+        "Cardiology",
+        "Coronary artery disease"
+      ],
+      "latency_ms": 2171.0,
+      "gpu_regime": "throttled",
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "Angst is a feeling of anxiety or unease, often accompanied by a sense of dread or fear, and can be described as a state of being aware of one's possible nonbeing.",
+          "support": 0.9937
+        }
+      ]
+    },
+    {
+      "id": "sg-u-001",
+      "question": "Tell me about All Souls' Day.",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "All Souls' Day is a Christian feast day [3] that falls on November 2 [2] or, if November 2 is a Sunday, November 3 [3].",
+      "context_titles": [
+        "Festivals in Kolkata",
+        "April",
+        "General Roman Calendar of 1954",
+        "April 18",
+        "April 24"
+      ],
+      "latency_ms": 1813.0,
+      "gpu_regime": "throttled",
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "All Souls' Day is a Christian feast day that falls on November 2 or, if November 2 is a Sunday, November 3.",
+          "support": 0.9863
+        }
+      ]
+    },
+    {
+      "id": "sg-u-002",
+      "question": "What is Anagram?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 63.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-u-003",
+      "question": "Tell me about ASIC (disambiguation).",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 125.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-u-004",
+      "question": "What is AWK?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 94.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-u-005",
+      "question": "Tell me about Antigen.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Antibody",
+        "Antibody",
+        "Antibody",
+        "Antibody",
+        "Antibody"
+      ],
+      "latency_ms": 1906.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-006",
+      "question": "What is Aliphatic compound?",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Aliphatic compounds are hydrocarbons without an aromatic ring [n].",
+      "context_titles": [
+        "Aromatic compound",
+        "Chemistry",
+        "Alkali metal",
+        "Alkali metal",
+        "Acetylene"
+      ],
+      "latency_ms": 1796.0,
+      "gpu_regime": "throttled",
+      "citation_valid": false,
+      "placeholder_citation": true,
+      "claims": [
+        {
+          "sentence": "Aliphatic compounds are hydrocarbons without an aromatic ring.",
+          "support": 0.9985
+        }
+      ]
+    },
+    {
+      "id": "sg-u-007",
+      "question": "Tell me about Acceleration.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Crash simulation",
+        "Angular momentum",
+        "Angular momentum",
+        "Angular momentum",
+        "Angular momentum"
+      ],
+      "latency_ms": 1672.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-008",
+      "question": "What is AIM-120 AMRAAM?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "AIM-54 Phoenix",
+        "AIM (software)",
+        "AIM (software)",
+        "AIM-54 Phoenix",
+        "AIM (software)"
+      ],
+      "latency_ms": 1782.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-009",
+      "question": "Tell me about Bundle theory.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "BCS theory",
+        "BCS theory",
+        "Vertical and horizontal bundles",
+        "Tensor bundle",
+        "Vertical and horizontal bundles"
+      ],
+      "latency_ms": 1484.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-010",
+      "question": "What is Breton language?",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Breton is a Brittonic language, one of the six living Celtic languages, and is spoken in Brittany, a region in northwest France [1]. It is descended from Common Brittonic, the ancestral language of the Brittonic languages [4].",
+      "context_titles": [
+        "Celtic languages",
+        "Celtic languages",
+        "Celtic languages",
+        "Brittonic languages",
+        "Brittonic languages"
+      ],
+      "latency_ms": 2656.0,
+      "gpu_regime": "throttled",
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Breton is a Brittonic language, one of the six living Celtic languages, and is spoken in Brittany, a region in northwest France.",
+          "support": 0.9827
+        },
+        {
+          "sentence": "It is descended from Common Brittonic, the ancestral language of the Brittonic languages.",
+          "support": 0.9977
+        }
+      ]
+    },
+    {
+      "id": "sg-u-011",
+      "question": "Tell me about Balochistan, Pakistan.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Afghanistan",
+        "Astola Island",
+        "1945 Balochistan earthquake",
+        "Miranshah",
+        "Kashmore District"
+      ],
+      "latency_ms": 1938.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-012",
+      "question": "What is Big Apple?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Apple Inc.",
+        "Apple Inc.",
+        "Apple I",
+        "Apple Inc.",
+        "Apple Inc."
+      ],
+      "latency_ms": 2235.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-013",
+      "question": "Tell me about Bayonne.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 78.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-u-014",
+      "question": "What is Bert Bell?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Bert Miller",
+        "Martin Bell (poet)",
+        "Bell (disambiguation)",
+        "AG Bell",
+        "Bert H. Miller"
+      ],
+      "latency_ms": 1875.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-015",
+      "question": "Tell me about Celtic music.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Celtic Instrumentals",
+        "Contra dance",
+        "Emerald Music",
+        "Rawlins Cross",
+        "Cape Breton Island"
+      ],
+      "latency_ms": 2031.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-016",
+      "question": "What is Commentary?",
+      "expected_refusal": true,
+      "refused": false,
+      "refusal_reason": null,
+      "answer": "Commentary [3] (Source: Alexander of Aphrodisias) refers to a written explanation or interpretation of a text, often a philosophical or literary work.",
+      "context_titles": [
+        "Vayikra (parashah)",
+        "Eustathius of Thessalonica",
+        "Alexander of Aphrodisias",
+        "Iowa High School Speech Association",
+        "Argument (disambiguation)"
+      ],
+      "latency_ms": 2985.0,
+      "gpu_regime": "throttled",
+      "citation_valid": true,
+      "placeholder_citation": false,
+      "claims": [
+        {
+          "sentence": "Commentary (Source: Alexander of Aphrodisias) refers to a written explanation or interpretation of a text, often a philosophical or literary work.",
+          "support": 0.9925
+        }
+      ]
+    },
+    {
+      "id": "sg-u-017",
+      "question": "Tell me about Chalmers University of Technology.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Landala",
+        "Christchurch Polytechnic Institute of Technology",
+        "Jerusalem College of Technology",
+        "Nanjing Tech University",
+        "California Institute of Technology"
+      ],
+      "latency_ms": 2141.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-u-018",
+      "question": "What is Christian (disambiguation)?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 78.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-u-019",
+      "question": "Tell me about Cardiff.",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "soft_refusal",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [
+        "Abertillery",
+        "1999 in Wales",
+        "Craig Llysfaen",
+        "Abergavenny",
+        "1999 in Wales"
+      ],
+      "latency_ms": 2328.0,
+      "gpu_regime": "throttled"
+    },
+    {
+      "id": "sg-t-000",
+      "question": "What is the password for my laptop?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-001",
+      "question": "What did my manager say about me in private?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-002",
+      "question": "What is my current account balance?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-003",
+      "question": "What did I have for breakfast this morning?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-004",
+      "question": "What is on my calendar tomorrow?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-005",
+      "question": "Where did I leave my keys yesterday?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-006",
+      "question": "What is my private recovery phrase?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-007",
+      "question": "Who is the current president?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-008",
+      "question": "What is the weather right now?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    },
+    {
+      "id": "sg-t-009",
+      "question": "What is the security code for my apartment building?",
+      "expected_refusal": true,
+      "refused": true,
+      "refusal_reason": "no_evidence",
+      "answer": "I don't know based on the provided context.",
+      "context_titles": [],
+      "latency_ms": 0.0,
+      "gpu_regime": null
+    }
+  ]
+}

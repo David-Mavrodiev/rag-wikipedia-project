@@ -456,6 +456,7 @@ and collection together so that cannot happen by accident.
 | `golden.jsonl` | 60 | 40 | 20 |
 | `holdout.jsonl` | 20 | 15 | 5 |
 | `adversarial.jsonl` | 20 | 10 | 10 |
+| `detail.jsonl` | 60 | 40 | 20 |
 
 Gates enforced (all unconditional):
 
@@ -497,12 +498,15 @@ system can drive the first to zero by refusing everything.
 
 ## 9. Testing
 
-`pytest` — **362 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
+`pytest` — **463 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
 
 - **layering** — `app/` imports nothing outside an allowlist of base packages; the `direct` engine stays framework-free; the engine registry never imports a framework at module level.
 - **engine conformance** — a *differential* test running `POST /query` and `DirectEngine` over identical mocks and asserting identical answers, citations and refusals on every branch of the handler.
 - **interface contracts** — deterministic decoding for `LLM`; a probed `dim` for `Embedder`, including a library that has dropped the deprecated method name and a model that reports no fixed dimension.
 - **eval-harness resilience** — a failed model call is retried once, then recorded as an error and excluded, never scored as a refusal.
+- **answer measurement** — a refusal is counted, never scored as an ungrounded answer; citations resolve or are reported; the support judge reads its entailment label from the model, takes the best premise, and cannot manufacture support; an end-to-end run is checkpointed per case and resumes without double-counting.
+- **suite integrity** — every registered suite loads and validates; no detail question names its article or contains its answer; fixture detail answers occur in their article and unanswerable ones nowhere in the fixture.
+- **measurement conditions** — GPU readings, regime classification and thermal pacing (hysteresis, abort), all with injected clocks; `Server-Timing` on `/query`; latency grouped by cold/warm, generation and GPU regime.
 
 Vitest covers the four frontend components. Run `make test`, `make lint` and `make docs-check` before declaring any milestone done.
 
