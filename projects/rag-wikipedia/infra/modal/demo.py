@@ -45,6 +45,9 @@ ROOT = _HERE.parents[2] if len(_HERE.parents) > 2 else Path("/srv")
 MODEL = os.environ.get("RAG_MODAL_MODEL", "llama3.2:3b")
 GPU = os.environ.get("RAG_MODAL_GPU", "T4")
 COLLECTION = "wikipedia"
+# eval/judge_accuracy.py names its reports after the set FILE ("real" lives in
+# real_claims.jsonl.gz), so reading one back needs the stem, not the flag.
+SET_STEMS = {"real": "real_claims", "synthetic": "synthetic"}
 EXPECTED_POINTS = 87173
 DAY_WINDOW_S, NIGHT_WINDOW_S = 120, 60
 QDRANT_VERSION = "v1.18.3"
@@ -243,6 +246,51 @@ def serve() -> None:
             "CLERK_AUDIENCE": os.environ.get("CLERK_AUDIENCE", ""),
         },
     )
+
+
+@app.function(image=eval_image, volumes={"/reports": reports},
+               cpu=4, memory=8192, timeout=3600, max_containers=1)
+def judge(sets: str = "real,synthetic", split: str = "test",
+          assemble: str = "0,3", git_sha: str = "") -> dict:
+    """Score the groundedness JUDGE against hand labels - no GPU, no corpus.
+
+    The judge decides whether a claim is supported, and the published
+    groundedness rate is only as good as that decision. This reads the committed
+    labelled sets and runs the NLI model on CPU: no Qdrant, no Ollama, no GPU, so
+    a full comparison costs cents and cannot be confused with an end-to-end run.
+
+    Every (set x assemble) combination runs in ONE container, because the cost
+    here is loading the model, not scoring 57 claims:
+
+        modal run infra/modal/demo.py::judge --split test --git-sha $SHA
+
+    The laptop can do this too. It stopped being able to while 16 GB of RAM was
+    otherwise occupied, and the point of the number is that it exists.
+    """
+    import json
+    import subprocess
+
+    out_dir = Path("/reports/judge")
+    results, failures = {}, []
+    for which in [s.strip() for s in sets.split(",") if s.strip()]:
+        for k in [a.strip() for a in assemble.split(",") if a.strip()]:
+            args = ["python", "eval/judge_accuracy.py", "--set", which,
+                    "--split", split, "--assemble", k, "--out-dir", str(out_dir)]
+            done = subprocess.run(
+                args, cwd="/srv/backend", check=False, capture_output=True, text=True,
+                env=os.environ | {"PYTHONPATH": "/srv/backend",
+                                  "PYTHONIOENCODING": "utf-8",
+                                  "RAG_GIT_SHA": git_sha},
+            )
+            key = f"{which}.{split}.assemble{k}"
+            if done.returncode != 0:
+                failures.append({"combo": key, "stderr_tail": done.stderr[-1500:]})
+                continue
+            report = out_dir / f"accuracy.{SET_STEMS.get(which, which)}.{split}.assemble{k}.json"
+            results[key] = (json.loads(report.read_text(encoding="utf-8"))
+                            if report.exists() else {"stdout_tail": done.stdout[-1500:]})
+    reports.commit()
+    return {"ok": not failures, "failures": failures, "results": results}
 
 
 @app.function(schedule=modal.Cron("0 8,23 * * *", timezone="Europe/Paris"))
