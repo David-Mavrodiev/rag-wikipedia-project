@@ -248,8 +248,13 @@ def serve() -> None:
     )
 
 
+# cpu=8 and two hours, measured: torch here is the CPU build (UV_TORCH_BACKEND=cpu
+# in the base image), and scoring the real set's two settings took about 45
+# minutes on 4 CPUs - four settings did not fit in an hour and the run was killed
+# with the synthetic half unfinished. A CUDA wheel would be faster and is a 2.5 GB
+# layer for a job that runs twice a month.
 @app.function(image=eval_image, volumes={"/reports": reports},
-               cpu=4, memory=8192, timeout=3600, max_containers=1)
+               cpu=8, memory=8192, timeout=7200, max_containers=1)
 def judge(sets: str = "real,synthetic", split: str = "test",
           assemble: str = "0,3", git_sha: str = "") -> dict:
     """Score the groundedness JUDGE against hand labels - no GPU, no corpus.
@@ -289,7 +294,10 @@ def judge(sets: str = "real,synthetic", split: str = "test",
             report = out_dir / f"accuracy.{SET_STEMS.get(which, which)}.{split}.assemble{k}.json"
             results[key] = (json.loads(report.read_text(encoding="utf-8"))
                             if report.exists() else {"stdout_tail": done.stdout[-1500:]})
-    reports.commit()
+            # Per combination, not at the end: the first run of this hit the
+            # timeout mid-set, and an uncommitted report is a run paid for twice.
+            reports.commit()
+            print(f"committed {key}")
     return {"ok": not failures, "failures": failures, "results": results}
 
 
