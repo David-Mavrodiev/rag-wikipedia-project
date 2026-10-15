@@ -498,7 +498,7 @@ system can drive the first to zero by refusing everything.
 
 ## 9. Testing
 
-`pytest` — **463 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
+`pytest` — **483 tests**: chunking (deterministic IDs), config, generation (prompt/citation), metrics, pipeline idempotency and resumability, retrieval (empty + below-threshold refusal), the evidence gate and IDF coverage, rate limiting, the quality endpoint, API (validation, 503 mapping, refusal), and **contract tests** for `QdrantStore` against an **in-memory Qdrant** (`QdrantClient(":memory:")`) — because mocking the store is what let a client API break reach prod (§12.1). Added in September 2026:
 
 - **layering** — `app/` imports nothing outside an allowlist of base packages; the `direct` engine stays framework-free; the engine registry never imports a framework at module level.
 - **engine conformance** — a *differential* test running `POST /query` and `DirectEngine` over identical mocks and asserting identical answers, citations and refusals on every branch of the handler.
@@ -630,7 +630,7 @@ This project demonstrably covers the **whole chain** — ingestion → chunking 
 The complete list, generated from `Settings` by `make docs-write` and checked in CI:
 
 <!-- docs-check:begin settings -->
-`Settings` exposes **24 settings** (env var = the upper-case name); see `backend/.env.example`.
+`Settings` exposes **26 settings** (env var = the upper-case name); see `backend/.env.example`.
 
 ```text
 QDRANT_URL
@@ -639,6 +639,8 @@ EMBED_MODEL
 LLM_MODEL
 COLLECTION
 LLM_NUM_CTX
+LLM_KEEP_ALIVE
+WARMUP_ON_STARTUP
 TOP_K
 PROFILE
 TOKEN_BUDGET

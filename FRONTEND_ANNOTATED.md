@@ -310,6 +310,19 @@ test('displays answer text', () => {                                // it render
   render(<AnswerView answer="Python is a language [1]." />)         // render with a sample answer
   expect(screen.getByTestId('answer-view')).toHaveTextContent('Python is a language')  // the text shows up
 })
+
+test('an uncited answer is shown with a note that it cannot be checked', () => {  // "[n]" used to look sourced
+  render(<AnswerView answer="Biotite is a mica [n]." cited={false} />)
+  expect(screen.getByTestId('answer-view')).toHaveTextContent('Biotite is a mica')  // still shown
+  expect(screen.getByTestId('uncited-note')).toBeInTheDocument()                     // but flagged
+})
+
+test('a cited answer and a refusal carry no note', () => {          // the note must not become noise
+  const { rerender } = render(<AnswerView answer="Python [1]." cited={true} />)
+  expect(screen.queryByTestId('uncited-note')).toBeNull()
+  rerender(<AnswerView answer="I don't know based on the provided context." refused={true} cited={false} />)
+  expect(screen.queryByTestId('uncited-note')).toBeNull()
+})
 ```
 
 ## `frontend/src/components/CitationList.test.tsx`

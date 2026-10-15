@@ -34,7 +34,14 @@ class BGEEmbedder(Embedder):
     def __init__(self, model_name: str = "BAAI/bge-small-en-v1.5"):
         from sentence_transformers import SentenceTransformer
 
-        self._model = SentenceTransformer(model_name)
+        # Cache first. Loading by name revalidates every file against the
+        # Hugging Face Hub on each start - unauthenticated HEAD requests that
+        # sat inside a 60.8 s first-request stall measured on 2026-09-21. Only a
+        # model that is not cached yet (OSError) goes to the network.
+        try:
+            self._model = SentenceTransformer(model_name, local_files_only=True)
+        except OSError:
+            self._model = SentenceTransformer(model_name)
 
     @property
     def dim(self) -> int:

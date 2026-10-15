@@ -71,3 +71,37 @@ def test_query_qdrant_down(client):
         response = client.post("/query", json={"question": "What is Python?"})
 
     assert response.status_code == 503
+
+
+# --- cited: whether a reader can check the answer against a source ----------
+def _answer_with(generated: str, client):
+    chunk = {"score": 0.95, "text": "Python is a programming language.",
+             "title": "Python", "source_id": "1"}
+    with (
+        patch("app.api.query._embedder") as mock_embedder,
+        patch("app.api.query._store") as mock_store,
+        patch("app.api.query._llm") as mock_llm,
+    ):
+        mock_embedder.return_value.embed.return_value = [0.1] * 384
+        mock_store.return_value.search.return_value = [chunk]
+        mock_llm.return_value.generate.return_value = generated
+        return client.post("/query", json={"question": "What is Python?"}).json()
+
+
+def test_an_answer_citing_a_given_chunk_is_cited(client):
+    data = _answer_with("Python is a programming language [1].", client)
+    assert data["cited"] is True and data["refused"] is False
+
+
+def test_a_placeholder_citation_is_served_but_marked_uncited(client):
+    # What llama3.2:3b did with "Cite inline with [n] markers": served, and
+    # indistinguishable from a sourced answer until this flag existed.
+    data = _answer_with("Python is a programming language [n].", client)
+    assert data["refused"] is False
+    assert data["cited"] is False
+    assert data["citations"] == []
+
+
+def test_a_citation_past_the_context_is_not_a_source(client):
+    data = _answer_with("Python is a programming language [7].", client)
+    assert data["cited"] is False

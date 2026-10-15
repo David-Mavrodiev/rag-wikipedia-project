@@ -41,3 +41,11 @@ def test_build_citations():
 def test_build_citations_out_of_range():
     cited = build_citations(MOCK_CHUNKS, [1, 99])
     assert len(cited) == 1
+
+
+def test_the_prompt_never_shows_the_model_a_placeholder_citation():
+    # "Cite inline with [n] markers" was copied literally by llama3.2:3b, so an
+    # answer reached the user with "[n]" and no source. Only real numbers now.
+    prompt = build_prompt("What is Python?", MOCK_CHUNKS)
+    assert "[n]" not in prompt.lower()
+    assert "[1] or [2]" in prompt

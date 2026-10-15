@@ -59,12 +59,16 @@ class OllamaLLM(LLM):
 
         self._model = model
         self._num_ctx = num_ctx if num_ctx is not None else settings.llm_num_ctx
+        self._keep_alive = settings.llm_keep_alive
         self._client = ollama.Client(host=base_url)
 
     def generate(self, prompt: str) -> str:
         response = self._client.generate(
             model=self._model,
             prompt=prompt,
+            # Pinned for the same reason as num_ctx: the server's 5-minute
+            # default would otherwise decide when the next answer pays a reload.
+            keep_alive=self._keep_alive,
             options={
                 "num_ctx": self._num_ctx,
                 # The LLM contract above. Ollama's own default is 0.8, so
