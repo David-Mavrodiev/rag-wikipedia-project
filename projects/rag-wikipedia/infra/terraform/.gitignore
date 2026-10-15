@@ -1,0 +1,8 @@
+# State holds resource ids and can hold secrets: never in git.
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+crash.log

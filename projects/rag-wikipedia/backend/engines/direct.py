@@ -19,7 +19,7 @@ from app.core.llm import LLM
 from app.core.prompt import build_prompt
 from app.core.refusal import REFUSAL_MESSAGE, is_refusal
 from app.core.retrieval import retrieve
-from app.core.vectorstore import QdrantStore
+from app.core.stores import VectorStore
 
 from engines.base import Engine, EngineResult
 
@@ -27,7 +27,7 @@ from engines.base import Engine, EngineResult
 class DirectEngine(Engine):
     """retrieve -> refuse or generate -> cite. One pass, at most one LLM call."""
 
-    def __init__(self, embedder: Embedder, store: QdrantStore, llm: LLM) -> None:
+    def __init__(self, embedder: Embedder, store: VectorStore, llm: LLM) -> None:
         self._embedder = embedder
         self._store = store
         self._llm = llm

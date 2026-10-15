@@ -45,7 +45,7 @@ from app.core.refusal import (
     is_refusal,
 )
 from app.core.retrieval import retrieve
-from app.core.vectorstore import QdrantStore
+from app.core.stores import VectorStore
 from langgraph.graph import END, START, StateGraph
 
 from engines.base import Engine, EngineResult
@@ -95,7 +95,7 @@ class LangGraphEngine(Engine):
     def __init__(
         self,
         embedder: Embedder,
-        store: QdrantStore,
+        store: VectorStore,
         llm: LLM,
         *,
         max_rewrites: int = MAX_REWRITES,

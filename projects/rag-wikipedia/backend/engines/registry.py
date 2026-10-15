@@ -6,6 +6,8 @@ three. Adding an engine is one line here. Choosing one is one environment
 variable.
 
     ENGINE_CHOICE=direct     the v1 chain (the default)
+    ENGINE_CHOICE=langgraph  a graph: grade, rewrite, verify
+    ENGINE_CHOICE=langchain  an LCEL chain whose middle step is the model choosing
 
 ENGINE_CHOICE is read from the environment rather than declared on `Settings`
 for now. Settings would be better - it validates at startup - but `config.py`
@@ -23,16 +25,16 @@ from collections.abc import Callable
 
 from app.core.embeddings import Embedder
 from app.core.llm import LLM
-from app.core.vectorstore import QdrantStore
+from app.core.stores import VectorStore
 
 from engines.base import Engine
 from engines.direct import DirectEngine
 
-EngineFactory = Callable[[Embedder, QdrantStore, LLM], Engine]
+EngineFactory = Callable[[Embedder, VectorStore, LLM], Engine]
 
 DEFAULT_ENGINE = "direct"
 
-def _langgraph(embedder: Embedder, store: QdrantStore, llm: LLM) -> Engine:
+def _langgraph(embedder: Embedder, store: VectorStore, llm: LLM) -> Engine:
     """Build the graph engine, importing its runtime only when it is chosen.
 
     LAZY on purpose. A module-level import here would make langgraph a hard
@@ -46,16 +48,24 @@ def _langgraph(embedder: Embedder, store: QdrantStore, llm: LLM) -> Engine:
     return LangGraphEngine(embedder, store, llm)
 
 
+def _langchain(embedder: Embedder, store: VectorStore, llm: LLM) -> Engine:
+    """The LCEL chain with an agent step. Lazy for the same reason as above."""
+    from engines.langchain_engine import LangChainEngine
+
+    return LangChainEngine(embedder, store, llm)
+
+
 ENGINE_REGISTRY: dict[str, EngineFactory] = {
     "direct": lambda embedder, store, llm: DirectEngine(embedder, store, llm),
     "langgraph": _langgraph,
+    "langchain": _langchain,
     # <- ADD A NEW ENGINE AS ONE LINE HERE
 }
 
 
 def make_engine(
     embedder: Embedder,
-    store: QdrantStore,
+    store: VectorStore,
     llm: LLM,
     choice: str | None = None,
 ) -> Engine:

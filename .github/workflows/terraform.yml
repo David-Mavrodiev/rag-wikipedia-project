@@ -1,0 +1,50 @@
+# Terraform, checked without an Azure account and without creating anything.
+#
+# `fmt` and `validate` need no credentials: validate only initialises the
+# provider schema (-backend=false), so this runs on every PR for free. `plan`
+# and `apply` are NOT here - a plan needs credentials, and an apply creates
+# billable resources, which belongs in a human's terminal.
+name: terraform
+
+on:
+  pull_request:
+    paths: ["projects/rag-wikipedia/infra/terraform/**", ".github/workflows/terraform.yml"]
+  push:
+    branches: [main]
+    paths: ["projects/rag-wikipedia/infra/terraform/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: projects/rag-wikipedia/infra/terraform
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.8"
+
+      - name: Formatting
+        run: terraform fmt -check -recursive -diff
+
+      - name: Initialise the provider schema only
+        run: terraform init -backend=false -input=false
+
+      - name: Validate
+        run: terraform validate -no-color
+
+      - name: The cost guard is still in place
+        # A free SKU by default, and anything billable blocked behind an
+        # explicit flag. Cheap to assert, expensive to discover missing.
+        run: |
+          grep -q 'default     = "free"' variables.tf
+          grep -q 'var.confirm_paid_tier' main.tf
+          echo "default SKU is free, and a paid tier needs confirm_paid_tier" \
+            >> "$GITHUB_STEP_SUMMARY"

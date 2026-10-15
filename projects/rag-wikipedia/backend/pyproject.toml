@@ -59,6 +59,24 @@ agent = [
     "langchain-core>=1.6,<2",
 ]
 
+# Azure AI Search as a second store (STORE_CHOICE=azure-search), with
+# server-side ACL trimming. Out of the base dependencies and out of CI: the
+# adapter imports the SDK inside the methods that use it, and
+# tests/test_azure_search_store.py fakes the modules, so the filter - the part
+# that must never be wrong - is enforced on a machine with no Azure account.
+azure = [
+    "azure-search-documents>=11.5,<12",
+    "azure-identity>=1.19,<2",
+]
+
+# Publishing finished eval reports to MLflow (scripts/mlflow_publish.py).
+# Kept out of the base dependencies, and out of CI: the publisher imports mlflow
+# inside the function that needs it, and tests/test_mlflow_publish.py fakes the
+# module, so the mapping is enforced on a machine that has never installed it.
+mlflow = [
+    "mlflow>=2.16,<4",
+]
+
 # Vertex AI adapters for the LLM and Embedder interfaces (backend/providers/).
 # Kept out of the base dependencies for the same reason as `agent`: the served
 # path defaults to the local models, which need none of this.
