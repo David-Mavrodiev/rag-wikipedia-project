@@ -144,6 +144,12 @@ The run's only fabrications therefore sit behind the refusal gate, which is wher
 step 3 aims: a relevance score that refuses those three questions before
 generation removes them.
 
+> **Step 3 is measured.** A cross-encoder relevance gate refuses all three, and
+> end to end false accepts go 0.150 to 0.000 - at the cost of two more
+> answerable refusals of 60 and 0.6 s of latency. The fit under-predicted that
+> cost fourfold, which is what a held-out suite is for:
+> [relevance-gate.md](relevance-gate.md).
+
 **One answer in seven cited a placeholder.** The prompt said "Cite inline with [n]
 markers", and in 8 of 55 answers the model copied `[n]` literally; two more cite
 nothing. Such an answer reaches the UI with no source and nothing saying so. The
