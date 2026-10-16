@@ -15,13 +15,13 @@ const PUBLISHED: { label: string; value: string; note: string }[] = [
   },
   {
     label: 'Refuses a question it could have answered',
-    value: '0.133 / 0.350',
+    value: '0.150 / 0.350',
     note: 'specific questions / vague ones ("Tell me about X"), with the right article retrieved',
   },
   {
     label: 'Claims supported by the retrieved text',
-    value: '0.792 judged, 51 of 53 by hand',
-    note: 'the judge over-flags: 8 of its 11 flags were correct answers it could not verify',
+    value: '0.812 judged, 39 of 48',
+    note: 'read as a measurement of the judge as much as the answers - see the lesson below',
   },
   {
     label: 'Answer latency',
@@ -40,8 +40,8 @@ const LESSONS: { head: string; body: string }[] = [
     body: 'In a regulated or industrial setting a confident wrong answer costs more than no answer. This system declines when the corpus cannot support a claim — and the two fabrications in 125 claims both came from questions it should have refused, which is where the work goes next.',
   },
   {
-    head: 'The evaluator is measured too',
-    body: 'The automatic groundedness judge was checked against 110 hand-labelled claims: it agrees 82% of the time and four of five of its alarms are false. Knowing that is the difference between a metric and a decoration.',
+    head: 'The evaluator is measured too, and it corrected us',
+    body: 'The groundedness judge was scored against hand-labelled claims, half of them labelled blind. On the practice half it cried wolf - four of five of its alarms were false. On the blind half it did the opposite: every alarm was right, and it slept through four of five real problems. So the supported-claim rate above is not a floor, and the candidate improvement that looked good on the practice half changed no verdict at all on the blind one. It is not shipped, and that is published.',
   },
   {
     head: 'A measurement belongs to one deployment',

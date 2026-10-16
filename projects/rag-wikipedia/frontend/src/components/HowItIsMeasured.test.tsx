@@ -12,12 +12,17 @@ test('the failing numbers are on the page, not hidden behind a link', () => {
   render(<HowItIsMeasured />)
   // The gate's false-accept rate is the worst number this project publishes.
   expect(screen.getByText(/0.800 → 0.150/)).toBeInTheDocument()
-  expect(screen.getByText(/0.133 \/ 0.350/)).toBeInTheDocument()
+  expect(screen.getByText(/0.150 \/ 0.350/)).toBeInTheDocument()
 })
 
-test('it says the evaluator itself was measured', () => {
+test('it says the evaluator was measured, in BOTH directions', () => {
+  // The page used to report only the over-flagging half. The blind split said
+  // the opposite, and a page that keeps the flattering half of a measurement is
+  // the thing this section exists to argue against.
   render(<HowItIsMeasured />)
-  expect(screen.getByText(/four of five of its alarms are false/)).toBeInTheDocument()
+  expect(screen.getByText(/four of five of its alarms were false/)).toBeInTheDocument()
+  expect(screen.getByText(/slept through four of five real problems/)).toBeInTheDocument()
+  expect(screen.getByText(/not a floor/)).toBeInTheDocument()
 })
 
 test('the full report is linked', () => {
