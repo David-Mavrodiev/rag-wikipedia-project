@@ -467,7 +467,7 @@ def retune() -> None:
 def evaluate(suite: str = "serving_detail", engine: str = "direct",
              score: bool = True, limit: int | None = None,
              score_only: bool = False, git_sha: str = "",
-             model: str = MODEL, out_dir: str = "/reports/e2e",
+             model: str = MODEL, out_name: str = "e2e",
              rerank: float = 0.0) -> dict:
     """Run the end-to-end harness here instead of on a laptop.
 
@@ -495,11 +495,18 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     `--out-dir`, so a comparison cannot overwrite the served model's report:
 
         modal run infra/modal/demo.py::evaluate --suite serving_detail
-            --model llama3.1:8b --out-dir /reports/e2e-llama31-8b --git-sha $SHA
+            --model llama3.1:8b --out-name e2e-llama31-8b --git-sha $SHA
+
+    `--out-name` is a NAME, not a path, and that is deliberate. Passing
+    `/reports/e2e-llama31-8b` from Git Bash on Windows silently became
+    `C:/Program Files/Git/reports/e2e-llama31-8b` inside the container: the run
+    finished, cost real money, and wrote its report where no volume was mounted.
+    A relative name cannot be mangled into an absolute one.
     """
     import json
     import subprocess
 
+    out_dir = f"/reports/{out_name.strip('/')}"
     _start_qdrant()
     subprocess.Popen(
         ["ollama", "serve"],
@@ -555,7 +562,8 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     # discards its return value, so a harness that failed inside this container
     # left no trace at all - an 8B comparison generated all 74 answers and then
     # vanished, and the reason was in a string nobody could see.
-    print(f"run_e2e exit={done.returncode} model={model} out_dir={out_dir}")
+    print(f"run_e2e exit={done.returncode} model={model} out_dir={out_dir} "
+          f"rerank={rerank}")
     if done.returncode != 0:
         print("--- stdout tail ---")
         print(done.stdout[-3000:])
