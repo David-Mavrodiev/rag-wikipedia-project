@@ -325,7 +325,8 @@ def retune() -> None:
 )
 def evaluate(suite: str = "serving_detail", engine: str = "direct",
              score: bool = True, limit: int | None = None,
-             score_only: bool = False, git_sha: str = "") -> dict:
+             score_only: bool = False, git_sha: str = "",
+             model: str = MODEL, out_dir: str = "/reports/e2e") -> dict:
     """Run the end-to-end harness here instead of on a laptop.
 
     The reference laptop idles at 88-91 C: a paced run of 80 cases takes about
@@ -345,6 +346,14 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     `.git` that produced it, so the first cloud run recorded `git_sha: null`
     and its numbers could not be tied to a commit. The caller knows the sha;
     it is passed in and `app.core.quality._git_sha` falls back to it.
+
+    `--model` answers a question a client always asks - "would you really ship a
+    3B model?" - with a number instead of an opinion. Only llama3.2:3b is baked
+    into the image; anything else is pulled at run time and written to its own
+    `--out-dir`, so a comparison cannot overwrite the served model's report:
+
+        modal run infra/modal/demo.py::evaluate --suite serving_detail
+            --model llama3.1:8b --out-dir /reports/e2e-llama31-8b --git-sha $SHA
     """
     import json
     import subprocess
@@ -357,8 +366,19 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     if not _wait_for("http://127.0.0.1:6333/readyz", 600):
         return {"ok": False, "error": "qdrant did not come up"}
 
+    if model != MODEL:
+        # Pulled, not baked: baking every model a comparison might want would
+        # make the demo's cold start pay for weights no visitor needs.
+        if not _wait_for("http://127.0.0.1:11434/api/version", 300):
+            return {"ok": False, "error": "ollama did not come up"}
+        pulled = subprocess.run(["ollama", "pull", model], check=False,
+                                capture_output=True, text=True)
+        if pulled.returncode != 0:
+            return {"ok": False, "error": f"could not pull {model}",
+                    "stderr_tail": pulled.stderr[-1500:]}
+
     args = ["python", "eval/run_e2e.py", "--suite", suite, "--engine", engine,
-            "--out-dir", "/reports/e2e", "--no-pace"]
+            "--out-dir", out_dir, "--no-pace"]
     if score_only:
         args.append("--score-only")
     if not score:
@@ -375,7 +395,7 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
             "OLLAMA_URL": "http://127.0.0.1:11434",
             "COLLECTION": COLLECTION,
             "PROFILE": "real",
-            "LLM_MODEL": MODEL,
+            "LLM_MODEL": model,
             # Provenance for a checkout-less container: both the generating and
             # the scoring side read it, so one run has one commit attached.
             "RAG_GIT_SHA": git_sha,
@@ -383,12 +403,13 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     )
     reports.commit()
 
-    report_path = Path(f"/reports/e2e/{suite}.{engine}.json")
+    report_path = Path(out_dir) / f"{suite}.{engine}.json"
     report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
     if not git_sha:
         print("WARNING: no --git-sha given; this report names no commit")
     return {
         "ok": done.returncode == 0,
+        "model": model,
         "git_sha": ((report or {}).get("provenance") or {}).get("git_sha"),
         "returncode": done.returncode,
         "stdout_tail": done.stdout[-4000:],
