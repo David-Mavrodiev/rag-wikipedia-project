@@ -403,6 +403,17 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     )
     reports.commit()
 
+    # PRINTED, not just returned: `modal run` shows a function's stdout and
+    # discards its return value, so a harness that failed inside this container
+    # left no trace at all - an 8B comparison generated all 74 answers and then
+    # vanished, and the reason was in a string nobody could see.
+    print(f"run_e2e exit={done.returncode} model={model} out_dir={out_dir}")
+    if done.returncode != 0:
+        print("--- stdout tail ---")
+        print(done.stdout[-3000:])
+        print("--- stderr tail ---")
+        print(done.stderr[-3000:])
+
     report_path = Path(out_dir) / f"{suite}.{engine}.json"
     report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
     if not git_sha:
