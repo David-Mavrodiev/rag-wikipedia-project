@@ -67,7 +67,12 @@ class Settings(BaseSettings):
     # docs/hallucination-controls.md calls that rule out by name, and this is
     # the first gate it applies to.
     rerank_model: str = ""
-    rerank_min_relevance: float = Field(default=0.0, ge=0.0, le=1.0)
+    # 0.9, FITTED on serving_golden and committed before the gate was tested on
+    # serving_detail: see backend/eval/sweep/serving_golden.relevance.json. It is
+    # the last threshold before recall@5 degrades (0.99 costs 0.933 -> 0.900) and
+    # it sits inside the flat 0.9-0.95 plateau rather than on a cliff. Idle
+    # without rerank_model: a threshold cannot refuse anything if nothing scores.
+    rerank_min_relevance: float = Field(default=0.9, ge=0.0, le=1.0)
 
     allowed_origins: str = "*"
     rate_limit_enabled: bool = True

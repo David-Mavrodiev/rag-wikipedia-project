@@ -467,7 +467,8 @@ def retune() -> None:
 def evaluate(suite: str = "serving_detail", engine: str = "direct",
              score: bool = True, limit: int | None = None,
              score_only: bool = False, git_sha: str = "",
-             model: str = MODEL, out_dir: str = "/reports/e2e") -> dict:
+             model: str = MODEL, out_dir: str = "/reports/e2e",
+             rerank: float = 0.0) -> dict:
     """Run the end-to-end harness here instead of on a laptop.
 
     The reference laptop idles at 88-91 C: a paced run of 80 cases takes about
@@ -537,6 +538,12 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
             "COLLECTION": COLLECTION,
             "PROFILE": "real",
             "LLM_MODEL": model,
+            # The relevance gate, off at 0.0. Its threshold is fitted by
+            # sweep_relevance on a different suite and committed before this
+            # run - passing it here is how the END-TO-END cost of the gate gets
+            # measured rather than assumed from the retrieval numbers.
+            "RERANK_MODEL": RERANK_MODEL if rerank > 0 else "",
+            "RERANK_MIN_RELEVANCE": str(rerank),
             # Provenance for a checkout-less container: both the generating and
             # the scoring side read it, so one run has one commit attached.
             "RAG_GIT_SHA": git_sha,
@@ -562,6 +569,7 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     return {
         "ok": done.returncode == 0,
         "model": model,
+        "rerank_min_relevance": rerank,
         "git_sha": ((report or {}).get("provenance") or {}).get("git_sha"),
         "returncode": done.returncode,
         "stdout_tail": done.stdout[-4000:],

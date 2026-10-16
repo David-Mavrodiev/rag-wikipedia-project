@@ -1,0 +1,100 @@
+{
+  "suite": "serving_golden",
+  "purpose": "fit the relevance gate threshold on a suite the test run does not contain",
+  "model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+  "git_sha": "4e98b5af31d88a0e8b1874a9e564d4eb2b9efdc4",
+  "chosen_threshold": 0.9,
+  "why": "Last point before recall@5 degrades (0.99 costs 0.933 -> 0.900) and inside the flat 0.9-0.95 plateau rather than on a cliff. Cost at the knee: answerable refusal 0.033 -> 0.067 on this suite, two cases of 60.",
+  "rows": [
+    {
+      "threshold": 0.0,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.38333333333333336,
+      "mrr": 0.9041666666666667,
+      "refusal_accuracy": 0.5,
+      "false_accept_rate": 0.5,
+      "answerable_refusal_rate": 0.03333333333333333
+    },
+    {
+      "threshold": 0.1,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.7333333333333333,
+      "false_accept_rate": 0.26666666666666666,
+      "answerable_refusal_rate": 0.05
+    },
+    {
+      "threshold": 0.2,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.7333333333333333,
+      "false_accept_rate": 0.26666666666666666,
+      "answerable_refusal_rate": 0.06666666666666667
+    },
+    {
+      "threshold": 0.3,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.7333333333333333,
+      "false_accept_rate": 0.26666666666666666,
+      "answerable_refusal_rate": 0.06666666666666667
+    },
+    {
+      "threshold": 0.5,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.8,
+      "false_accept_rate": 0.2,
+      "answerable_refusal_rate": 0.06666666666666667
+    },
+    {
+      "threshold": 0.7,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.8333333333333334,
+      "false_accept_rate": 0.16666666666666666,
+      "answerable_refusal_rate": 0.06666666666666667
+    },
+    {
+      "threshold": 0.8,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.8333333333333334,
+      "false_accept_rate": 0.16666666666666666,
+      "answerable_refusal_rate": 0.06666666666666667
+    },
+    {
+      "threshold": 0.9,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.9,
+      "false_accept_rate": 0.1,
+      "answerable_refusal_rate": 0.06666666666666667
+    },
+    {
+      "threshold": 0.95,
+      "recall@5": 0.9333333333333333,
+      "precision@5": 0.37333333333333335,
+      "mrr": 0.9333333333333333,
+      "refusal_accuracy": 0.9,
+      "false_accept_rate": 0.1,
+      "answerable_refusal_rate": 0.06666666666666667
+    },
+    {
+      "threshold": 0.99,
+      "recall@5": 0.9,
+      "precision@5": 0.35333333333333333,
+      "mrr": 0.9,
+      "refusal_accuracy": 1.0,
+      "false_accept_rate": 0.0,
+      "answerable_refusal_rate": 0.1
+    }
+  ]
+}
