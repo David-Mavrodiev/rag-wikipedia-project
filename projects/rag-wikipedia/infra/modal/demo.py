@@ -18,6 +18,10 @@ under a second whether or not this container is awake. That split is the point -
 a visitor sees the product and the published numbers immediately, and only the
 answer waits for the GPU.
 
+ONE `modal run` AT A TIME. This module defines a web endpoint, so a second
+ephemeral app steals its dev webhook label and the older run is stopped - which
+is how an 8B comparison generated all 74 answers and then vanished twice.
+
 Cost levers (docs/online-deployment.md §6), all visible here:
 * min_containers=0  - idle costs nothing. An always-on T4 is about $580/month.
 * max_containers=1  - a burst queues instead of burning the month's credit.
@@ -260,6 +264,62 @@ def serve() -> None:
 # minutes on 4 CPUs - four settings did not fit in an hour and the run was killed
 # with the synthetic half unfinished. A CUDA wheel would be faster and is a 2.5 GB
 # layer for a job that runs twice a month.
+@app.function(image=eval_image, volumes={"/reports": reports},
+               cpu=8, memory=16384, timeout=3600, max_containers=1)
+def audit_fixture(git_sha: str = "") -> dict:
+    """Regenerate `audit_report.json` from the COMMITTED fixture, in a container.
+
+    `scripts/audit_freshness.py` fails CI when a watched file changes without a
+    re-measured report, which is the rule working as intended - and it meant
+    every change to retrieval or refusal waited on a laptop with a local Qdrant
+    and 16 GB of RAM it did not have. The fixture ingest is deterministic and
+    needs no network, so the whole chain runs here: ingest, IDF table, audit.
+
+    Qdrant storage is /tmp, NOT the demo's volume. An audit must not leave a
+    second collection in the corpus the public demo serves.
+
+        modal run infra/modal/demo.py::audit_fixture --git-sha $(git rev-parse HEAD)
+        modal volume get rag-wikipedia-reports audit/audit_report.json .
+    """
+    import json
+    import subprocess
+
+    _start_qdrant(storage="/tmp/qdrant-fixture")
+    if not _wait_for("http://127.0.0.1:6333/readyz", 600):
+        return {"ok": False, "error": "qdrant did not come up"}
+
+    env = os.environ | {
+        "PYTHONPATH": "/srv/backend",
+        "PYTHONIOENCODING": "utf-8",
+        "QDRANT_URL": "http://127.0.0.1:6333",
+        "PROFILE": "fixture",
+        "COLLECTION": "wikipedia_eval",
+        "RAG_GIT_SHA": git_sha,
+    }
+    steps = (
+        ("ingest", ["python", "pipeline/flow.py"]),
+        ("idf", ["python", "../scripts/build_idf.py", "--collection", "wikipedia_eval"]),
+        ("audit", ["python", "eval/audit.py"]),
+    )
+    for name, args in steps:
+        done = subprocess.run(args, cwd="/srv/backend", check=False,
+                              capture_output=True, text=True, env=env)
+        print(f"{name}: exit={done.returncode}")
+        if done.returncode != 0:
+            print(done.stdout[-2000:])
+            print(done.stderr[-2000:])
+            return {"ok": False, "step": name, "stderr_tail": done.stderr[-2000:]}
+
+    report = Path("/srv/backend/eval/audit_report.json")
+    out = Path("/reports/audit")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "audit_report.json").write_text(report.read_text(encoding="utf-8"), encoding="utf-8")
+    reports.commit()
+    loaded = json.loads(report.read_text(encoding="utf-8"))
+    return {"ok": True, "status": loaded.get("status"),
+            "provenance": loaded.get("provenance"), "metrics": loaded.get("metrics")}
+
+
 @app.function(image=eval_image, gpu=GPU, volumes={"/corpus": corpus, "/reports": reports},
                cpu=8, memory=16384, timeout=5400, max_containers=1)
 def sweep_relevance(suite: str = "serving_golden",
