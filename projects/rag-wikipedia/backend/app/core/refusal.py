@@ -119,6 +119,10 @@ class EvidenceDecision:
     # "measured and found nothing" instead of "not measured".
     coverage: float = 0.0
     uncovered_terms: list[str] = field(default_factory=list)
+    # -1.0 means NOT MEASURED (no cross-encoder configured, or it failed to
+    # load). Zero would mean "measured, nothing relevant", which is a refusal
+    # reason rather than an absence, and the two must not look alike in a report.
+    relevance: float = -1.0
 
 
 def tokenize_for_evidence(text: str) -> set[str]:
@@ -203,6 +207,18 @@ def decide_evidence(query: str, results: list[dict]) -> EvidenceDecision:
             True, "score_below_minimum", top_score, margin, evidence_overlap(query, results)
         )
 
+    # Cross-encoder relevance, when retrieval attached it, is checked BEFORE
+    # the lexical tests and before the high-confidence escape hatch below.
+    # Order is the whole intervention: the false accepts this gate exists for
+    # are confident vector matches on a NEIGHBOURING article, which clear both
+    # of those. A reranker that only reordered results would leave them in.
+    relevance = float(results[0].get("relevance", -1.0))
+    if relevance >= 0.0 and relevance < runtime.rerank_min_relevance:
+        return EvidenceDecision(
+            True, "low_relevance", top_score, margin,
+            evidence_overlap(query, results), relevance=relevance,
+        )
+
     terms = query_terms(query)
     covered = terms & evidence_terms(results)
     overlap = sorted(covered)
@@ -228,13 +244,16 @@ def decide_evidence(query: str, results: list[dict]) -> EvidenceDecision:
     table = load_table(settings.collection)
     if table is None or runtime.refusal_min_evidence_coverage <= 0.0:
         if len(overlap) >= runtime.refusal_min_overlap_terms:
-            return EvidenceDecision(False, "sufficient_overlap", top_score, margin, overlap)
+            return EvidenceDecision(False, "sufficient_overlap", top_score, margin, overlap,
+                                    relevance=relevance)
         if high_confidence:
             return EvidenceDecision(
-                False, "high_confidence_vector_match", top_score, margin, overlap
+                False, "high_confidence_vector_match", top_score, margin, overlap,
+                relevance=relevance,
             )
         return EvidenceDecision(
-            True, "insufficient_evidence_overlap", top_score, margin, overlap
+            True, "insufficient_evidence_overlap", top_score, margin, overlap,
+            relevance=relevance,
         )
 
     coverage = table.coverage(terms, covered)
@@ -245,16 +264,19 @@ def decide_evidence(query: str, results: list[dict]) -> EvidenceDecision:
 
     if coverage >= runtime.refusal_min_evidence_coverage:
         return EvidenceDecision(
-            False, "sufficient_evidence_coverage", top_score, margin, overlap, coverage, uncovered
+            False, "sufficient_evidence_coverage", top_score, margin, overlap, coverage,
+            uncovered, relevance,
         )
 
     if high_confidence:
         return EvidenceDecision(
-            False, "high_confidence_vector_match", top_score, margin, overlap, coverage, uncovered
+            False, "high_confidence_vector_match", top_score, margin, overlap, coverage,
+            uncovered, relevance,
         )
 
     return EvidenceDecision(
-        True, "insufficient_evidence_coverage", top_score, margin, overlap, coverage, uncovered
+        True, "insufficient_evidence_coverage", top_score, margin, overlap, coverage,
+        uncovered, relevance,
     )
 
 

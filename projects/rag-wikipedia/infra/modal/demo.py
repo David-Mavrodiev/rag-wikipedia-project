@@ -18,6 +18,10 @@ under a second whether or not this container is awake. That split is the point -
 a visitor sees the product and the published numbers immediately, and only the
 answer waits for the GPU.
 
+ONE `modal run` AT A TIME. This module defines a web endpoint, so a second
+ephemeral app steals its dev webhook label and the older run is stopped - which
+is how an 8B comparison generated all 74 answers and then vanished twice.
+
 Cost levers (docs/online-deployment.md §6), all visible here:
 * min_containers=0  - idle costs nothing. An always-on T4 is about $580/month.
 * max_containers=1  - a burst queues instead of burning the month's credit.
@@ -132,11 +136,22 @@ reports = modal.Volume.from_name("rag-wikipedia-reports", create_if_missing=True
 # NLI model is ~700 MB, and baking it into the image the DEMO cold-starts from
 # would make every first visitor wait for weights no answer needs.
 # HF_HUB_OFFLINE is lifted for the download and put back afterwards.
+RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
 eval_image = _with_sources(
-    base_image.env({"HF_HUB_OFFLINE": "0"})
+    # Prefect, here and NOT in base_image: `audit_fixture` runs the real ingest
+    # flow, whose tasks are Prefect-decorated, and the serving image's comment
+    # above is right that a demo cold start should not pay for an orchestrator.
+    base_image.uv_pip_install("prefect>=3,<4")
+    .env({"HF_HUB_OFFLINE": "0"})
     .run_commands(
         "python -c \"from sentence_transformers import CrossEncoder;"
         " CrossEncoder('cross-encoder/nli-deberta-v3-base')\"",
+        # The relevance gate's model, 22M parameters against the judge's 184M.
+        # Baked for the same reason: HF_HUB_OFFLINE is 1 at run time, so a model
+        # that is not in the image cannot be fetched by a measurement.
+        f"python -c \"from sentence_transformers import CrossEncoder;"
+        f" CrossEncoder('{RERANK_MODEL}')\"",
     )
     .env({"HF_HUB_OFFLINE": "1"})
 )
@@ -254,6 +269,142 @@ def serve() -> None:
 # with the synthetic half unfinished. A CUDA wheel would be faster and is a 2.5 GB
 # layer for a job that runs twice a month.
 @app.function(image=eval_image, volumes={"/reports": reports},
+               cpu=8, memory=16384, timeout=3600, max_containers=1)
+def audit_fixture(git_sha: str = "") -> dict:
+    """Regenerate `audit_report.json` from the COMMITTED fixture, in a container.
+
+    `scripts/audit_freshness.py` fails CI when a watched file changes without a
+    re-measured report, which is the rule working as intended - and it meant
+    every change to retrieval or refusal waited on a laptop with a local Qdrant
+    and 16 GB of RAM it did not have. The fixture ingest is deterministic and
+    needs no network, so the whole chain runs here: ingest, IDF table, audit.
+
+    Qdrant storage is /tmp, NOT the demo's volume. An audit must not leave a
+    second collection in the corpus the public demo serves.
+
+        modal run infra/modal/demo.py::audit_fixture --git-sha $(git rev-parse HEAD)
+        modal volume get rag-wikipedia-reports audit/audit_report.json .
+    """
+    import json
+    import subprocess
+
+    _start_qdrant(storage="/tmp/qdrant-fixture")
+    if not _wait_for("http://127.0.0.1:6333/readyz", 600):
+        return {"ok": False, "error": "qdrant did not come up"}
+
+    env = os.environ | {
+        "PYTHONPATH": "/srv/backend",
+        "PYTHONIOENCODING": "utf-8",
+        "QDRANT_URL": "http://127.0.0.1:6333",
+        "PROFILE": "fixture",
+        "COLLECTION": "wikipedia_eval",
+        "RAG_GIT_SHA": git_sha,
+    }
+    steps = (
+        ("ingest", ["python", "pipeline/flow.py"]),
+        ("idf", ["python", "../scripts/build_idf.py", "--collection", "wikipedia_eval"]),
+        ("audit", ["python", "eval/audit.py"]),
+    )
+    report = Path("/srv/backend/eval/audit_report.json")
+    for name, args in steps:
+        done = subprocess.run(args, cwd="/srv/backend", check=False,
+                              capture_output=True, text=True, env=env)
+        print(f"{name}: exit={done.returncode}")
+        # `audit.py` exits non-zero when a quality gate fails, and on this
+        # corpus they DO fail - status suspect_overfit, published as such. The
+        # report is the artefact either way, so the audit step is judged by
+        # whether it wrote one, not by its exit code. Treating the red status as
+        # a crash is how the first run threw away a perfectly good measurement.
+        if done.returncode != 0 and not (name == "audit" and report.exists()):
+            print(done.stdout[-2000:])
+            print(done.stderr[-2000:])
+            return {"ok": False, "step": name, "exit": done.returncode,
+                    "stderr_tail": done.stderr[-2000:]}
+
+    out = Path("/reports/audit")
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "audit_report.json").write_text(report.read_text(encoding="utf-8"), encoding="utf-8")
+    reports.commit()
+    loaded = json.loads(report.read_text(encoding="utf-8"))
+    return {"ok": True, "status": loaded.get("status"),
+            "provenance": loaded.get("provenance"), "metrics": loaded.get("metrics")}
+
+
+@app.function(image=eval_image, gpu=GPU, volumes={"/corpus": corpus, "/reports": reports},
+               cpu=8, memory=16384, timeout=5400, max_containers=1)
+def sweep_relevance(suite: str = "serving_golden",
+                    thresholds: str = "0.0,0.1,0.2,0.3,0.5,0.7",
+                    git_sha: str = "") -> dict:
+    """Fit the relevance gate's threshold - on a suite the TEST run does not use.
+
+    docs/hallucination-controls.md sets the rule this function exists to obey: a
+    threshold is fitted on a split the test suite does not contain and committed
+    BEFORE the test run, never chosen after seeing the number it is judged by.
+    So this sweeps `serving_golden` (title-naming questions) and the gate is
+    then tested, once, on `serving_detail` (title-free) - different questions,
+    same corpus.
+
+    Retrieval only: no LLM, no judge. Each threshold is a full run through the
+    real code path rather than a replay, because a gate that is swept through a
+    shortcut is not the gate that ships.
+
+        modal run infra/modal/demo.py::sweep_relevance --suite serving_golden
+    """
+    import json
+    import subprocess
+
+    _start_qdrant()
+    if not _wait_for("http://127.0.0.1:6333/readyz", 600):
+        return {"ok": False, "error": "qdrant did not come up"}
+
+    out = Path("/reports/sweep")
+    out.mkdir(parents=True, exist_ok=True)
+    rows, failures = [], []
+    for raw in [t.strip() for t in thresholds.split(",") if t.strip()]:
+        done = subprocess.run(
+            ["python", "eval/run_eval.py", "--suite", suite],
+            cwd="/srv/backend", check=False, capture_output=True, text=True,
+            env=os.environ | {
+                "PYTHONPATH": "/srv/backend",
+                "PYTHONIOENCODING": "utf-8",
+                "QDRANT_URL": "http://127.0.0.1:6333",
+                "COLLECTION": COLLECTION,
+                "PROFILE": "real",
+                "RAG_GIT_SHA": git_sha,
+                # 0.0 is OFF, which makes the first row the honest baseline
+                # measured by the same code on the same day as the rest.
+                "RERANK_MODEL": RERANK_MODEL if float(raw) > 0 else "",
+                "RERANK_MIN_RELEVANCE": raw,
+            },
+        )
+        stem = "report" if suite == "golden" else f"report_{suite}"
+        report_path = Path("/srv/backend/eval") / f"{stem}.json"
+        if not report_path.exists():
+            failures.append({"threshold": raw, "exit": done.returncode,
+                             "stderr_tail": done.stderr[-1500:]})
+            print(f"threshold {raw}: no report (exit {done.returncode})")
+            print(done.stderr[-2000:])
+            continue
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        row = {"threshold": float(raw)} | {
+            k: report.get(k) for k in
+            ("recall@5", "precision@5", "mrr", "refusal_accuracy",
+             "false_accept_rate", "answerable_refusal_rate")
+        }
+        rows.append(row)
+        print("swept", json.dumps(row))
+        (out / f"{suite}.relevance.{raw}.json").write_text(
+            json.dumps(report, indent=2), encoding="utf-8")
+
+    summary = {"suite": suite, "model": RERANK_MODEL, "git_sha": git_sha,
+               "rows": rows, "failures": failures}
+    (out / f"{suite}.relevance.summary.json").write_text(
+        json.dumps(summary, indent=2), encoding="utf-8")
+    reports.commit()
+    return summary
+
+
+@app.function(image=eval_image, volumes={"/reports": reports},
                cpu=8, memory=8192, timeout=7200, max_containers=1)
 def judge(sets: str = "real,synthetic", split: str = "test",
           assemble: str = "0,3", git_sha: str = "") -> dict:
@@ -326,7 +477,8 @@ def retune() -> None:
 def evaluate(suite: str = "serving_detail", engine: str = "direct",
              score: bool = True, limit: int | None = None,
              score_only: bool = False, git_sha: str = "",
-             model: str = MODEL, out_dir: str = "/reports/e2e") -> dict:
+             model: str = MODEL, out_name: str = "e2e",
+             rerank: float = 0.0) -> dict:
     """Run the end-to-end harness here instead of on a laptop.
 
     The reference laptop idles at 88-91 C: a paced run of 80 cases takes about
@@ -353,11 +505,18 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     `--out-dir`, so a comparison cannot overwrite the served model's report:
 
         modal run infra/modal/demo.py::evaluate --suite serving_detail
-            --model llama3.1:8b --out-dir /reports/e2e-llama31-8b --git-sha $SHA
+            --model llama3.1:8b --out-name e2e-llama31-8b --git-sha $SHA
+
+    `--out-name` is a NAME, not a path, and that is deliberate. Passing
+    `/reports/e2e-llama31-8b` from Git Bash on Windows silently became
+    `C:/Program Files/Git/reports/e2e-llama31-8b` inside the container: the run
+    finished, cost real money, and wrote its report where no volume was mounted.
+    A relative name cannot be mangled into an absolute one.
     """
     import json
     import subprocess
 
+    out_dir = f"/reports/{out_name.strip('/')}"
     _start_qdrant()
     subprocess.Popen(
         ["ollama", "serve"],
@@ -396,12 +555,30 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
             "COLLECTION": COLLECTION,
             "PROFILE": "real",
             "LLM_MODEL": model,
+            # The relevance gate, off at 0.0. Its threshold is fitted by
+            # sweep_relevance on a different suite and committed before this
+            # run - passing it here is how the END-TO-END cost of the gate gets
+            # measured rather than assumed from the retrieval numbers.
+            "RERANK_MODEL": RERANK_MODEL if rerank > 0 else "",
+            "RERANK_MIN_RELEVANCE": str(rerank),
             # Provenance for a checkout-less container: both the generating and
             # the scoring side read it, so one run has one commit attached.
             "RAG_GIT_SHA": git_sha,
         },
     )
     reports.commit()
+
+    # PRINTED, not just returned: `modal run` shows a function's stdout and
+    # discards its return value, so a harness that failed inside this container
+    # left no trace at all - an 8B comparison generated all 74 answers and then
+    # vanished, and the reason was in a string nobody could see.
+    print(f"run_e2e exit={done.returncode} model={model} out_dir={out_dir} "
+          f"rerank={rerank}")
+    if done.returncode != 0:
+        print("--- stdout tail ---")
+        print(done.stdout[-3000:])
+        print("--- stderr tail ---")
+        print(done.stderr[-3000:])
 
     report_path = Path(out_dir) / f"{suite}.{engine}.json"
     report = json.loads(report_path.read_text(encoding="utf-8")) if report_path.exists() else None
@@ -410,6 +587,7 @@ def evaluate(suite: str = "serving_detail", engine: str = "direct",
     return {
         "ok": done.returncode == 0,
         "model": model,
+        "rerank_min_relevance": rerank,
         "git_sha": ((report or {}).get("provenance") or {}).get("git_sha"),
         "returncode": done.returncode,
         "stdout_tail": done.stdout[-4000:],

@@ -105,7 +105,7 @@ fix alone moved the supported-claim rate from 0.774 to 0.792). Full report:
 
 | refusal | value | | answers (55 of 80) | value |
 |---|---:|---|---|---:|
-| false_accept_rate | 0.150 (3/20) | | supported claims (judge) | 0.792 (42/53) |
+| false_accept_rate | 0.150 (3/20) | | supported claims (mean/answer) | 0.792 (53 answers) |
 | answerable_refusal_rate | 0.133 (8/60) | | fully supported answers (judge) | 0.792 |
 | refusal_accuracy | 0.850 | | citation resolves to a chunk | 0.818 (45/55) |
 | context_hit_rate | 0.950 | | literal `[n]` placeholder | 0.145 (8/55) |
@@ -134,7 +134,10 @@ judge found 11 of 53 claims unsupported. Each was read against its context:
 | stated by the context, but about something else | 1 | `sd-u-010` reports the AIM-54's 78 victories for a question about a different missile |
 | correct and stated by the context; the judge missed it | 8 | 6 join facts from different sentences (`sd-a-014` takes "Donald J." from a chunk's first sentence and the 2021 revelation from its seventh; `sd-a-064` calls SCADE Suite a "model-based design tool", which the chunk says in its first sentence about the product's maker); 1 repeats the question's wording where the context uses other words ("killed" where the source says "involved in the murder"); 1 is a bare name |
 
-So 0.792 is a floor: on reading, 51 of the 53 claims are stated by their context.
+So 0.792 is a floor: on reading, 51 of the 53 flagged-or-read claims are stated by
+their context. (0.792 itself is a mean of per-answer supported fractions over the
+53 answers that had judgeable claims, not a ratio of claims - see
+[judge-accuracy.md](judge-accuracy.md).)
 Only the flagged claims were read - the 42 the judge accepted were not - and
 groundedness is not correctness, as `sd-u-010` shows. All three answers to
 unanswerable questions were flagged. Two answers were not judged at all, because
@@ -143,6 +146,12 @@ a two-word name ("Clas Thunberg") is below the judge's minimum claim length.
 The run's only fabrications therefore sit behind the refusal gate, which is where
 step 3 aims: a relevance score that refuses those three questions before
 generation removes them.
+
+> **Step 3 is measured.** A cross-encoder relevance gate refuses all three, and
+> end to end false accepts go 0.150 to 0.000 - at the cost of two more
+> answerable refusals of 60 and 0.6 s of latency. The fit under-predicted that
+> cost fourfold, which is what a held-out suite is for:
+> [relevance-gate.md](relevance-gate.md).
 
 **One answer in seven cited a placeholder.** The prompt said "Cite inline with [n]
 markers", and in 8 of 55 answers the model copied `[n]` literally; two more cite
@@ -202,7 +211,7 @@ Tesla T4, same corpus (`wikipedia`, 87,173 vectors) and same suite. Report:
 | answerable_refusal_rate | 0.133 (8/60) | 0.150 (9/60) |
 | refusal_accuracy | 0.850 | 0.850 |
 | context_hit_rate | 0.950 | 0.950 |
-| supported claims (judge) | 0.792 (42/53) | 0.812 (39/48) |
+| supported claims, mean per answer | 0.792 over 53 answers | 0.812 over 48 |
 | answers carrying a flagged claim | 0.200 (11/55) | 0.167 (9/54) |
 | answers with no judgeable claim | 2/55 | 6/54 |
 | latency p50 | 7.3 s (74/74 clamped) | **1.79 s (74/74 full clock)** |
@@ -230,7 +239,8 @@ regression this run can demonstrate, and it is not free either: it is the number
 to watch when step 3 changes the refusal gate.
 
 **The supported-claim rate rose over a smaller base, which is less of a win than
-it looks.** 0.792 (42/53) to 0.812 (39/48). Four more answers are now bare names
+it looks.** 0.792 to 0.812, each a mean over the answers that had judgeable
+claims - 53 then 48. Four more answers are now bare names
 - "Hylopathism [1]", "Petrus Plancius [1]" - which fall below the judge's
 minimum claim length and are therefore not judged at all: 6 of 54 answers versus
 2 of 55. Counting whole answers instead, which claim length cannot flatter, 9 of

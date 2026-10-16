@@ -20,7 +20,7 @@ frontend, Prefect for the ingestion flow. Everything runs locally.
 | | |
 |---|---|
 | Corpus served | **24,694 articles / 87,173 vectors** (full 25k profile) |
-| Tests | **531 backend tests** (pytest) + **20 frontend tests** (Vitest) |
+| Tests | **542 backend tests** (pytest) + **20 frontend tests** (Vitest) |
 | CI | lint, tests, documentation checks, and a quality delta posted on every PR |
 | Quality gates | four, all unconditional — and **both refusal gates are red on purpose** |
 

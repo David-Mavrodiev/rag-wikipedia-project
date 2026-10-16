@@ -20,8 +20,8 @@ const PUBLISHED: { label: string; value: string; note: string }[] = [
   },
   {
     label: 'Claims supported by the retrieved text',
-    value: '0.812 judged, 39 of 48',
-    note: 'read as a measurement of the judge as much as the answers - see the lesson below',
+    value: '0.812 average per answer',
+    note: 'averaged over the 48 answers with judgeable claims; the judge flagged 9 of 50 claims, and read it as a measurement of the judge as much as the answers',
   },
   {
     label: 'Answer latency',

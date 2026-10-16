@@ -22,6 +22,7 @@ _BOUNDS: dict[str, tuple[float, float]] = {
     "refusal_min_overlap_terms": (0, 50),
     "refusal_min_evidence_coverage": (0.0, 1.0),
     "retrieval_candidate_k": (1, 1000),
+    "rerank_min_relevance": (0.0, 1.0),
 }
 
 
@@ -38,6 +39,9 @@ class RetrievalRuntimeConfig:
     # startup over a field whose absence has an obvious meaning. Absent = the
     # coverage gate had not been configured = off.
     refusal_min_evidence_coverage: float = 0.0
+    # Defaulted for the same reason as coverage above: a runtime_config.json
+    # written before the gate existed must stay loadable, and 0.0 is OFF.
+    rerank_min_relevance: float = 0.0
 
 
 def validate_runtime_config(config: RetrievalRuntimeConfig) -> RetrievalRuntimeConfig:
@@ -59,6 +63,7 @@ def default_runtime_config() -> RetrievalRuntimeConfig:
         refusal_min_overlap_terms=settings.refusal_min_overlap_terms,
         refusal_min_evidence_coverage=settings.refusal_min_evidence_coverage,
         retrieval_candidate_k=settings.retrieval_candidate_k,
+        rerank_min_relevance=settings.rerank_min_relevance,
     )
 
 
