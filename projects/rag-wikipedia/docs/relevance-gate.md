@@ -133,3 +133,48 @@ One at a time: this module defines a web endpoint and concurrent runs fight over
 its label. `--out-name` is a name, not a path, because Git Bash rewrites
 `/reports/...` into `C:/Program Files/Git/reports/...` and a run that cost real
 money wrote its report where no volume was mounted.
+
+## Does the gate earn its place against a bigger model?
+
+The question a client asks first is not "is your gate clever", it is "would you
+ship a 3B model at all". So the same suite was run four ways - same corpus, same
+retrieval, same judge, same T4 - and the gate has to justify itself against
+simply spending more on the model.
+
+| | false_accept | answerable_refusal | supported, mean/answer | flagged claims | answered | p50 |
+|---|---:|---:|---:|---:|---:|---:|
+| llama3.2:3b | 0.150 | 0.150 | 0.812 | 9 of 50 | 54 | 1.79 s |
+| 3b + gate 0.9 | **0.000** | 0.183 | 0.837 | 7 of 43 | 49 | 2.42 s |
+| llama3.1:8b | **0.000** | **0.083** | 0.881 | 7 of 71 | 55 | 3.53 s |
+| 8b + gate 0.9 | **0.000** | 0.167 | **0.896** | 5 of 62 | 50 | 4.25 s |
+
+**The 8B model reaches zero false accepts on its own, and refuses fewer
+answerable questions doing it** - 5 of 60 against the 3B's 9, and against 11
+with the gate. It also supports more of its claims over a larger claim base: 71
+judged claims to the 3B's 50, because it writes longer answers, and still a
+higher supported rate. On quality it beats the gate outright.
+
+**On top of the 8B model the gate is redundant.** False accepts are already
+zero, so it buys nothing, and it doubles answerable refusals (0.083 to 0.167)
+for another 0.7 s. The one thing it still improves is per-answer groundedness
+(0.881 to 0.896, 5 flagged claims of 62 against 7 of 71), which is a trade worth
+making only where a wrong answer is expensive and a refusal is cheap.
+
+So the honest recommendation, by deployment rather than by preference:
+
+| situation | choice |
+|---|---|
+| GPU headroom for an 8B model | **8B, no gate.** Better on every quality axis than 3B+gate, for 1.1 s more. |
+| Small GPU, or latency budget under 3 s | **3B + gate.** It buys the 8B's false-accept behaviour at 2.4 s and ~2 GB of VRAM instead of ~5 GB. |
+| A wrong answer is catastrophic, a refusal is cheap | **8B + gate**, accepting 1 refused answerable question in 6. |
+| Nothing is catastrophic and speed matters | 3B alone, knowing 3 of 20 unanswerable questions get answered. |
+
+That is what the gate is for: making a small model behave like a larger one on
+the axis that produces fabrications, cheaply. It is not a substitute for a
+better model, and this table is the reason it ships off by default.
+
+**Caveat, same as everywhere here.** Twenty unanswerable questions and sixty
+answerable ones. The 8B's 0.000 is "none of 20", and the gap between 0.083 and
+0.150 answerable refusal is four cases. Both models were run once; the earlier
+pair of identical T4 runs says generation is reproducible at this temperature,
+but these are single runs per configuration.
