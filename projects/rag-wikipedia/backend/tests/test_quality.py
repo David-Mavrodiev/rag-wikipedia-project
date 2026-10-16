@@ -6,6 +6,19 @@ from app.core.quality import update_quality_state
 from app.core.runtime_config import get_runtime_config
 
 
+class _Completed:
+    """Enough of CompletedProcess for the sha helper."""
+
+    def __init__(self, returncode: int, stdout: str = ""):
+        self.returncode = returncode
+        self.stdout = stdout
+
+
+def _no_git(*args, **kwargs):
+    """What a container without the git binary does: raise."""
+    raise FileNotFoundError("git")
+
+
 def test_quality_endpoint_returns_runtime_state(client):
     update_quality_state(
         status="healthy",
@@ -293,6 +306,41 @@ def test_provenance_survives_an_unreadable_collection():
 
     assert prov["vector_count"] is None
     assert prov["profile"]
+
+
+def test_a_container_without_git_still_names_the_commit(monkeypatch):
+    """The cloud eval runs where there is no `.git`, and reported git_sha: null.
+
+    A metric nobody can attribute to a commit cannot be reproduced or retired.
+    """
+    from app.core import quality
+
+    monkeypatch.setattr(quality.subprocess, "run", _no_git)
+    monkeypatch.setenv("RAG_GIT_SHA", "  4d1f2c9  ")
+
+    assert quality._git_sha() == "4d1f2c9"
+
+
+def test_a_checkout_outranks_a_declared_sha(monkeypatch):
+    # Otherwise a stale exported variable relabels a real run as another commit.
+    from app.core import quality
+
+    monkeypatch.setattr(
+        quality.subprocess, "run",
+        lambda *a, **k: _Completed(0, "real0ne\n"),
+    )
+    monkeypatch.setenv("RAG_GIT_SHA", "declared")
+
+    assert quality._git_sha() == "real0ne"
+
+
+def test_no_git_and_no_declaration_is_still_none(monkeypatch):
+    from app.core import quality
+
+    monkeypatch.setattr(quality.subprocess, "run", _no_git)
+    monkeypatch.delenv("RAG_GIT_SHA", raising=False)
+
+    assert quality._git_sha() is None
 
 
 def test_audit_response_carries_provenance(client, monkeypatch):

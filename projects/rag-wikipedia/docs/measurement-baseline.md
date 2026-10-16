@@ -113,6 +113,10 @@ fix alone moved the supported-claim rate from 0.774 to 0.792). Full report:
 `serving_golden` is not reported: the GPU reached 96 C with 49 of its 90 cases
 generated, and a partial suite is not a measurement.
 
+> **These remain the baseline, not the current numbers.** The serving fixes that
+> follow it were re-measured on 13 Oct 2026 - see
+> [Re-measured after the serving fixes](#re-measured-after-the-serving-fixes-13-oct-2026).
+
 **The model, not the gate, does most of the refusing.** Retrieval let 16 of the 20
 held-out questions through (false_accept 0.800); end to end, 3 were answered
 (0.150), so the model itself refused 13 of the 16. The same caution costs
@@ -177,13 +181,91 @@ The `make bench-latency` run was made after the startup changes that followed th
 baseline (models loaded at startup, the LLM kept resident), so it is reported with
 them rather than here.
 
+## Re-measured after the serving fixes (13 Oct 2026)
+
+The baseline above ended with a number the serving changes had to move: `[n]`
+copied literally into 8 of 55 answers. Re-measuring it needed 80 generations,
+which on the reference laptop meant about ninety minutes of paced running, and
+the thermal guard had already killed one attempt at 91 C. The run was moved to a
+rented T4 instead: 80 cases in 3.5 minutes of generation plus 9 minutes of
+judging, about $0.10, nothing to cool.
+
+Commit `75b1c5d` (branch `feat/online-demo`, which contains the serving fixes),
+Tesla T4, same corpus (`wikipedia`, 87,173 vectors) and same suite. Report:
+[`backend/eval/e2e/2026-10-13-t4/serving_detail.direct.md`](../backend/eval/e2e/2026-10-13-t4/serving_detail.direct.md).
+
+| | 21-22 Sep, laptop `2bcc858` | 13 Oct, T4 `75b1c5d` |
+|---|---:|---:|
+| literal `[n]` placeholder | 0.145 (8/55) | **0.000 (0/54)** |
+| citation resolves to a chunk | 0.818 (45/55) | **1.000 (54/54)** |
+| false_accept_rate | 0.150 (3/20) | 0.150 (3/20) |
+| answerable_refusal_rate | 0.133 (8/60) | 0.150 (9/60) |
+| refusal_accuracy | 0.850 | 0.850 |
+| context_hit_rate | 0.950 | 0.950 |
+| supported claims (judge) | 0.792 (42/53) | 0.812 (39/48) |
+| answers carrying a flagged claim | 0.200 (11/55) | 0.167 (9/54) |
+| answers with no judgeable claim | 2/55 | 6/54 |
+| latency p50 | 7.3 s (74/74 clamped) | **1.79 s (74/74 full clock)** |
+
+**The placeholder is gone, and no answer cites a number that resolves to
+nothing.** Both were a UI problem, not a scoreboard problem: in September 10 of
+55 answers reached the page with a citation marker that pointed at no chunk. Now
+all 54 resolve, and `[n]` appears in none.
+
+**The run is reproducible; the comparison is not a controlled experiment.** Two
+full T4 runs at the same commit returned identical accuracy metrics - the same 9
+answerable refusals, the same 3 false accepts, the same 9 flagged claims, the
+same rates to four decimals - and differed only in latency (p50 1,768 vs 1,793
+ms). So none of the right-hand column is run-to-run noise. But the two columns
+differ in prompt, keep-alive, GPU, driver and date at once, so a change between
+them cannot be attributed to the prompt alone.
+
+**One more answerable question is refused, and three cases moved in both
+directions.** `sd-a-009` was refused in September and is answered now;
+`sd-a-039` and `sd-a-059` were answered and are refused now, both with the right
+article in context. `sd-a-059`'s September answer was one of the placeholder
+ones ("Bob Hancocks ... [n]"), so one of the two new refusals replaced an answer
+a user could not have checked. Net 8 to 9 of 60. One case in 60 is not a
+regression this run can demonstrate, and it is not free either: it is the number
+to watch when step 3 changes the refusal gate.
+
+**The supported-claim rate rose over a smaller base, which is less of a win than
+it looks.** 0.792 (42/53) to 0.812 (39/48). Four more answers are now bare names
+- "Hylopathism [1]", "Petrus Plancius [1]" - which fall below the judge's
+minimum claim length and are therefore not judged at all: 6 of 54 answers versus
+2 of 55. Counting whole answers instead, which claim length cannot flatter, 9 of
+54 carry a flagged claim against 11 of 55. The three unanswerable questions that
+were wrongly accepted are still flagged, as in September. A terser answer is
+easier to support; a metric that improves because fewer sentences are judged has
+improved less than its number says.
+
+**Latency now describes the system rather than the cooling.** p50 1.79 s against
+7.3 s, with every one of the 74 generations at full clock where the laptop had
+none. The 72.2 s maximum is the first case, which pays the container's model
+load; every other answer landed between 1.18 s and 2.60 s. The laptop's 7.3 s is
+still the honest number for the laptop, and this is the honest number for a T4 -
+each belongs to its hardware, which is why both are kept.
+
+**Provenance.** The first cloud run reported `git_sha: null`: the image carries
+the code without the `.git` that produced it, so the report named no commit -
+the same hole `scored_git_sha` closed on the scoring side. `evaluate()` now
+passes the sha in and both sides record it. The numbers above are the re-run,
+not that first one.
+
+```bash
+modal run infra/modal/demo.py::evaluate --suite serving_detail --git-sha $(git rev-parse HEAD)
+modal volume get rag-wikipedia-reports e2e/serving_detail.direct.json ./report.json
+```
+
 ## Conditions and limits
 
 - **Hardware.** RTX 3060 Laptop GPU (6 GB). With llama3.2:3b resident it idles at
   ~82 C, and one generation takes it to 88-92 C and a clamped clock. Unpaced, it
   reached 96 C after 33 generations. End-to-end runs are paced to start a
   generation only below 90 C; the accuracy metrics do not depend on the regime,
-  and every latency sample records it.
+  and every latency sample records it. Since 13 Oct an end-to-end run can also
+  be sent to a rented T4 (`infra/modal/demo.py::evaluate`), which needs no pacing
+  - a cloud sample and a laptop sample are not comparable and are never mixed.
 - **The judge.** `cross-encoder/nli-deberta-v3-base`, CPU, threshold 0.5, best
   premise over windows, sentences and adjacent pairs (see `eval/grounding.py` for
   the measurements behind that choice). "Unsupported by the context" is not

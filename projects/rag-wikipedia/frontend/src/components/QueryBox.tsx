@@ -3,9 +3,11 @@ import { useState } from 'react'
 interface Props {
   onSubmit: (question: string) => void
   loading: boolean
+  /** Called when the visitor first shows intent, so a sleeping server can start waking. */
+  onIntent?: () => void
 }
 
-export default function QueryBox({ onSubmit, loading }: Props) {
+export default function QueryBox({ onSubmit, loading, onIntent }: Props) {
   const [value, setValue] = useState('')
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -21,6 +23,7 @@ export default function QueryBox({ onSubmit, loading }: Props) {
         type="text"
         value={value}
         onChange={(event) => setValue(event.target.value)}
+        onFocus={onIntent}
         placeholder="Ask a question about Wikipedia..."
         disabled={loading}
         data-testid="query-input"

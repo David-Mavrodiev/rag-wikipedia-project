@@ -11,14 +11,17 @@ export default function AnswerView({ answer, refused = false, cited = true }: Pr
   // in a literal "[n]" looked exactly like a sourced one.
   const uncited = !refused && !cited
   return (
-    <div
-      data-testid="answer-view"
-      style={{ margin: '1rem 0', padding: '1rem', background: '#f5f5f5' }}
-    >
-      <h3>Answer</h3>
+    <div data-testid="answer-view" className={refused ? 'answer refused' : 'answer'}>
+      <h3>{refused ? 'No answer' : 'Answer'}</h3>
       <p>{answer}</p>
+      {refused && (
+        <p className="note">
+          The retrieved passages did not support an answer, so the system declined rather
+          than inventing one.
+        </p>
+      )}
       {uncited && (
-        <p data-testid="uncited-note" style={{ color: '#8a5a00', fontSize: '0.9em' }}>
+        <p data-testid="uncited-note" className="note warn">
           No source is cited for this answer, so it cannot be checked against the retrieved
           articles.
         </p>
