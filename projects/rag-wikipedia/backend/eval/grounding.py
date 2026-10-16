@@ -222,12 +222,42 @@ def _variants(premise: str) -> list[str]:
     return [premise] if stripped == premise else [premise, stripped]
 
 
-def sentence_support(sentences: list[str], contexts: list[str], judge: NLIJudge) -> list[float]:
+def assembled_premise(text: str, terms: frozenset[str], *, k: int) -> str | None:
+    """The k sentences of a chunk that share most with the claim, in document order.
+
+    A claim often joins facts the chunk keeps apart: "Donald J. Bonebrake" is in
+    the first sentence of its chunk and the 2021 Grohl revelation in the eighth,
+    and neither a window (too much around it) nor an adjacent pair (too far
+    apart) shows both at once. This builds one premise out of the sentences that
+    look relevant, and the order is the chunk's, not the ranking's, so pronouns
+    still resolve forwards.
+
+    Assembling evidence can manufacture support, which is exactly what the
+    `composed_false` claims of the synthetic set are there to catch.
+    """
+    ranked = sorted(
+        ((index, sentence) for index, sentence in enumerate(_sentences(text, 1))),
+        key=lambda pair: -len(terms & content_terms(pair[1])),
+    )
+    chosen = [pair for pair in ranked[:k] if terms & content_terms(pair[1])]
+    if len(chosen) < 2:
+        return None
+    return " ".join(sentence for _, sentence in sorted(chosen))
+
+
+def sentence_support(sentences: list[str], contexts: list[str], judge: NLIJudge, *,
+                     assemble: int = 0) -> list[float]:
     """Best entailment probability of each sentence over every premise it is shown.
 
     Premises: all windows of all chunks, plus the single sentences and adjacent
     pairs that share a content word with the claim - each as written and with
     parentheticals stripped. See the module docstring for why.
+
+    `assemble=k` adds one premise per chunk built from its k best-overlapping
+    sentences (`assembled_premise`). It is OFF by default: the published
+    groundedness numbers were measured without it, and whether it is an
+    improvement is decided by `eval/judge_accuracy.py` on claims the change was
+    not designed against, not by argument.
     """
     if not sentences:
         return []
@@ -241,6 +271,10 @@ def sentence_support(sentences: list[str], contexts: list[str], judge: NLIJudge)
     for index, sentence in enumerate(sentences):
         terms = content_terms(sentence)
         premises = windows + [span for span, span_terms in spans if terms & span_terms]
+        if assemble:
+            premises += [premise for premise in
+                         (assembled_premise(text, terms, k=assemble) for text in contexts)
+                         if premise]
         seen: set[str] = set()
         for premise in premises:
             for variant in _variants(premise):
