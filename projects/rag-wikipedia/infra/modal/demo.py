@@ -139,7 +139,11 @@ reports = modal.Volume.from_name("rag-wikipedia-reports", create_if_missing=True
 RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 eval_image = _with_sources(
-    base_image.env({"HF_HUB_OFFLINE": "0"})
+    # Prefect, here and NOT in base_image: `audit_fixture` runs the real ingest
+    # flow, whose tasks are Prefect-decorated, and the serving image's comment
+    # above is right that a demo cold start should not pay for an orchestrator.
+    base_image.uv_pip_install("prefect>=3,<4")
+    .env({"HF_HUB_OFFLINE": "0"})
     .run_commands(
         "python -c \"from sentence_transformers import CrossEncoder;"
         " CrossEncoder('cross-encoder/nli-deberta-v3-base')\"",
