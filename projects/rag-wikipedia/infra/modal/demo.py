@@ -132,11 +132,18 @@ reports = modal.Volume.from_name("rag-wikipedia-reports", create_if_missing=True
 # NLI model is ~700 MB, and baking it into the image the DEMO cold-starts from
 # would make every first visitor wait for weights no answer needs.
 # HF_HUB_OFFLINE is lifted for the download and put back afterwards.
+RERANK_MODEL = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+
 eval_image = _with_sources(
     base_image.env({"HF_HUB_OFFLINE": "0"})
     .run_commands(
         "python -c \"from sentence_transformers import CrossEncoder;"
         " CrossEncoder('cross-encoder/nli-deberta-v3-base')\"",
+        # The relevance gate's model, 22M parameters against the judge's 184M.
+        # Baked for the same reason: HF_HUB_OFFLINE is 1 at run time, so a model
+        # that is not in the image cannot be fetched by a measurement.
+        f"python -c \"from sentence_transformers import CrossEncoder;"
+        f" CrossEncoder('{RERANK_MODEL}')\"",
     )
     .env({"HF_HUB_OFFLINE": "1"})
 )
@@ -253,6 +260,80 @@ def serve() -> None:
 # minutes on 4 CPUs - four settings did not fit in an hour and the run was killed
 # with the synthetic half unfinished. A CUDA wheel would be faster and is a 2.5 GB
 # layer for a job that runs twice a month.
+@app.function(image=eval_image, gpu=GPU, volumes={"/corpus": corpus, "/reports": reports},
+               cpu=8, memory=16384, timeout=5400, max_containers=1)
+def sweep_relevance(suite: str = "serving_golden",
+                    thresholds: str = "0.0,0.1,0.2,0.3,0.5,0.7",
+                    git_sha: str = "") -> dict:
+    """Fit the relevance gate's threshold - on a suite the TEST run does not use.
+
+    docs/hallucination-controls.md sets the rule this function exists to obey: a
+    threshold is fitted on a split the test suite does not contain and committed
+    BEFORE the test run, never chosen after seeing the number it is judged by.
+    So this sweeps `serving_golden` (title-naming questions) and the gate is
+    then tested, once, on `serving_detail` (title-free) - different questions,
+    same corpus.
+
+    Retrieval only: no LLM, no judge. Each threshold is a full run through the
+    real code path rather than a replay, because a gate that is swept through a
+    shortcut is not the gate that ships.
+
+        modal run infra/modal/demo.py::sweep_relevance --suite serving_golden
+    """
+    import json
+    import subprocess
+
+    _start_qdrant()
+    if not _wait_for("http://127.0.0.1:6333/readyz", 600):
+        return {"ok": False, "error": "qdrant did not come up"}
+
+    out = Path("/reports/sweep")
+    out.mkdir(parents=True, exist_ok=True)
+    rows, failures = [], []
+    for raw in [t.strip() for t in thresholds.split(",") if t.strip()]:
+        done = subprocess.run(
+            ["python", "eval/run_eval.py", "--suite", suite],
+            cwd="/srv/backend", check=False, capture_output=True, text=True,
+            env=os.environ | {
+                "PYTHONPATH": "/srv/backend",
+                "PYTHONIOENCODING": "utf-8",
+                "QDRANT_URL": "http://127.0.0.1:6333",
+                "COLLECTION": COLLECTION,
+                "PROFILE": "real",
+                "RAG_GIT_SHA": git_sha,
+                # 0.0 is OFF, which makes the first row the honest baseline
+                # measured by the same code on the same day as the rest.
+                "RERANK_MODEL": RERANK_MODEL if float(raw) > 0 else "",
+                "RERANK_MIN_RELEVANCE": raw,
+            },
+        )
+        stem = "report" if suite == "golden" else f"report_{suite}"
+        report_path = Path("/srv/backend/eval") / f"{stem}.json"
+        if not report_path.exists():
+            failures.append({"threshold": raw, "exit": done.returncode,
+                             "stderr_tail": done.stderr[-1500:]})
+            print(f"threshold {raw}: no report (exit {done.returncode})")
+            print(done.stderr[-2000:])
+            continue
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        row = {"threshold": float(raw)} | {
+            k: report.get(k) for k in
+            ("recall@5", "precision@5", "mrr", "refusal_accuracy",
+             "false_accept_rate", "answerable_refusal_rate")
+        }
+        rows.append(row)
+        print("swept", json.dumps(row))
+        (out / f"{suite}.relevance.{raw}.json").write_text(
+            json.dumps(report, indent=2), encoding="utf-8")
+
+    summary = {"suite": suite, "model": RERANK_MODEL, "git_sha": git_sha,
+               "rows": rows, "failures": failures}
+    (out / f"{suite}.relevance.summary.json").write_text(
+        json.dumps(summary, indent=2), encoding="utf-8")
+    reports.commit()
+    return summary
+
+
 @app.function(image=eval_image, volumes={"/reports": reports},
                cpu=8, memory=8192, timeout=7200, max_containers=1)
 def judge(sets: str = "real,synthetic", split: str = "test",

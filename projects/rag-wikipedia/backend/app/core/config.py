@@ -61,6 +61,14 @@ class Settings(BaseSettings):
     refusal_min_evidence_coverage: float = Field(default=0.45, ge=0.0, le=1.0)
     retrieval_candidate_k: int = Field(default=20, ge=1, le=1000)
 
+    # Cross-encoder relevance (app/core/rerank.py). Empty means OFF: no model is
+    # loaded and nothing about retrieval changes. The threshold below is fitted
+    # on a suite the test run does not contain, and committed before that run -
+    # docs/hallucination-controls.md calls that rule out by name, and this is
+    # the first gate it applies to.
+    rerank_model: str = ""
+    rerank_min_relevance: float = Field(default=0.0, ge=0.0, le=1.0)
+
     allowed_origins: str = "*"
     rate_limit_enabled: bool = True
     rate_limit_redis_url: str = "redis://localhost:6379/0"
