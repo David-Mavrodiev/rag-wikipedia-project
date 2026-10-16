@@ -75,7 +75,8 @@ being counted, not ranking getting worse. Ordering improved - mrr rose from
 | false_accept_rate | 0.150 (3/20) | **0.000 (0/20)** |
 | refusal_accuracy | 0.850 | 1.000 |
 | answerable_refusal_rate | 0.150 (9/60) | 0.183 (11/60) |
-| supported claims (judge) | 0.812 (39/48) | 0.837 (36/43) |
+| supported claims, mean per answer (judge) | 0.812 over 48 answers | 0.837 over 43 |
+| claims the judge flagged | 9 of 50 | 7 of 43 |
 | citation resolves | 1.000 | 1.000 |
 | literal `[n]` | 0.000 | 0.000 |
 | latency p50 | 1.79 s | 2.42 s |
@@ -107,6 +108,11 @@ fitted, committed, and can be audited, logged and changed.
   re-fit rather than inherit 0.9.
 - **`context_hit_rate` falls 0.950 to 0.867 by construction**: a refused case has
   no context to hit.
+- **`supported_sentence_rate` is a mean over answers**, not a ratio of claims:
+  each answer contributes its own supported fraction, then those are averaged.
+  An earlier version of this table wrote it as "39/48", which reads as 39 of 48
+  claims and is wrong - 48 is the number of answers that had judgeable claims.
+  The claim counts are in their own row.
 - **The judge still grades this**, with the limits measured in
   [judge-accuracy.md](judge-accuracy.md): on blind labels it misses more
   unsupported claims than it invents, so the supported-claim rates in that table
