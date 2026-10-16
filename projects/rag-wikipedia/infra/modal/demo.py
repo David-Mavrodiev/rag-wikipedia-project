@@ -305,16 +305,22 @@ def audit_fixture(git_sha: str = "") -> dict:
         ("idf", ["python", "../scripts/build_idf.py", "--collection", "wikipedia_eval"]),
         ("audit", ["python", "eval/audit.py"]),
     )
+    report = Path("/srv/backend/eval/audit_report.json")
     for name, args in steps:
         done = subprocess.run(args, cwd="/srv/backend", check=False,
                               capture_output=True, text=True, env=env)
         print(f"{name}: exit={done.returncode}")
-        if done.returncode != 0:
+        # `audit.py` exits non-zero when a quality gate fails, and on this
+        # corpus they DO fail - status suspect_overfit, published as such. The
+        # report is the artefact either way, so the audit step is judged by
+        # whether it wrote one, not by its exit code. Treating the red status as
+        # a crash is how the first run threw away a perfectly good measurement.
+        if done.returncode != 0 and not (name == "audit" and report.exists()):
             print(done.stdout[-2000:])
             print(done.stderr[-2000:])
-            return {"ok": False, "step": name, "stderr_tail": done.stderr[-2000:]}
+            return {"ok": False, "step": name, "exit": done.returncode,
+                    "stderr_tail": done.stderr[-2000:]}
 
-    report = Path("/srv/backend/eval/audit_report.json")
     out = Path("/reports/audit")
     out.mkdir(parents=True, exist_ok=True)
     (out / "audit_report.json").write_text(report.read_text(encoding="utf-8"), encoding="utf-8")
