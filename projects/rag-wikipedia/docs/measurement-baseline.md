@@ -187,7 +187,11 @@ them rather than here.
 - **The judge.** `cross-encoder/nli-deberta-v3-base`, CPU, threshold 0.5, best
   premise over windows, sentences and adjacent pairs (see `eval/grounding.py` for
   the measurements behind that choice). "Unsupported by the context" is not
-  "false".
+  "false". **The judge itself is measured** in
+  [judge-accuracy.md](judge-accuracy.md), against labels half of which were
+  written blind: on those, it misses more unsupported claims than it invents, so
+  a supported-claim rate here is not a floor. The earlier claim that it was one
+  rested on the practice half alone and is withdrawn.
 - **Suite limits.** Absence is checked as a string, so a paraphrased answer would
   pass as absent; an answerable fact may also occur in another article, which
   scores as a miss if that article ranks first. Passages whose answer is the
