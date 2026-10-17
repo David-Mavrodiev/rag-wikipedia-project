@@ -69,10 +69,9 @@ Python 3.12, uv workspace (`.venv` here, `backend` is a member) — always
   (`projects/rag-wikipedia/README.md`).
 - **Asserted claims are corrected BY HAND.** That is deliberate — the script
   says so when it fails, because these numbers are meant to stay inline and
-  readable. Measured: adding one test file holding two tests fails six claims
-  across five files — `README.md`, `TESTS_ANNOTATED.md` (twice: the test count
-  and the file count), `PROJECT_BLUEPRINT.md`,
-  `MASTER_TRAINER_LESSON_SCRIPT.md`, `MASTER_TRAINER_PREP_PLAN.md`.
+  readable. Adding one test file holding two tests fails four claims across
+  three files — `README.md`, `TESTS_ANNOTATED.md` (twice: the test count and
+  the file count) and `PROJECT_BLUEPRINT.md`.
 
 The failure prints `file:line`, the documented number, the repository's number
 and the matched text, so each edit is mechanical. Make them in the SAME commit

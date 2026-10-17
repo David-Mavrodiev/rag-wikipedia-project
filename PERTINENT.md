@@ -21,7 +21,8 @@ a stale `node_repl` MCP entry pointing at an obsolete Codex binary.
 
 ### Preferred fix
 
-The detailed runbook and recovery checklist live in `CODEX_RUNBOOK.md`.
+The longer machine-specific runbook is kept outside this repository; the steps
+below are the part that applies anywhere.
 
 If app-backed functionality must stay available, keep apps enabled and remove stale
 local MCP entries first:
@@ -43,7 +44,7 @@ checking that `~/.codex/config.toml` contains:
 apps = true
 ```
 
-If the warning persists, clear the stale apps caches listed in `CODEX_RUNBOOK.md`,
+If the warning persists, clear Codex's stale apps caches,
 then run `codex doctor` again.
 
 Fallback only: `codex features disable apps` removes the `codex_apps` startup payload,

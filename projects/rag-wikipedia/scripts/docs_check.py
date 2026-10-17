@@ -9,8 +9,8 @@ Two mechanisms, on purpose:
   ``<!-- docs-check:begin NAME -->`` / ``<!-- docs-check:end -->`` is rewritten
   from the repository. Good for inventories and tables.
 * ASSERTED CLAIMS - a regex per fact, matched anywhere in the docs. Good for
-  numbers that must stay inline and readable, like the lesson script's
-  "**192 passing**", which nobody wants to replace with a pointer.
+  numbers that must stay inline and readable, like the README's test count,
+  which nobody wants to replace with a pointer.
 
 Usage:
     python scripts/docs_check.py            # verify; non-zero exit on drift
