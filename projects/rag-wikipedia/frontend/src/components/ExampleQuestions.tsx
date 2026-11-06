@@ -18,8 +18,11 @@ const EXAMPLES: { question: string; why: string }[] = [
     why: 'Answers from one article, with the source shown.',
   },
   {
+    // Word for word the evaluated question (serving_detail.jsonl, sd-a-000). A shortened
+    // copy without the date was refused live on 2026-11-06: the showcase must be a
+    // question the published numbers actually cover, not a paraphrase of one.
     question:
-      'Which company bought the Spanish-language station out of the Pappas bankruptcy for $4 million?',
+      'Which company bought the Spanish-language station out of the Pappas bankruptcy for $4 million and took ownership on April 1, 2009?',
     why: 'A detail that never names its article: retrieval has to find it.',
   },
   {
