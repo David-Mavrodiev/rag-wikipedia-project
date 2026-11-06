@@ -77,7 +77,7 @@ settings = Settings()  # instantiate once at import time; every module imports t
 > below; `backend/.env.example` documents each one with its default and range.
 
 <!-- docs-check:begin settings -->
-`Settings` exposes **26 settings** (env var = the upper-case name); see `backend/.env.example`.
+`Settings` exposes **28 settings** (env var = the upper-case name); see `backend/.env.example`.
 
 ```text
 QDRANT_URL
@@ -98,6 +98,8 @@ REFUSAL_MIN_MARGIN
 REFUSAL_MIN_OVERLAP_TERMS
 REFUSAL_MIN_EVIDENCE_COVERAGE
 RETRIEVAL_CANDIDATE_K
+RERANK_MODEL
+RERANK_MIN_RELEVANCE
 ALLOWED_ORIGINS
 RATE_LIMIT_ENABLED
 RATE_LIMIT_REDIS_URL

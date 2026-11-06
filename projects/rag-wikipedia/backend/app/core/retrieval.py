@@ -7,6 +7,7 @@ import tiktoken
 from app.core.config import settings
 from app.core.embeddings import Embedder
 from app.core.refusal import decide_evidence, evidence_overlap, is_private_or_time_dependent
+from app.core.rerank import relevance_scores
 from app.core.runtime_config import get_runtime_config
 from app.core.vectorstore import QdrantStore
 
@@ -45,7 +46,18 @@ def retrieve(
 
     vector = embedder.embed(query)
     candidate_k = max(top_k, get_runtime_config().retrieval_candidate_k)
-    results = _rerank(query, store.search(vector, top_k=candidate_k))[:top_k]
+    candidates = _rerank(query, store.search(vector, top_k=candidate_k))
+
+    # A cross-encoder, when one is configured, reorders the candidates and
+    # leaves its score on each result for the gate to read. Scoring the
+    # CANDIDATES rather than the top_k is the point: a passage the vector search
+    # ranked seventh can be the one that actually answers the question.
+    scores = relevance_scores(query, candidates)
+    if scores is not None:
+        for candidate, score in zip(candidates, scores, strict=True):
+            candidate["relevance"] = score
+        candidates.sort(key=lambda result: result["relevance"], reverse=True)
+    results = candidates[:top_k]
 
     evidence = decide_evidence(query, results)
     if evidence.refused:
